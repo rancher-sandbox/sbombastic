@@ -1,0 +1,24 @@
+# Default values for sbombastic.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+controller:
+  image:
+    repository: ghcr.io/fabriziosestito/sbombastic/controller
+    tag: v0.1.0-alpha1
+    pullPolicy: IfNotPresent
+  replicas: 3
+
+storage:
+  image:
+    repository: ghcr.io/fabriziosestito/sbombastic/storage
+    tag: v0.1.0-alpha1
+    pullPolicy: IfNotPresent
+  replicas: 3
+
+worker:
+  image:
+    repository: ghcr.io/fabriziosestito/sbombastic/worker
+    tag: v0.1.0-alpha1
+    pullPolicy: IfNotPresent
+  replicas: 3

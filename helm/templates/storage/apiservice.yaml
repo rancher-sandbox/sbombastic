@@ -1,0 +1,13 @@
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.storage.sbombastic.rancher.io
+spec:
+  insecureSkipTLSVerify: true
+  group: storage.sbombastic.rancher.io
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: api
+    namespace: {{ .Release.Namespace }}
+  version: v1alpha1

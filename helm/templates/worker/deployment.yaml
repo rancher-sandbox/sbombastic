@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    worker: "true"
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      worker: "true"
+  template:
+    metadata:
+      labels:
+        worker: "true"
+    spec:
+      serviceAccountName: apiserver
+      containers:
+        - name: wardle-server
+          image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}

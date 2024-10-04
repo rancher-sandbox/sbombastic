@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    apiserver: "true"
+spec:
+  replicas: {{ .Values.storage.replicas }}
+  selector:
+    matchLabels:
+      apiserver: "true"
+  template:
+    metadata:
+      labels:
+        apiserver: "true"
+    spec:
+      serviceAccountName: apiserver
+      containers:
+        - name: wardle-server
+          image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
+          imagePullPolicy: {{ .Values.storage.image.pullPolicy }}

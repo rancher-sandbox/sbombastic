@@ -1,0 +1,6 @@
+storage: 
+    image: <your-repository>/storage
+controller: 
+    image: <your-repository>/controller
+worker: 
+    image: <your-repository>/worker

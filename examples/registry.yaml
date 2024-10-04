@@ -1,0 +1,9 @@
+apiVersion: sbombastic.rancher.io/v1alpha1
+kind: Registry
+metadata:
+  name: my-first-registry
+  namespace: default
+  labels:
+    sample-label: "true"
+spec:
+  foo: bar
