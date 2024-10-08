@@ -40,13 +40,13 @@ spec:
             description: RegistrySpec defines the desired state of Registry
             properties:
               authSecret:
-                description: AuthSecret is the name of the secret that contains the
-                  credentials to access the registry
+                description: |-
+                  AuthSecret is the name of the secret that contains the credentials to access the registry.
+                  The Secret is expected to be in the same namespace as the Registry.
                 type: string
               caBundle:
-                description: |-
-                  CABundle is the CA bundle to use when connecting to the registry.
-                  If not set, the system's root CA bundle will be used.
+                description: CABundle is the CA bundle to use when connecting to the
+                  registry.
                 type: string
               insecure:
                 description: Insecure allows insecure connections to the registry
