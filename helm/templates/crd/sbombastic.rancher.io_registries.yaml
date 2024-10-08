@@ -39,9 +39,26 @@ spec:
           spec:
             description: RegistrySpec defines the desired state of Registry
             properties:
-              foo:
-                description: Foo is an example field of Registry. Edit registry_types.go
-                  to remove/update
+              authSecret:
+                description: AuthSecret is the name of the secret that contains the
+                  credentials to access the registry
+                type: string
+              caBundle:
+                description: |-
+                  CABundle is the CA bundle to use when connecting to the registry.
+                  If not set, the system's root CA bundle will be used.
+                type: string
+              insecure:
+                description: Insecure allows insecure connections to the registry
+                  when set to true.
+                type: boolean
+              repositories:
+                description: Repositories is the list of the repositories to be scanned
+                items:
+                  type: string
+                type: array
+              url:
+                description: URL is the URL of the container registry
                 type: string
             type: object
           status:
