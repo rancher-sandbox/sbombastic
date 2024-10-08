@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
-	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -36,11 +35,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/nats-io/nats-server/v2/server"
-	"github.com/nats-io/nats.go"
-
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/controller"
+	"github.com/rancher/sbombastic/internal/messaging"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -81,8 +78,17 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	startNats()
-	js := initJetStreamContext()
+	ns, err := messaging.NewServer()
+	if err != nil {
+		setupLog.Error(err, "unable to start NATS server")
+		os.Exit(1)
+	}
+
+	js, err := messaging.NewJetStreamContext(ns)
+	if err != nil {
+		setupLog.Error(err, "unable to create JetStream context")
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -175,47 +181,4 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func startNats() {
-	opts := &server.Options{
-		JetStream: true,
-	}
-
-	ns, err := server.NewServer(opts)
-	if err != nil {
-		panic(err)
-	}
-	ns.ConfigureLogger()
-
-	go ns.Start()
-
-	if !ns.ReadyForConnections(20 * time.Second) {
-		panic("not ready for connection")
-	}
-}
-
-func initJetStreamContext() nats.JetStreamContext {
-	// Connect to NATS
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		panic(err)
-	}
-
-	// Create JetStream Context
-	js, err := nc.JetStream(nats.PublishAsyncMaxPending(256))
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = js.AddStream(&nats.StreamConfig{
-		Name:      "sbombastic",
-		Retention: nats.WorkQueuePolicy,
-		Subjects:  []string{"sbombastic"},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	return js
 }
