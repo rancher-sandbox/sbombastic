@@ -1,12 +1,19 @@
 CONTROLLER_TOOLS_VERSION := v0.16.1
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
+GOLANGCI_LINT_VER := v1.61.0
+GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+
 .PHONY: all
 all: controller storage worker
 
 .PHOHY: test
 test:
 	go test ./... -coverprofile cover.out
+
+.PHOHY: lint
+lint:
+	$(GOLANGCI_LINT) run 
 
 .PHOHY: vet
 vet:
