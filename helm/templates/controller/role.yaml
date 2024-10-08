@@ -30,3 +30,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - sbombastic.sbombastic.rancher.io
+  resources:
+  - images
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sbombastic.sbombastic.rancher.io
+  resources:
+  - images/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sbombastic.sbombastic.rancher.io
+  resources:
+  - images/status
+  verbs:
+  - get
+  - patch
+  - update
