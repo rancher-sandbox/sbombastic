@@ -28,8 +28,17 @@ type RegistrySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Registry. Edit registry_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// URL is the URL of the container registry
+	URL string `json:"url,omitempty"`
+	// Repositories is the list of the repositories to be scanned
+	Repositories []string `json:"repositories,omitempty"`
+	// AuthSecret is the name of the secret that contains the credentials to access the registry
+	AuthSecret string `json:"authSecret,omitempty"`
+	// CABundle is the CA bundle to use when connecting to the registry.
+	// If not set, the system's root CA bundle will be used.
+	CABundle string `json:"caBundle,omitempty"`
+	// Insecure allows insecure connections to the registry when set to true.
+	Insecure bool `json:"insecure,omitempty"`
 }
 
 // RegistryStatus defines the observed state of Registry
