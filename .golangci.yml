@@ -12,7 +12,6 @@ run:
   # Default: 1m
   timeout: 3m
 
-
 # This file contains only configs which differ from defaults.
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
@@ -131,7 +130,7 @@ linters-settings:
       shadow:
         # Whether to be strict about shadowing; can be noisy.
         # Default: false
-        strict: true
+        strict: false
 
   inamedparam:
     # Skips check for interface methods with only a single parameter.
@@ -166,7 +165,7 @@ linters-settings:
   nolintlint:
     # Exclude following linters from requiring an explanation.
     # Default: []
-    allow-no-explanation: [ funlen, gocognit, lll ]
+    allow-no-explanation: [funlen, gocognit, lll]
     # Enable to require an explanation of nonzero length after each nolint directive.
     # Default: false
     require-explanation: true
@@ -209,7 +208,6 @@ linters-settings:
     # Default: false
     all: true
 
-
 linters:
   disable-all: true
   enable:
@@ -238,25 +236,19 @@ linters:
     - forbidigo # forbids identifiers
     - funlen # tool for detection of long functions
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
-    - gochecknoglobals # checks that no global variables exist
-    - gochecknoinits # checks that no init functions are present in Go code
     - gochecksumtype # checks exhaustiveness on Go "sum types"
     - gocognit # computes and checks the cognitive complexity of functions
     - goconst # finds repeated strings that could be replaced by a constant
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - gocyclo # computes and checks the cyclomatic complexity of functions
-    - godot # checks if comments end in a period
     - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
-    - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
     - intrange # finds places where for loops could make use of an integer range
-    - lll # reports long lines
     - loggercheck # checks key value pairs for common logger libraries (kitlog,klog,logr,zap)
     - makezero # finds slice declarations with non-zero initial length
     - mirror # reports wrong mirror patterns of bytes/strings usage
-    - mnd # detects magic numbers
     - musttag # enforces field tags in (un)marshaled structs
     - nakedret # finds naked returns in functions greater than a specified function length
     - nestif # reports deeply nested if statements
@@ -280,7 +272,6 @@ linters:
     - tenv # detects using os.Setenv instead of t.Setenv since Go1.17
     - testableexamples # checks if examples are testable (have an expected output)
     - testifylint # checks usage of github.com/stretchr/testify
-    - testpackage # makes you use a separate _test package
     - tparallel # detects inappropriate usage of t.Parallel() method in your Go test codes
     - unconvert # removes unnecessary type conversions
     - unparam # reports unused function parameters
@@ -349,6 +340,15 @@ linters:
     # scheme. This is a common usage in kubebuilder projects
     # - gochecknoinits # checks that no init functions are present in Go code
 
+    # Disable magic numbers check
+    # - mnd # checks for magic numbers
+
+    # Controller code makes use of the kubebuilder framework which uses the pattern of global variables
+    # - gochecknoglobals  # checks that no global variables exist
+
+    # This is annoying.
+    # - godot # checks if comments end in a period
+
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
@@ -357,9 +357,9 @@ issues:
 
   exclude-rules:
     - source: "(noinspection|TODO)"
-      linters: [ godot ]
+      linters: [godot]
     - source: "//noinspection"
-      linters: [ gocritic ]
+      linters: [gocritic]
     - path: "_test\\.go"
       linters:
         - bodyclose
