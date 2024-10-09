@@ -20,20 +20,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nats-io/nats.go"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // RegistryReconciler reconciles a Registry object
 type RegistryReconciler struct {
 	client.Client
-	Scheme           *runtime.Scheme
-	JetStreamContext nats.JetStreamContext
+	Scheme    *runtime.Scheme
+	Publisher messaging.Publisher
 }
 
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -54,11 +54,13 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Log.Info(fmt.Sprintf("Reconciling Registry %s", req.NamespacedName.Name))
 
-	_, err := r.JetStreamContext.Publish("sbombastic", []byte(fmt.Sprintf("Reconciling Registry %s", req.NamespacedName.Name)))
-	if err != nil {
+	msg := &messaging.CreateCatalog{
+		RegistryName:      req.Name,
+		RegistryNamespace: req.Namespace,
+	}
 
-		log.Log.Error(err, "Failed to publish message to JetStream")
-		return ctrl.Result{}, err
+	if err := r.Publisher.Publish(msg); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to publish message: %w", err)
 	}
 
 	return ctrl.Result{}, nil
