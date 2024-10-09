@@ -7,22 +7,21 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 func main() {
-    nc, err := nats.Connect("nats://controller-nats.sbombastic.svc.cluster.local")
+	nc, err := nats.Connect("nats://controller-nats.sbombastic.svc.cluster.local")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Use the JetStream context to produce and consumer messages
-	// that have been persisted.
 	js, err := nc.JetStream(nats.PublishAsyncMaxPending(256))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sub, err := js.PullSubscribe("sbombastic", "worker", nats.InactiveThreshold(24*time.Hour))
+	sub, err := js.PullSubscribe(messaging.SbombasticSubject, "worker", nats.InactiveThreshold(24*time.Hour))
 	if err != nil {
 		log.Fatal(err)
 	}
