@@ -68,7 +68,12 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Registry{}).
 		Complete(r)
+	if err != nil {
+		return fmt.Errorf("failed to create controller: %w", err)
+	}
+
+	return nil
 }
