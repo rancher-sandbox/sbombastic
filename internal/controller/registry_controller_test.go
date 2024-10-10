@@ -18,67 +18,207 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
+	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
+	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
 var _ = Describe("Registry Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+	When("A Registry needs to be discovered", func() {
+		var reconciler RegistryReconciler
+		var registry v1alpha1.Registry
 
-		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		registry := &v1alpha1.Registry{}
-
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind Registry")
-			err := k8sClient.Get(ctx, typeNamespacedName, registry)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &v1alpha1.Registry{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
-		})
-
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &v1alpha1.Registry{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance Registry")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &RegistryReconciler{
+		BeforeEach(func(ctx context.Context) {
+			By("Creating a new RegistryReconciler")
+			reconciler = RegistryReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+			By("Creating a new Registry without the last discovery time annotation set")
+			registry = v1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uuid.New().String(),
+					Namespace: "default",
+				},
+				Spec: v1alpha1.RegistrySpec{
+					URL:          "ghcr.io/rancher",
+					Repositories: []string{"sbombastic"},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &registry)).To(Succeed())
+		})
+
+		It("Should start the discovery process", func(ctx context.Context) {
+			By("Ensuring the right message is published to the worker queue")
+			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
+			mockPublisher.On("Publish", &messaging.CreateCatalog{
+				RegistryName:      registry.Name,
+				RegistryNamespace: registry.Namespace,
+			}).Return(nil)
+			reconciler.Publisher = mockPublisher
+
+			By("Reconciling the Registry")
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      registry.Name,
+					Namespace: registry.Namespace,
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			By("Checking the Registry status condition")
+			Expect(k8sClient.Get(ctx, types.NamespacedName{
+				Name:      registry.Name,
+				Namespace: registry.Namespace,
+			}, &registry)).To(Succeed())
+
+			Expect(registry.Status.Conditions).To(ContainElement(
+				WithTransform(func(c metav1.Condition) metav1.Condition {
+					return metav1.Condition{
+						Type:    c.Type,
+						Status:  c.Status,
+						Reason:  c.Reason,
+						Message: c.Message,
+					}
+				}, Equal(metav1.Condition{
+					Type:    "Discovering",
+					Status:  metav1.ConditionTrue,
+					Reason:  v1alpha1.DiscoveryRequestedReason,
+					Message: "Registry discovery in progress",
+				}))))
+		})
+
+		It("Should set the Discovery status condition to Unknown if the message cannot be published", func(ctx context.Context) {
+			By("Returning an error when publishing the message")
+			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
+			mockPublisher.On("Publish", &messaging.CreateCatalog{
+				RegistryName:      registry.Name,
+				RegistryNamespace: registry.Namespace,
+			}).Return(errors.New("failed to publish message"))
+			reconciler.Publisher = mockPublisher
+
+			By("Reconciling the Registry")
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      registry.Name,
+					Namespace: registry.Namespace,
+				},
+			})
+			Expect(err).To(HaveOccurred())
+
+			By("Checking the Registry status condition")
+			Expect(k8sClient.Get(ctx, types.NamespacedName{
+				Name:      registry.Name,
+				Namespace: registry.Namespace,
+			}, &registry)).To(Succeed())
+
+			Expect(registry.Status.Conditions).To(ContainElement(
+				WithTransform(func(c metav1.Condition) metav1.Condition {
+					return metav1.Condition{
+						Type:    c.Type,
+						Status:  c.Status,
+						Reason:  c.Reason,
+						Message: c.Message,
+					}
+				}, Equal(metav1.Condition{
+					Type:    "Discovering",
+					Status:  metav1.ConditionUnknown,
+					Reason:  v1alpha1.FailedToRequestDiscoveryReason,
+					Message: "Failed to communicate with the workers",
+				}))))
+		})
+	})
+
+	When("Repositories are updated", func() {
+		var registry v1alpha1.Registry
+
+		BeforeEach(func(ctx context.Context) {
+			By("Creating a new Registry that has been discovered and scanned")
+			registry = v1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uuid.New().String(),
+					Namespace: "default",
+					Annotations: map[string]string{
+						v1alpha1.RegistryLastDiscoveredAtAnnotation: time.Now().Format(time.RFC3339),
+						v1alpha1.RegistryLastScannedAtAnnotation:    time.Now().Format(time.RFC3339),
+					},
+				},
+				Spec: v1alpha1.RegistrySpec{
+					URL:          "ghcr.io/rancher",
+					Repositories: []string{"sbombastic-dev", "sbombastic-prod"},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &registry)).To(Succeed())
+
+			By("Creating a new Image inside the sbombastic-dev repository")
+			image := v1alpha1.Image{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uuid.New().String(),
+					Namespace: "default",
+					Labels: map[string]string{
+						v1alpha1.ImageRegistryLabel:   registry.Name,
+						v1alpha1.ImageRepositoryLabel: "sbombastic-dev",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &image)).To(Succeed())
+
+			By("Creating a new Image inside the sbombastic-prod repository")
+			image = v1alpha1.Image{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uuid.New().String(),
+					Namespace: "default",
+					Labels: map[string]string{
+						v1alpha1.ImageRegistryLabel:   registry.Name,
+						v1alpha1.ImageRepositoryLabel: "sbombastic-prod",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &image)).To(Succeed())
+		})
+
+		It("Should delete all Images that are not in the current list of repositories", func(ctx context.Context) {
+			By("Updating the Registry with a new list of repositories")
+			registry.Spec.Repositories = []string{"sbombastic-prod"}
+			Expect(k8sClient.Update(ctx, &registry)).To(Succeed())
+
+			By("Reconciling the Registry")
+			reconciler := RegistryReconciler{
+				Client: k8sClient,
+			}
+
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      registry.Name,
+					Namespace: registry.Namespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Expecting that the Images in the sbombastic-dev repository are deleted")
+			var images v1alpha1.ImageList
+			Expect(k8sClient.List(ctx, &images, &client.ListOptions{
+				Namespace: "default",
+				LabelSelector: labels.SelectorFromSet(map[string]string{
+					v1alpha1.ImageRegistryLabel: registry.Name,
+				}),
+			},
+			)).To(Succeed())
+
+			Expect(images.Items).To(HaveLen(1))
+			Expect(images.Items[0].Labels[v1alpha1.ImageRepositoryLabel]).To(Equal("sbombastic-prod"))
 		})
 	})
 })
