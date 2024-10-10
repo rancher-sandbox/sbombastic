@@ -369,3 +369,5 @@ issues:
         - gosec
         - noctx
         - wrapcheck
+    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      linters: [govet]
