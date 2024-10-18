@@ -1,15 +1,24 @@
+GOLANGCI_LINT_VERSION := v1.61.0
 CONTROLLER_TOOLS_VERSION := v0.16.1
-CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+ENVTEST_VERSION := release-0.19
+ENVTEST_K8S_VERSION := 1.31.0
 
-GOLANGCI_LINT_VER := v1.61.0
-GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+
+ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 .PHONY: all
 all: controller storage worker
 
-.PHOHY: test
-test:
-	go test ./... -coverprofile cover.out
+.PHONY: test
+test: vet ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
 
 .PHOHY: lint
 lint:
@@ -32,7 +41,7 @@ worker: vet
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/worker ./cmd/worker
 
 .PHONY: generate
-generate: generate-controller generate-storage
+generate: generate-controller generate-storage generate-mocks
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -45,3 +54,7 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 .PHONY: generate-storage
 generate-storage: ## Generate storage  code in pkg/generated and DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	API_KNOWN_VIOLATIONS_DIR=. UPDATE_API_KNOWN_VIOLATIONS=true ./hack/update-codegen.sh
+
+.PHONY: generate-mocks
+generate-mocks: ## Generate mocks for testing.
+	go generate ./...
