@@ -12,3 +12,12 @@ type CreateCatalog struct {
 func (m *CreateCatalog) MessageType() string {
 	return "CreateCatalog"
 }
+
+type CreateSBOM struct {
+	ImageName      string `json:"imageName"`
+	ImageNamespace string `json:"imageNamespace"`
+}
+
+func (m *CreateSBOM) MessageType() string {
+	return "CreateSBOM"
+}
