@@ -51,8 +51,12 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=helm/templates/crd output:rbac:artifacts:config=helm/templates/controller
 
+.PHONY: generate-storage-test-crd
+generate-storage-test-crd: ## Generate CRD used by the controller tests to access the storage resources. This is needed since storage does not provide CRD, being an API server extension.
+	$(CONTROLLER_GEN) crd paths="./api/storage/..." output:crd:artifacts:config=test/crd
+
 .PHONY: generate-storage
-generate-storage: ## Generate storage  code in pkg/generated and DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/generated and DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	API_KNOWN_VIOLATIONS_DIR=. UPDATE_API_KNOWN_VIOLATIONS=true ./hack/update-codegen.sh
 
 .PHONY: generate-mocks
