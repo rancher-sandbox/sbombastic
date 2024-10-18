@@ -31,6 +31,10 @@ import (
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
 	// Group=storage.sbombastic.rancher.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithKind("SBOM"):
+		return &storagev1alpha1.SBOMApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("SBOMSpec"):
+		return &storagev1alpha1.SBOMSpecApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ScanResult"):
 		return &storagev1alpha1.ScanResultApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ScanResultSpec"):

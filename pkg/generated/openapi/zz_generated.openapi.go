@@ -28,6 +28,10 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":             schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":         schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec":         schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMStatus":       schema_sbombastic_api_storage_v1alpha1_SBOMStatus(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult":       schema_sbombastic_api_storage_v1alpha1_ScanResult(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultList":   schema_sbombastic_api_storage_v1alpha1_ScanResultList(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultSpec":   schema_sbombastic_api_storage_v1alpha1_ScanResultSpec(ref),
@@ -85,6 +89,134 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/runtime.TypeMeta":                            schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
 		"k8s.io/apimachinery/pkg/runtime.Unknown":                             schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
 		"k8s.io/apimachinery/pkg/version.Info":                                schema_k8sio_apimachinery_pkg_version_Info(ref),
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_SBOM(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SBOM represents a Software Bill of Materials of an OCI artifact",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec", "github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_SBOMList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SBOMList contains a list of Software Bill of Materials",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SBOMSpec defines the desired state of a SBOM",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"data": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"data"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_SBOMStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SBOMStatus defines the observed state of a SBOM",
+				Type:        []string{"object"},
+			},
+		},
 	}
 }
 

@@ -17,4 +17,6 @@ limitations under the License.
 
 package v1alpha1
 
+type SBOMExpansion interface{}
+
 type ScanResultExpansion interface{}

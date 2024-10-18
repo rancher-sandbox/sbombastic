@@ -17,6 +17,14 @@ limitations under the License.
 
 package v1alpha1
 
+// SBOMListerExpansion allows custom methods to be added to
+// SBOMLister.
+type SBOMListerExpansion interface{}
+
+// SBOMNamespaceListerExpansion allows custom methods to be added to
+// SBOMNamespaceLister.
+type SBOMNamespaceListerExpansion interface{}
+
 // ScanResultListerExpansion allows custom methods to be added to
 // ScanResultLister.
 type ScanResultListerExpansion interface{}
