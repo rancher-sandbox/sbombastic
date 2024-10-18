@@ -95,7 +95,7 @@ var _ = Describe("Registry Controller", func() {
 				}, Equal(metav1.Condition{
 					Type:    "Discovering",
 					Status:  metav1.ConditionTrue,
-					Reason:  v1alpha1.DiscoveryRequestedReason,
+					Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
 					Message: "Registry discovery in progress",
 				}))))
 		})
@@ -135,7 +135,7 @@ var _ = Describe("Registry Controller", func() {
 				}, Equal(metav1.Condition{
 					Type:    "Discovering",
 					Status:  metav1.ConditionUnknown,
-					Reason:  v1alpha1.FailedToRequestDiscoveryReason,
+					Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
 					Message: "Failed to communicate with the workers",
 				}))))
 		})

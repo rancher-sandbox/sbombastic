@@ -66,9 +66,9 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		if err := r.Publisher.Publish(&msg); err != nil {
 			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
-				Type:    v1alpha1.RegistryConditionDiscovering,
+				Type:    v1alpha1.RegistryDiscoveringCondition,
 				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.RegistryReasonFailedToRequestDiscovery,
+				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
 				Message: "Failed to communicate with the workers",
 			})
 			if err := r.Status().Update(ctx, &registry); err != nil {
@@ -80,9 +80,9 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		meta.SetStatusCondition(&registry.Status.Conditions,
 			metav1.Condition{
-				Type:    v1alpha1.RegistryConditionDiscovering,
+				Type:    v1alpha1.RegistryDiscoveringCondition,
 				Status:  metav1.ConditionTrue,
-				Reason:  v1alpha1.RegistryReasonDiscoveryRequested,
+				Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
 				Message: "Registry discovery in progress",
 			})
 		if err := r.Status().Update(ctx, &registry); err != nil {
