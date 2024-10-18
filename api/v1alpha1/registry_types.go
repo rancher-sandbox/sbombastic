@@ -46,13 +46,13 @@ type RegistrySpec struct {
 }
 
 const (
-	DiscoveringCondition = "Discovering"
-	DiscoveredCondition  = "Discovered"
+	RegistryDiscoveringCondition = "Discovering"
+	RegistryDiscoveredCondition  = "Discovered"
 )
 
 const (
-	DiscoveryRequestedReason       = "DiscoveryRequested"
-	FailedToRequestDiscoveryReason = "FailedToRequestDiscovery"
+	RegistryDiscoveryRequestedReason       = "DiscoveryRequested"
+	RegistryFailedToRequestDiscoveryReason = "FailedToRequestDiscovery"
 )
 
 // RegistryStatus defines the observed state of Registry
