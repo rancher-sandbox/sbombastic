@@ -68,7 +68,7 @@ local_resource(
         "api",
         "internal/admission",
         "internal/apiserver",
-        "internal/registry",
+        "internal/storage",
         "pkg"
     ],
 )

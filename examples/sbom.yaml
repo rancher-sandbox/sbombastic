@@ -1,0 +1,9 @@
+apiVersion: storage.sbombastic.rancher.io/v1alpha1
+kind: SBOM
+metadata:
+  name: my-first-sbom
+  labels:
+    sample-label: "true"
+spec:
+  data:
+    foo: bar
