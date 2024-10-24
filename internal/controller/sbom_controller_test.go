@@ -33,7 +33,7 @@ import (
 )
 
 var _ = Describe("SBOM Controller", func() {
-	When("An SBOM is created", func() {
+	When("A SBOM is created", func() {
 		var reconciler SBOMReconciler
 		var registry v1alpha1.Registry
 		var sbom storagev1alpha1.SBOM
