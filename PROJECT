@@ -26,4 +26,9 @@ resources:
   kind: Image
   path: github.com/rancher/sbombastic/api/v1alpha1
   version: v1alpha1
+- controller: true
+  domain: sbombastic.rancher.io
+  group: storage.sbombastic.rancher.io
+  kind: SBOM
+  version: v1alpha1
 version: "3"

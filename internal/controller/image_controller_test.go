@@ -19,66 +19,57 @@ package controller
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
+	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
+
+	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
+	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
 var _ = Describe("Image Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+	When("An Image without a SBOM is created", func() {
+		var reconciler ImageReconciler
+		var image v1alpha1.Image
 
-		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		image := &sbombasticv1alpha1.Image{}
-
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind Image")
-			err := k8sClient.Get(ctx, typeNamespacedName, image)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &sbombasticv1alpha1.Image{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
-		})
-
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &sbombasticv1alpha1.Image{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance Image")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &ImageReconciler{
+		BeforeEach(func(ctx context.Context) {
+			By("Creating a new RegistryReconciler")
+			reconciler = ImageReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+			By("Creating the Image")
+			image = v1alpha1.Image{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uuid.New().String(),
+					Namespace: "default",
+				},
+			}
+			Expect(k8sClient.Create(ctx, &image)).To(Succeed())
+		})
+
+		It("should successfully reconcile the resource", func(ctx context.Context) {
+			By("Ensuring the right message is published to the worker queue")
+			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
+			mockPublisher.On("Publish", &messaging.CreateSBOM{
+				ImageName:      image.Name,
+				ImageNamespace: image.Namespace,
+			}).Return(nil)
+			reconciler.Publisher = mockPublisher
+
+			By("Reconciling the Registry")
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      image.Name,
+					Namespace: image.Namespace,
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })

@@ -23,6 +23,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// SBOMs returns a SBOMInformer.
+	SBOMs() SBOMInformer
 	// ScanResults returns a ScanResultInformer.
 	ScanResults() ScanResultInformer
 }
@@ -36,6 +38,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// SBOMs returns a SBOMInformer.
+func (v *version) SBOMs() SBOMInformer {
+	return &sBOMInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ScanResults returns a ScanResultInformer.

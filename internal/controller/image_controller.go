@@ -18,45 +18,73 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // ImageReconciler reconciles a Image object
 type ImageReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme    *runtime.Scheme
+	Publisher messaging.Publisher
 }
 
 // +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Image object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
+// Reconcile reconciles an Image.
+// If the Image doesn't have the SBOM, it sends a create SBOM request to the workers.
 func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var image v1alpha1.Image
+	if err := r.Get(ctx, req.NamespacedName, &image); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("unable to fetch Image: %w", err)
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	var sbom storagev1alpha1.SBOM
+	if err := r.Get(ctx, req.NamespacedName, &sbom); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Creating SBOM of Image", "name", image.Name, "namespace", image.Namespace)
+
+			msg := messaging.CreateSBOM{
+				ImageName:      image.Name,
+				ImageNamespace: image.Namespace,
+			}
+
+			if err := r.Publisher.Publish(&msg); err != nil {
+				return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
+			}
+		} else {
+			return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&sbombasticv1alpha1.Image{}).
+	err := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.Image{}).
 		Complete(r)
+	if err != nil {
+		return fmt.Errorf("failed to create Image controller: %w", err)
+	}
+
+	return nil
 }
