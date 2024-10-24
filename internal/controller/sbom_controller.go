@@ -43,8 +43,10 @@ type SBOMReconciler struct {
 // +kubebuilder:rbac:groups=storage.sbombastic.rancher.io.sbombastic.rancher.io,resources=sboms/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=storage.sbombastic.rancher.io.sbombastic.rancher.io,resources=sboms/finalizers,verbs=update
 
+// Reconcile reconciles a SBOM.
+// If all images have SBOMs, it updates the last discovered timestamp on the registry, since the Registry discovery is completed.
 func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
 	var sbom storagev1alpha1.SBOM
 	if err := r.Get(ctx, req.NamespacedName, &sbom); err != nil {
@@ -80,7 +82,10 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
 	}
 
+	// Check if all images have SBOMs
 	if len(sbomList.Items) == len(imageList.Items) {
+		log.Info("Registry discovery is completed.", "name", registryName, "namespace", req.Namespace)
+
 		var registry v1alpha1.Registry
 		err := r.Get(ctx, client.ObjectKey{
 			Name:      registryName,
@@ -91,18 +96,22 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 
 		_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation]
-		if !found {
-			if registry.Annotations == nil {
-				registry.Annotations = make(map[string]string)
-			}
+		if found {
+			log.V(1).Info("Registry already has a last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
 
-			registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] = time.Now().Format(time.RFC3339)
-			if err := r.Update(ctx, &registry); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to update Registry LastScannedAt: %w", err)
-			}
+			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, nil
+		if registry.Annotations == nil {
+			registry.Annotations = make(map[string]string)
+		}
+
+		log.V(1).Info("Updating Registry last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
+
+		registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] = time.Now().Format(time.RFC3339)
+		if err := r.Update(ctx, &registry); err != nil {
+			return ctrl.Result{}, fmt.Errorf("unable to update Registry LastScannedAt: %w", err)
+		}
 	}
 
 	return ctrl.Result{}, nil

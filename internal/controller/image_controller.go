@@ -42,6 +42,8 @@ type ImageReconciler struct {
 // +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/finalizers,verbs=update
 
+// Reconcile reconciles an Image.
+// If the Image doesn't have the SBOM, it sends a create SBOM request to the workers.
 func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
