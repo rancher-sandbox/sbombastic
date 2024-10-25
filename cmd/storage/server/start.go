@@ -22,6 +22,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -54,6 +55,8 @@ type WardleServerOptions struct {
 	StdOut                io.Writer
 	StdErr                io.Writer
 
+	DB *sqlx.DB
+
 	AlternateDNS []string
 }
 
@@ -72,12 +75,14 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 }
 
 // NewWardleServerOptions returns a new WardleServerOptions
-func NewWardleServerOptions(out, errOut io.Writer) *WardleServerOptions {
+func NewWardleServerOptions(out, errOut io.Writer, db *sqlx.DB) *WardleServerOptions {
 	o := &WardleServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
 			"/registry/sbombastic.rancher.io",
 			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
 		),
+
+		DB: db,
 
 		StdOut: out,
 		StdErr: errOut,
@@ -229,7 +234,7 @@ func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
 		return err
 	}
 
-	server, err := config.Complete().New()
+	server, err := config.Complete().New(o.DB)
 	if err != nil {
 		return err
 	}
