@@ -24,10 +24,10 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/api/storage/install"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/registry"
-	"github.com/rancher/sbombastic/internal/registry/sbombastic/scanresult"
+	"github.com/rancher/sbombastic/internal/storage"
 )
 
 var (
@@ -95,7 +95,7 @@ func (cfg *Config) Complete() CompletedConfig {
 }
 
 // New returns a new instance of WardleServer from the given config.
-func (c completedConfig) New() (*WardleServer, error) {
+func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
 	genericServer, err := c.GenericConfig.New("sample-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
@@ -108,7 +108,13 @@ func (c completedConfig) New() (*WardleServer, error) {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(v1alpha1.GroupName, Scheme, metav1.ParameterCodec, Codecs)
 
 	v1alpha1storage := map[string]rest.Storage{}
-	v1alpha1storage["scanresults"] = registry.RESTInPeace(scanresult.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter))
+
+	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
+	if err != nil {
+		return nil, err
+	}
+
+	v1alpha1storage["sboms"] = sbomStore
 	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage
 
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
