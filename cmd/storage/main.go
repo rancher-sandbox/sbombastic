@@ -17,16 +17,28 @@ limitations under the License.
 package main
 
 import (
+	"log"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/cmd/storage/server"
+	"github.com/rancher/sbombastic/internal/storage"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/cli"
+
+	_ "modernc.org/sqlite"
 )
 
 func main() {
+	db, err := sqlx.Connect("sqlite", "storage.db")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	db.MustExec(storage.CreateSBOMTableSQL)
+
 	ctx := genericapiserver.SetupSignalContext()
-	options := server.NewWardleServerOptions(os.Stdout, os.Stderr)
+	options := server.NewWardleServerOptions(os.Stdout, os.Stderr, db)
 	cmd := server.NewCommandStartWardleServer(ctx, options)
 	code := cli.Run(cmd)
 	os.Exit(code)
