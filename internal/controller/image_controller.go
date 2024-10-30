@@ -38,9 +38,9 @@ type ImageReconciler struct {
 	Publisher messaging.Publisher
 }
 
-// +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sbombastic.sbombastic.rancher.io,resources=images/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images/finalizers,verbs=update
 
 // Reconcile reconciles an Image.
 // If the Image doesn't have the SBOM, it sends a create SBOM request to the workers.

@@ -39,9 +39,9 @@ type SBOMReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io.sbombastic.rancher.io,resources=sboms,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io.sbombastic.rancher.io,resources=sboms/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io.sbombastic.rancher.io,resources=sboms/finalizers,verbs=update
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=sboms,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=sboms/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=sboms/finalizers,verbs=update
 
 // Reconcile reconciles a SBOM.
 // If all images have SBOMs, it updates the last discovered timestamp on the registry, since the Registry discovery is completed.
