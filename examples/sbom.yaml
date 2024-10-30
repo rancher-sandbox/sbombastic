@@ -1,0 +1,11 @@
+apiVersion: storage.sbombastic.rancher.io/v1alpha1
+kind: SBOM
+metadata:
+  name: sbom-example
+  namespace: default
+  labels:
+    sbombastic.rancher.io/registry: registry-example
+    sbombastic.rancher.io/repository: test
+spec:
+  data:
+    foo: bar
