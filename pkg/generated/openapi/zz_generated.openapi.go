@@ -173,7 +173,7 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMList(ref common.ReferenceCallbac
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult"),
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM"),
 									},
 								},
 							},
@@ -184,7 +184,7 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMList(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
