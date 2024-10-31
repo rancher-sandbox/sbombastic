@@ -257,6 +257,62 @@ func collectEvents(watcher watch.Interface) []watch.Event {
 	return events
 }
 
+func (suite *storeTestSuite) TestGetList() {
+	key := keyPrefix + "/default"
+	sbom1 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test1",
+			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/test": "true",
+			},
+		},
+	}
+	err := suite.store.Create(context.Background(), key+"/test1", &sbom1, nil, 0)
+	suite.Require().NoError(err)
+
+	sbom2 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test2",
+			Namespace: "default",
+		},
+	}
+	err = suite.store.Create(context.Background(), key+"/test2", &sbom2, nil, 0)
+	suite.Require().NoError(err)
+
+	tests := []struct {
+		name          string
+		listOptions   storage.ListOptions
+		expectedItems []v1alpha1.SBOM
+	}{
+		{
+			name:          "list all",
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			listOptions: storage.ListOptions{
+				Predicate: MatchSBOM(labels.Everything(), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector",
+			expectedItems: []v1alpha1.SBOM{sbom1},
+			listOptions: storage.ListOptions{
+				Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+					"sbombastic.rancher.io/test": "true",
+				}), fields.Everything()),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		suite.Run(test.name, func() {
+			sbomList := &v1alpha1.SBOMList{}
+			err := suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
+			suite.Require().NoError(err)
+			suite.ElementsMatch(test.expectedItems, sbomList.Items)
+		})
+	}
+}
+
 func (suite *storeTestSuite) TestGuaranteedUpdate() {
 	tests := []struct {
 		name                string
