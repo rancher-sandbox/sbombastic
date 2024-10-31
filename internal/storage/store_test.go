@@ -23,14 +23,14 @@ import (
 
 const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
 
-type sbomStoreTestSuite struct {
+type storeTestSuite struct {
 	suite.Suite
 	store       *store
 	db          *sqlx.DB
 	broadcaster *watch.Broadcaster
 }
 
-func (suite *sbomStoreTestSuite) SetupTest() {
+func (suite *storeTestSuite) SetupTest() {
 	suite.db = sqlx.MustConnect("sqlite", ":memory:")
 
 	suite.db.MustExec(CreateSBOMTableSQL)
@@ -45,16 +45,16 @@ func (suite *sbomStoreTestSuite) SetupTest() {
 	}
 }
 
-func (suite *sbomStoreTestSuite) TearDownTest() {
+func (suite *storeTestSuite) TearDownTest() {
 	suite.db.Close()
 	suite.broadcaster.Shutdown()
 }
 
-func TestSBOMStoreTestSuite(t *testing.T) {
-	suite.Run(t, &sbomStoreTestSuite{})
+func TestStoreTestSuite(t *testing.T) {
+	suite.Run(t, &storeTestSuite{})
 }
 
-func (suite *sbomStoreTestSuite) TestCreate() {
+func (suite *storeTestSuite) TestCreate() {
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -71,7 +71,7 @@ func (suite *sbomStoreTestSuite) TestCreate() {
 	suite.Equal("1", out.ResourceVersion)
 }
 
-func (suite *sbomStoreTestSuite) TestDelete() {
+func (suite *storeTestSuite) TestDelete() {
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -127,7 +127,7 @@ func (suite *sbomStoreTestSuite) TestDelete() {
 	}
 }
 
-func (suite *sbomStoreTestSuite) TestWatchEmptyResourceVersion() {
+func (suite *storeTestSuite) TestWatchEmptyResourceVersion() {
 	key := keyPrefix + "/default/test"
 	opts := storage.ListOptions{ResourceVersion: ""}
 
@@ -140,7 +140,7 @@ func (suite *sbomStoreTestSuite) TestWatchEmptyResourceVersion() {
 	suite.Require().Empty(events)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchResourceVersionZero() {
+func (suite *storeTestSuite) TestWatchResourceVersionZero() {
 	key := keyPrefix + "/default/test"
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -172,7 +172,7 @@ func (suite *sbomStoreTestSuite) TestWatchResourceVersionZero() {
 	suite.Equal(sbom, events[1].Object)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
+func (suite *storeTestSuite) TestWatchSpecificResourceVersion() {
 	key := keyPrefix + "/default"
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -207,7 +207,7 @@ func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
 	suite.Equal(updatedSBOM, events[1].Object)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchWithLabelSelector() {
+func (suite *storeTestSuite) TestWatchWithLabelSelector() {
 	key := keyPrefix + "/default"
 	sbom1 := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -257,7 +257,7 @@ func collectEvents(watcher watch.Interface) []watch.Event {
 	return events
 }
 
-func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
+func (suite *storeTestSuite) TestGuaranteedUpdate() {
 	tests := []struct {
 		name                string
 		key                 string
@@ -367,7 +367,7 @@ func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
 	}
 }
 
-func (suite *sbomStoreTestSuite) TestCount() {
+func (suite *storeTestSuite) TestCount() {
 	err := suite.store.Create(context.Background(), keyPrefix+"/default/test1", &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test1",
