@@ -1,10 +1,10 @@
-|              |                                 |
-| :----------- | :------------------------------ |
-| Feature Name | Scanner architecture and design |
-| Start Date   | Oct 24th, 2024                  |
-| Category     | Architecture                    |
+|              |                                                      |
+| :----------- | :--------------------------------------------------- |
+| Feature Name | Scanner architecture and design                      |
+| Start Date   | Oct 24th, 2024                                       |
+| Category     | Architecture                                         |
 | RFC PR       | https://github.com/rancher-sandbox/sbombastic/pull/9 |
-| State        | **ACCEPTED**                    |
+| State        | **ACCEPTED**                                         |
 
 # Summary
 
