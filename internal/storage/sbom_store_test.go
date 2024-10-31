@@ -253,36 +253,34 @@ func collectEvents(watcher watch.Interface) []watch.Event {
 }
 
 func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
-	sbom := &v1alpha1.SBOM{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "default",
-			UID:       "test-uid",
-		},
-		Spec: v1alpha1.SBOMSpec{
-			Data: runtime.RawExtension{
-				Raw: []byte("{}"),
-			},
-		},
-	}
-	err := suite.store.Create(context.Background(), keyPrefix+"/default/test", sbom, &v1alpha1.SBOM{}, 0)
-	suite.Require().NoError(err)
-
 	tests := []struct {
 		name                string
 		key                 string
 		ignoreNotFound      bool
 		preconditions       *storage.Preconditions
+		sbom                *v1alpha1.SBOM
 		expectedUpdatedSBOM *v1alpha1.SBOM
 		expectedError       error
 	}{
 		{
 			name:          "happy path",
-			key:           keyPrefix + "/default/test",
+			key:           keyPrefix + "/default/test1",
 			preconditions: &storage.Preconditions{},
+			sbom: &v1alpha1.SBOM{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "default",
+					UID:       "test-uid",
+				},
+				Spec: v1alpha1.SBOMSpec{
+					Data: runtime.RawExtension{
+						Raw: []byte("{}"),
+					},
+				},
+			},
 			expectedUpdatedSBOM: &v1alpha1.SBOM{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "test",
+					Name:            "test1",
 					Namespace:       "default",
 					UID:             "test-uid",
 					ResourceVersion: "2",
@@ -300,7 +298,18 @@ func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
 			preconditions: &storage.Preconditions{
 				UID: ptr.To(types.UID("incorrect-uid")),
 			},
-
+			sbom: &v1alpha1.SBOM{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test2",
+					Namespace: "default",
+					UID:       "test-uid",
+				},
+				Spec: v1alpha1.SBOMSpec{
+					Data: runtime.RawExtension{
+						Raw: []byte("{}"),
+					},
+				},
+			},
 			expectedError: storage.NewInvalidObjError(keyPrefix+"/default/test",
 				"Precondition failed: UID in precondition: incorrect-uid, UID in object meta: test-uid"),
 		},
@@ -321,6 +330,11 @@ func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
 
 	for _, test := range tests {
 		suite.Run(test.name, func() {
+			if test.sbom != nil {
+				err := suite.store.Create(context.Background(), test.key, test.sbom, &v1alpha1.SBOM{}, 0)
+				suite.Require().NoError(err)
+			}
+
 			tryUpdate := func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 				input.(*v1alpha1.SBOM).Spec.Data.Raw = []byte(`{"foo": "bar"}`)
 
@@ -332,6 +346,14 @@ func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
 			if test.expectedError != nil {
 				suite.Require().Error(err)
 				suite.Require().Equal(test.expectedError.Error(), err.Error())
+
+				if test.sbom != nil {
+					// If there is an error, the original object should not be updated.
+					currentSBOM := &v1alpha1.SBOM{}
+					err := suite.store.Get(context.Background(), keyPrefix+"/default/test", storage.GetOptions{}, currentSBOM)
+					suite.Require().NoError(err)
+					suite.Equal(test.sbom, currentSBOM)
+				}
 			} else {
 				suite.Require().NoError(err)
 				suite.Require().Equal(test.expectedUpdatedSBOM, updatedSBOM)
