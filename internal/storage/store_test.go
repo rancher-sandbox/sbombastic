@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,7 +25,7 @@ const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
 
 type sbomStoreTestSuite struct {
 	suite.Suite
-	store       *sbomStore
+	store       *store
 	db          *sqlx.DB
 	broadcaster *watch.Broadcaster
 }
@@ -35,9 +36,12 @@ func (suite *sbomStoreTestSuite) SetupTest() {
 	suite.db.MustExec(CreateSBOMTableSQL)
 
 	suite.broadcaster = watch.NewBroadcaster(1000, watch.WaitIfChannelFull)
-	suite.store = &sbomStore{
-		broadcaster: suite.broadcaster,
+	suite.store = &store{
 		db:          suite.db,
+		broadcaster: suite.broadcaster,
+		table:       "sboms",
+		newFunc:     func() runtime.Object { return &v1alpha1.SBOM{} },
+		newListFunc: func() runtime.Object { return &v1alpha1.SBOMList{} },
 	}
 }
 
@@ -178,7 +182,10 @@ func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
 	}
 	suite.Require().NoError(suite.store.Create(context.Background(), key+"/test", sbom, &v1alpha1.SBOM{}, 0))
 
-	opts := storage.ListOptions{ResourceVersion: "1"}
+	opts := storage.ListOptions{
+		ResourceVersion: "1",
+		Predicate:       MatchSBOM(labels.Everything(), fields.Everything()),
+	}
 
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
 	suite.Require().NoError(err)
@@ -226,11 +233,9 @@ func (suite *sbomStoreTestSuite) TestWatchWithLabelSelector() {
 
 	opts := storage.ListOptions{
 		ResourceVersion: "1",
-		Predicate: storage.SelectionPredicate{
-			Label: labels.SelectorFromSet(labels.Set{
-				"sbombastic.rancher.io/test": "true",
-			}),
-		},
+		Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+			"sbombastic.rancher.io/test": "true",
+		}), fields.Everything()),
 	}
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
 	suite.Require().NoError(err)
