@@ -17,6 +17,8 @@ limitations under the License.
 package apiserver
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -98,7 +100,7 @@ func (cfg *Config) Complete() CompletedConfig {
 func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
 	genericServer, err := c.GenericConfig.New("sample-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating generic server: %w", err)
 	}
 
 	s := &WardleServer{
@@ -111,14 +113,14 @@ func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
 
 	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating SBOM store: %w", err)
 	}
 
 	v1alpha1storage["sboms"] = sbomStore
 	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage
 
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error installing API group: %w", err)
 	}
 
 	return s, nil

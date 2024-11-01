@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"net"
 
 	"github.com/jmoiron/sqlx"
@@ -28,10 +29,8 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/version"
-	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/apiserver/pkg/server/options"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilversion "k8s.io/apiserver/pkg/util/version"
@@ -40,9 +39,7 @@ import (
 	netutils "k8s.io/utils/net"
 
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/admission/wardleinitializer"
 	"github.com/rancher/sbombastic/internal/apiserver"
-	clientset "github.com/rancher/sbombastic/pkg/generated/clientset/versioned"
 	informers "github.com/rancher/sbombastic/pkg/generated/informers/externalversions"
 	sampleopenapi "github.com/rancher/sbombastic/pkg/generated/openapi"
 )
@@ -66,7 +63,12 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 	}
 	kubeVer := utilversion.DefaultKubeEffectiveVersion().BinaryVersion()
 	// "1.2" maps to kubeVer
-	offset := int(ver.Minor()) - 2
+	minor := ver.Minor()
+	if minor > math.MaxInt32 {
+		panic("minor version is too large")
+	}
+
+	offset := int(minor) - 2
 	mappedVer := kubeVer.OffsetMinor(offset)
 	if mappedVer.GreaterThan(kubeVer) {
 		return kubeVer
@@ -145,16 +147,6 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 		apiserver.WardleComponentName, utilversion.NewEffectiveVersion(defaultWardleVersion),
 		featuregate.NewVersionedFeatureGate(version.MustParse(defaultWardleVersion)))
 
-	// // Add versioned feature specifications for the "BanFlunder" feature.
-	// // These specifications, together with the effective version, determine if the feature is enabled.
-	// utilruntime.Must(wardleFeatureGate.AddVersioned(map[featuregate.Feature]featuregate.VersionedSpecs{
-	// 	"BanFlunder": {
-	// 		{Version: version.MustParse("1.2"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	// 		{Version: version.MustParse("1.1"), Default: true, PreRelease: featuregate.Beta},
-	// 		{Version: version.MustParse("1.0"), Default: false, PreRelease: featuregate.Alpha},
-	// 	},
-	// }))
-
 	// Register the default kube component if not already present in the global registry.
 	_, _ = utilversion.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(utilversion.DefaultKubeComponent,
 		utilversion.NewEffectiveVersion(baseversion.DefaultKubeBinaryVersion), utilfeature.DefaultMutableFeatureGate)
@@ -169,7 +161,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 }
 
 // Validate validates WardleServerOptions
-func (o WardleServerOptions) Validate(args []string) error {
+func (o WardleServerOptions) Validate(_ []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	errors = append(errors, utilversion.DefaultComponentGlobalsRegistry.Validate()...)
@@ -185,17 +177,7 @@ func (o *WardleServerOptions) Complete() error {
 func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", o.AlternateDNS, []net.IP{netutils.ParseIPSloppy("127.0.0.1")}); err != nil {
-		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
-	}
-
-	o.RecommendedOptions.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
-		client, err := clientset.NewForConfig(c.LoopbackClientConfig)
-		if err != nil {
-			return nil, err
-		}
-		informerFactory := informers.NewSharedInformerFactory(client, c.LoopbackClientConfig.Timeout)
-		o.SharedInformerFactory = informerFactory
-		return []admission.PluginInitializer{wardleinitializer.New(informerFactory)}, nil
+		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
@@ -212,12 +194,12 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	serverConfig.EffectiveVersion = utilversion.DefaultComponentGlobalsRegistry.EffectiveVersionFor(apiserver.WardleComponentName)
 
 	// As we don't have a real etcd, we need to set a dummy storage factory
-	serverConfig.RESTOptionsGetter = &options.StorageFactoryRestOptionsFactory{
-		StorageFactory: &options.SimpleStorageFactory{},
+	serverConfig.RESTOptionsGetter = &genericoptions.StorageFactoryRestOptionsFactory{
+		StorageFactory: &genericoptions.SimpleStorageFactory{},
 	}
 
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error applying options to server config: %w", err)
 	}
 
 	config := &apiserver.Config{
@@ -236,14 +218,12 @@ func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
 
 	server, err := config.Complete().New(o.DB)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating server: %w", err)
 	}
 
-	server.GenericAPIServer.AddPostStartHookOrDie("start-sample-server-informers", func(context genericapiserver.PostStartHookContext) error {
-		config.GenericConfig.SharedInformerFactory.Start(context.Done())
-		o.SharedInformerFactory.Start(context.Done())
-		return nil
-	})
+	if err := server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
+		return fmt.Errorf("error while running server: %w", err)
+	}
 
-	return server.GenericAPIServer.PrepareRun().RunWithContext(ctx)
+	return nil
 }

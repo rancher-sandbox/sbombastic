@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -26,6 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// TODO: placeholder, implement subscriber logic
 	for {
 		msgs, err := sub.Fetch(1, nats.MaxWait(5*time.Second))
 		if err != nil {
@@ -36,11 +36,7 @@ func main() {
 		}
 
 		for _, msg := range msgs {
-			fmt.Printf("Received a message: %s\n", string(msg.Data))
-			meta, _ := msg.Metadata()
-			fmt.Printf("Stream Sequence  : %v\n", meta.Sequence.Stream)
-			fmt.Printf("Consumer Sequence: %v\n", meta.Sequence.Consumer)
-			msg.Ack()
+			_ = msg.Ack()
 		}
 	}
 }
