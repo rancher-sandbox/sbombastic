@@ -20,9 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 const (
 	RegistryLastDiscoveredAtAnnotation = "sbombastic.rancher.io/last-discovered-at"
 	RegistryLastScannedAtAnnotation    = "sbombastic.rancher.io/last-scanned-at"
@@ -30,12 +27,10 @@ const (
 
 // RegistrySpec defines the desired state of Registry
 type RegistrySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// URL is the URL of the container registry
 	URL string `json:"url,omitempty"`
 	// Repositories is the list of the repositories to be scanned
+	// An empty list means all the repositories found in the registry are going to be scanned
 	Repositories []string `json:"repositories,omitempty"`
 	// AuthSecret is the name of the secret in the same namespace that contains the credentials to access the registry.
 	AuthSecret string `json:"authSecret,omitempty"`

@@ -20,9 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 const (
 	ImageRepositoryLabel = "sbombastic.rancher.io/repository"
 	ImageRegistryLabel   = "sbombastic.rancher.io/registry"
@@ -30,11 +27,19 @@ const (
 
 // ImageSpec defines the desired state of Image
 type ImageSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// list of the layers that make the image
+	Layers []ImageLayer `json:"layers,omitempty"`
+}
 
-	// Foo is an example field of Image. Edit image_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// ImageLayer define a layer part of an OCI Image
+type ImageLayer struct {
+	// command is the command that led to the creation
+	// of the layer. The contents are base64 encoded
+	Command string `json:"command"`
+	// digest is the Hash of the compressed layer
+	Digest string `json:"digest"`
+	// diffID is the Hash of the uncompressed layer
+	DiffID string `json:"diffID"`
 }
 
 // ImageStatus defines the observed state of Image
