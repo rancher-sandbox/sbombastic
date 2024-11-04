@@ -55,6 +55,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+//nolint:funlen // TODO: refactor to reduce function length
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
