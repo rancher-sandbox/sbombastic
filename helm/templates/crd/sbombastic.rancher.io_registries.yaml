@@ -52,7 +52,9 @@ spec:
                   when set to true.
                 type: boolean
               repositories:
-                description: Repositories is the list of the repositories to be scanned
+                description: |-
+                  Repositories is the list of the repositories to be scanned
+                  An empty list means all the repositories found in the registry are going to be scanned
                 items:
                   type: string
                 type: array
