@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,35 +23,38 @@ import (
 
 const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
 
-type sbomStoreTestSuite struct {
+type storeTestSuite struct {
 	suite.Suite
-	store       *sbomStore
+	store       *store
 	db          *sqlx.DB
 	broadcaster *watch.Broadcaster
 }
 
-func (suite *sbomStoreTestSuite) SetupTest() {
+func (suite *storeTestSuite) SetupTest() {
 	suite.db = sqlx.MustConnect("sqlite", ":memory:")
 
 	suite.db.MustExec(CreateSBOMTableSQL)
 
 	suite.broadcaster = watch.NewBroadcaster(1000, watch.WaitIfChannelFull)
-	suite.store = &sbomStore{
-		broadcaster: suite.broadcaster,
+	suite.store = &store{
 		db:          suite.db,
+		broadcaster: suite.broadcaster,
+		table:       "sboms",
+		newFunc:     func() runtime.Object { return &v1alpha1.SBOM{} },
+		newListFunc: func() runtime.Object { return &v1alpha1.SBOMList{} },
 	}
 }
 
-func (suite *sbomStoreTestSuite) TearDownTest() {
+func (suite *storeTestSuite) TearDownTest() {
 	suite.db.Close()
 	suite.broadcaster.Shutdown()
 }
 
-func TestSBOMStoreTestSuite(t *testing.T) {
-	suite.Run(t, &sbomStoreTestSuite{})
+func TestStoreTestSuite(t *testing.T) {
+	suite.Run(t, &storeTestSuite{})
 }
 
-func (suite *sbomStoreTestSuite) TestCreate() {
+func (suite *storeTestSuite) TestCreate() {
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -67,7 +71,7 @@ func (suite *sbomStoreTestSuite) TestCreate() {
 	suite.Equal("1", out.ResourceVersion)
 }
 
-func (suite *sbomStoreTestSuite) TestDelete() {
+func (suite *storeTestSuite) TestDelete() {
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -123,7 +127,7 @@ func (suite *sbomStoreTestSuite) TestDelete() {
 	}
 }
 
-func (suite *sbomStoreTestSuite) TestWatchEmptyResourceVersion() {
+func (suite *storeTestSuite) TestWatchEmptyResourceVersion() {
 	key := keyPrefix + "/default/test"
 	opts := storage.ListOptions{ResourceVersion: ""}
 
@@ -136,7 +140,7 @@ func (suite *sbomStoreTestSuite) TestWatchEmptyResourceVersion() {
 	suite.Require().Empty(events)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchResourceVersionZero() {
+func (suite *storeTestSuite) TestWatchResourceVersionZero() {
 	key := keyPrefix + "/default/test"
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -168,7 +172,7 @@ func (suite *sbomStoreTestSuite) TestWatchResourceVersionZero() {
 	suite.Equal(sbom, events[1].Object)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
+func (suite *storeTestSuite) TestWatchSpecificResourceVersion() {
 	key := keyPrefix + "/default"
 	sbom := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -178,7 +182,10 @@ func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
 	}
 	suite.Require().NoError(suite.store.Create(context.Background(), key+"/test", sbom, &v1alpha1.SBOM{}, 0))
 
-	opts := storage.ListOptions{ResourceVersion: "1"}
+	opts := storage.ListOptions{
+		ResourceVersion: "1",
+		Predicate:       MatchSBOM(labels.Everything(), fields.Everything()),
+	}
 
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
 	suite.Require().NoError(err)
@@ -200,7 +207,7 @@ func (suite *sbomStoreTestSuite) TestWatchSpecificResourceVersion() {
 	suite.Equal(updatedSBOM, events[1].Object)
 }
 
-func (suite *sbomStoreTestSuite) TestWatchWithLabelSelector() {
+func (suite *storeTestSuite) TestWatchWithLabelSelector() {
 	key := keyPrefix + "/default"
 	sbom1 := &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -226,11 +233,9 @@ func (suite *sbomStoreTestSuite) TestWatchWithLabelSelector() {
 
 	opts := storage.ListOptions{
 		ResourceVersion: "1",
-		Predicate: storage.SelectionPredicate{
-			Label: labels.SelectorFromSet(labels.Set{
-				"sbombastic.rancher.io/test": "true",
-			}),
-		},
+		Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+			"sbombastic.rancher.io/test": "true",
+		}), fields.Everything()),
 	}
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
 	suite.Require().NoError(err)
@@ -252,7 +257,63 @@ func collectEvents(watcher watch.Interface) []watch.Event {
 	return events
 }
 
-func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
+func (suite *storeTestSuite) TestGetList() {
+	key := keyPrefix + "/default"
+	sbom1 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test1",
+			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/test": "true",
+			},
+		},
+	}
+	err := suite.store.Create(context.Background(), key+"/test1", &sbom1, nil, 0)
+	suite.Require().NoError(err)
+
+	sbom2 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test2",
+			Namespace: "default",
+		},
+	}
+	err = suite.store.Create(context.Background(), key+"/test2", &sbom2, nil, 0)
+	suite.Require().NoError(err)
+
+	tests := []struct {
+		name          string
+		listOptions   storage.ListOptions
+		expectedItems []v1alpha1.SBOM
+	}{
+		{
+			name:          "list all",
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			listOptions: storage.ListOptions{
+				Predicate: MatchSBOM(labels.Everything(), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector",
+			expectedItems: []v1alpha1.SBOM{sbom1},
+			listOptions: storage.ListOptions{
+				Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+					"sbombastic.rancher.io/test": "true",
+				}), fields.Everything()),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		suite.Run(test.name, func() {
+			sbomList := &v1alpha1.SBOMList{}
+			err := suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
+			suite.Require().NoError(err)
+			suite.ElementsMatch(test.expectedItems, sbomList.Items)
+		})
+	}
+}
+
+func (suite *storeTestSuite) TestGuaranteedUpdate() {
 	tests := []struct {
 		name                string
 		key                 string
@@ -362,7 +423,7 @@ func (suite *sbomStoreTestSuite) TestGuaranteedUpdate() {
 	}
 }
 
-func (suite *sbomStoreTestSuite) TestCount() {
+func (suite *storeTestSuite) TestCount() {
 	err := suite.store.Create(context.Background(), keyPrefix+"/default/test1", &v1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test1",
