@@ -1,42 +1,46 @@
 package main
 
 import (
-	"errors"
-	"log"
-	"time"
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/nats-io/nats.go"
 	"github.com/rancher/sbombastic/internal/messaging"
+	"go.uber.org/zap"
 )
 
 func main() {
-	nc, err := nats.Connect("nats://controller-nats.sbombastic.svc.cluster.local")
+	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("failed to create logger: %v", err))
+	}
+	defer logger.Sync() //nolint: errcheck // flushes buffer, ignore error
+
+	sub, err := messaging.NewSubscription("nats://controller-nats.sbombastic.svc.cluster.local",
+		"worker")
+	if err != nil {
+		logger.Fatal("Error creating subscription", zap.Error(err))
 	}
 
-	js, err := nc.JetStream(nats.PublishAsyncMaxPending(256))
-	if err != nil {
-		log.Fatal(err)
-	}
+	handlers := messaging.HandlerRegistry{}
+	subscriber := messaging.NewSubscriber(sub, handlers, logger)
 
-	sub, err := js.PullSubscribe(messaging.SbombasticSubject, "worker", nats.InactiveThreshold(24*time.Hour))
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
 
-	// TODO: placeholder, implement subscriber logic
-	for {
-		msgs, err := sub.Fetch(1, nats.MaxWait(5*time.Second))
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-signalChan
+		cancel()
+	}()
+
+	go func() {
+		err := subscriber.Run(ctx)
 		if err != nil {
-			if errors.Is(err, nats.ErrTimeout) {
-				continue
-			}
-			log.Fatal(err)
+			logger.Fatal("Error running worker subscriber", zap.Error(err))
 		}
-
-		for _, msg := range msgs {
-			_ = msg.Ack()
-		}
-	}
+	}()
 }
