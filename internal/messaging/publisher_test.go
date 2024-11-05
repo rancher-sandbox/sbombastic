@@ -5,17 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type testMessage struct {
-	Data string `json:"data"`
-}
-
-func (m testMessage) MessageType() string {
-	return "test-type"
-}
 
 func TestPublisher_Publish(t *testing.T) {
 	ns, err := NewServer()
@@ -23,6 +16,9 @@ func TestPublisher_Publish(t *testing.T) {
 	defer ns.Shutdown()
 
 	js, err := NewJetStreamContext(ns)
+	require.NoError(t, err)
+
+	err = AddStream(js, nats.MemoryStorage)
 	require.NoError(t, err)
 
 	publisher := NewPublisher(js)
@@ -34,7 +30,7 @@ func TestPublisher_Publish(t *testing.T) {
 	err = publisher.Publish(msg)
 	require.NoError(t, err)
 
-	sub, err := js.SubscribeSync(SbombasticSubject)
+	sub, err := js.SubscribeSync(sbombasticSubject)
 	require.NoError(t, err)
 	defer func() {
 		err := sub.Unsubscribe()
