@@ -8,7 +8,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-const SbombasticSubject = "sbombastic"
+const sbombasticSubject = "sbombastic"
 
 func NewServer() (*server.Server, error) {
 	opts := &server.Options{
@@ -41,15 +41,39 @@ func NewJetStreamContext(ns *server.Server) (nats.JetStreamContext, error) {
 		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
 	}
 
-	_, err = js.AddStream(&nats.StreamConfig{
+	return js, nil
+}
+
+func AddStream(js nats.JetStreamContext, storage nats.StorageType) error {
+	_, err := js.AddStream(&nats.StreamConfig{
 		Name: "SBOMBASTIC",
 		// We use WorkQueuePolicy to ensure that each message is removed once it is processed.
 		Retention: nats.WorkQueuePolicy,
-		Subjects:  []string{SbombasticSubject},
+		Subjects:  []string{sbombasticSubject},
+		Storage:   storage,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to add JetStream stream: %w", err)
+		return fmt.Errorf("failed to add JetStream stream: %w", err)
 	}
 
-	return js, nil
+	return nil
+}
+
+func NewSubscription(url, durable string) (*nats.Subscription, error) {
+	nc, err := nats.Connect(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to NATS server: %w", err)
+	}
+
+	js, err := nc.JetStream(nats.PublishAsyncMaxPending(256))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
+	}
+
+	sub, err := js.PullSubscribe(sbombasticSubject, durable, nats.InactiveThreshold(24*time.Hour))
+	if err != nil {
+		return nil, fmt.Errorf("failed to subscribe to JetStream stream: %w", err)
+	}
+
+	return sub, nil
 }
