@@ -21,8 +21,11 @@ import (
 )
 
 const (
-	ImageRepositoryLabel = "sbombastic.rancher.io/repository"
 	ImageRegistryLabel   = "sbombastic.rancher.io/registry"
+	ImageRepositoryLabel = "sbombastic.rancher.io/repository"
+	ImageTagLabel        = "sbombastic.rancher.io/tag"
+	ImageDigestLabel     = "sbombastic.rancher.io/digest"
+	ImagePlatformLabel   = "sbombastic.rancher.io/platform"
 )
 
 // ImageSpec defines the desired state of Image
