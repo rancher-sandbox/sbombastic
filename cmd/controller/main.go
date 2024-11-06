@@ -35,6 +35,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/nats-io/nats.go"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/controller"
@@ -90,6 +91,12 @@ func main() {
 	js, err := messaging.NewJetStreamContext(ns)
 	if err != nil {
 		setupLog.Error(err, "unable to create JetStream context")
+		os.Exit(1)
+	}
+
+	err = messaging.AddStream(js, nats.FileStorage)
+	if err != nil {
+		setupLog.Error(err, "unable to add JetStream stream")
 		os.Exit(1)
 	}
 

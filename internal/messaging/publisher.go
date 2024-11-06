@@ -34,7 +34,7 @@ func (p *publisher) Publish(message Message) error {
 	header.Add(MessageTypeHeader, message.MessageType())
 
 	msg := &nats.Msg{
-		Subject: SbombasticSubject,
+		Subject: sbombasticSubject,
 		Data:    data,
 		Header:  header,
 	}
