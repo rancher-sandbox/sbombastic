@@ -47,7 +47,7 @@ spec:
                     command:
                       description: |-
                         command is the command that led to the creation
-                        of the layer
+                        of the layer. The contents are base64 encoded
                       type: string
                     diffID:
                       description: diffID is the Hash of the uncompressed layer
