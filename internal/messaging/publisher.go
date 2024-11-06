@@ -9,7 +9,7 @@ import (
 
 const MessageTypeHeader = "MessageType"
 
-//go:generate go run github.com/vektra/mockery/v2@v2.46.2 --name Publisher
+//go:generate go run github.com/vektra/mockery/v2@v2.46.2 --name Publisher --filename publisher.go
 type Publisher interface {
 	Publish(message Message) error
 }

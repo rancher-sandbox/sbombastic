@@ -18,12 +18,12 @@ type Client struct {
 	mock.Mock
 }
 
-// Catalogue provides a mock function with given fields: ctx, _a1
-func (_m *Client) Catalogue(ctx context.Context, _a1 name.Registry) ([]string, error) {
+// Catalog provides a mock function with given fields: ctx, _a1
+func (_m *Client) Catalog(ctx context.Context, _a1 name.Registry) ([]string, error) {
 	ret := _m.Called(ctx, _a1)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Catalogue")
+		panic("no return value specified for Catalog")
 	}
 
 	var r0 []string
