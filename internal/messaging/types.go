@@ -4,14 +4,18 @@ type Message interface {
 	MessageType() string
 }
 
+const CreateCatalogType = "CreateCatalog"
+
 type CreateCatalog struct {
 	RegistryName      string `json:"registryName"`
 	RegistryNamespace string `json:"registryNamespace"`
 }
 
 func (m *CreateCatalog) MessageType() string {
-	return "CreateCatalog"
+	return CreateCatalogType
 }
+
+const CreateSBOMType = "CreateSBOM"
 
 type CreateSBOM struct {
 	ImageName      string `json:"imageName"`
@@ -19,5 +23,5 @@ type CreateSBOM struct {
 }
 
 func (m *CreateSBOM) MessageType() string {
-	return "CreateSBOM"
+	return CreateSBOMType
 }

@@ -3,12 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/rancher/sbombastic/internal/messaging"
 	"go.uber.org/zap"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
+	"github.com/rancher/sbombastic/internal/handlers/registry"
+	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
 func main() {
@@ -24,11 +34,29 @@ func main() {
 		logger.Fatal("Error creating subscription", zap.Error(err))
 	}
 
-	handlers := messaging.HandlerRegistry{}
+	config := ctrl.GetConfigOrDie()
+	scheme := scheme.Scheme
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
+		logger.Fatal("Error adding v1alpha1 to scheme", zap.Error(err))
+	}
+	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
+		logger.Fatal("Error adding storagev1alpha1 to scheme", zap.Error(err))
+	}
+	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		logger.Fatal("Error creating k8s client", zap.Error(err))
+	}
+	registryClientFactory := func(transport http.RoundTripper) registry.Client {
+		return registry.NewClient(transport, logger)
+	}
+	createCatalogHandler := handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, logger)
+
+	handlers := messaging.HandlerRegistry{
+		messaging.CreateCatalogType: createCatalogHandler,
+	}
 	subscriber := messaging.NewSubscriber(sub, handlers, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
-
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
