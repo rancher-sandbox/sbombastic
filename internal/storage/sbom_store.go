@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS sboms (
 
 // NewSBOMStore returns a store registry that will work against API services.
 func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB) (*registry.Store, error) {
-	strategy := NewStrategy(scheme)
+	strategy := newSBOMStrategy(scheme)
 
 	newFunc := func() runtime.Object { return &v1alpha1.SBOM{} }
 	newListFunc := func() runtime.Object { return &v1alpha1.SBOMList{} }
@@ -32,7 +32,7 @@ func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, 
 	store := &registry.Store{
 		NewFunc:                   newFunc,
 		NewListFunc:               newListFunc,
-		PredicateFunc:             MatchSBOM,
+		PredicateFunc:             matcher,
 		DefaultQualifiedResource:  v1alpha1.Resource("sboms"),
 		SingularQualifiedResource: v1alpha1.Resource("sbom"),
 		Storage: registry.DryRunnableStorage{
@@ -52,7 +52,7 @@ func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, 
 		TableConvertor: rest.NewDefaultTableConvertor(v1alpha1.Resource("sboms")),
 	}
 
-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
+	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: getAttrs}
 	if err := store.CompleteWithOptions(options); err != nil {
 		return nil, fmt.Errorf("unable to complete store with options: %w", err)
 	}

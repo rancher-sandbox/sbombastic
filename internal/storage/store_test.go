@@ -184,7 +184,7 @@ func (suite *storeTestSuite) TestWatchSpecificResourceVersion() {
 
 	opts := storage.ListOptions{
 		ResourceVersion: "1",
-		Predicate:       MatchSBOM(labels.Everything(), fields.Everything()),
+		Predicate:       matcher(labels.Everything(), fields.Everything()),
 	}
 
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
@@ -233,7 +233,7 @@ func (suite *storeTestSuite) TestWatchWithLabelSelector() {
 
 	opts := storage.ListOptions{
 		ResourceVersion: "1",
-		Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+		Predicate: matcher(labels.SelectorFromSet(labels.Set{
 			"sbombastic.rancher.io/test": "true",
 		}), fields.Everything()),
 	}
@@ -289,14 +289,14 @@ func (suite *storeTestSuite) TestGetList() {
 			name:          "list all",
 			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
 			listOptions: storage.ListOptions{
-				Predicate: MatchSBOM(labels.Everything(), fields.Everything()),
+				Predicate: matcher(labels.Everything(), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector",
 			expectedItems: []v1alpha1.SBOM{sbom1},
 			listOptions: storage.ListOptions{
-				Predicate: MatchSBOM(labels.SelectorFromSet(labels.Set{
+				Predicate: matcher(labels.SelectorFromSet(labels.Set{
 					"sbombastic.rancher.io/test": "true",
 				}), fields.Everything()),
 			},
