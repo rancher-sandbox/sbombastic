@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -30,7 +31,7 @@ func getAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 
 	imageMetadataAccessor, ok := obj.(v1alpha1.ImageMetadataAccessor)
 	if !ok {
-		return nil, nil, fmt.Errorf("object does not implement ImageMetadataAccessor")
+		return nil, nil, errors.New("object does not implement ImageMetadataAccessor")
 	}
 
 	selectableMetadata := fields.Set{
@@ -42,6 +43,7 @@ func getAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 		"spec.imageMetadata.Registry":   imageMetadataAccessor.GetImageMetadata().Registry,
 		"spec.imageMetadata.Repository": imageMetadataAccessor.GetImageMetadata().Repository,
 		"spec.imageMetadata.Tag":        imageMetadataAccessor.GetImageMetadata().Tag,
+		"spec.imageMetadata.Platform":   imageMetadataAccessor.GetImageMetadata().Platform,
 		"spec.imageMetadata.Digest":     imageMetadataAccessor.GetImageMetadata().Digest,
 	}
 
