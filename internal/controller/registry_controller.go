@@ -23,13 +23,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
@@ -94,21 +94,26 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if len(registry.Spec.Repositories) > 0 {
-		// Delete all images that are not in the current list of repositories
 		log.V(1).Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
 
-		registryReq, err := labels.NewRequirement(v1alpha1.ImageRegistryLabel, selection.Equals, []string{registry.Name})
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to create Registry label requirement: %w", err)
+		fieldSelector := client.MatchingFields{
+			"spec.imageMetadata.registry": registry.Name,
 		}
-		notInRepositoriesReq, err := labels.NewRequirement(v1alpha1.ImageRepositoryLabel, selection.NotIn, registry.Spec.Repositories)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to create Repository label requirement: %w", err)
-		}
-		selector := labels.NewSelector().Add(*registryReq, *notInRepositoriesReq)
 
-		if err := r.DeleteAllOf(ctx, &v1alpha1.Image{}, client.InNamespace(req.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to delete Images: %w", err)
+		var images storagev1alpha1.ImageList
+		if err := r.List(ctx, &images, client.InNamespace(req.Namespace), fieldSelector); err != nil {
+			return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
+		}
+
+		allowedRepositories := sets.NewString(registry.Spec.Repositories...)
+
+		for _, image := range images.Items {
+			if !allowedRepositories.Has(image.GetImageMetadata().Repository) {
+				if err := r.Delete(ctx, &image); err != nil {
+					return ctrl.Result{}, fmt.Errorf("unable to delete Image %s: %w", image.Name, err)
+				}
+				log.V(1).Info("Deleted Image", "name", image.Name, "repository", image.GetImageMetadata().Repository)
+			}
 		}
 	}
 
