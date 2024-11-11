@@ -102,6 +102,8 @@ local_resource(
         "go.sum",
         "cmd/worker",
         "api",
+        "internal/messaging",
+        "internal/handlers",
     ],
 )
 
