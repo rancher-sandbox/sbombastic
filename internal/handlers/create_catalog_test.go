@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/handlers/registry"
 	registryMocks "github.com/rancher/sbombastic/internal/handlers/registry/mocks"
@@ -127,25 +128,30 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	imageList := &v1alpha1.ImageList{}
+	imageList := &storagev1alpha1.ImageList{}
 	err = k8sClient.List(context.Background(), imageList)
 
 	require.NoError(t, err)
 	require.Len(t, imageList.Items, 2)
 
-	assert.Equal(t, imageList.Items[0].Labels[v1alpha1.ImageRegistryLabel], registryURL)
-	assert.Equal(t, imageList.Items[0].Labels[v1alpha1.ImageRepositoryLabel], repositoryName)
-	assert.Equal(t, imageList.Items[0].Labels[v1alpha1.ImageTagLabel], imageTag)
-	assert.Equal(t, imageList.Items[0].Labels[v1alpha1.ImagePlatformLabel], platformLinuxAmd64.String())
-	assert.Equal(t, imageList.Items[0].Labels[v1alpha1.ImageDigestLabel], digestLinuxAmd64.String())
-	assert.Len(t, imageList.Items[0].Spec.Layers, 8)
+	image1 := imageList.Items[0]
+	image2 := imageList.Items[1]
 
-	assert.Equal(t, imageList.Items[1].Labels[v1alpha1.ImageRegistryLabel], registryURL)
-	assert.Equal(t, imageList.Items[1].Labels[v1alpha1.ImageRepositoryLabel], repositoryName)
-	assert.Equal(t, imageList.Items[1].Labels[v1alpha1.ImageTagLabel], imageTag)
-	assert.Equal(t, imageList.Items[1].Labels[v1alpha1.ImagePlatformLabel], platformLinuxArm64.String())
-	assert.Equal(t, imageList.Items[1].Labels[v1alpha1.ImageDigestLabel], digestLinuxArm64.String())
-	assert.Len(t, imageList.Items[0].Spec.Layers, 8)
+	assert.Equal(t, registry.Namespace, image1.Namespace)
+	assert.Equal(t, registry.Name, image1.GetImageMetadata().Registry)
+	assert.Equal(t, repositoryName, image1.GetImageMetadata().Repository)
+	assert.Equal(t, imageTag, image1.GetImageMetadata().Tag)
+	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
+	assert.Equal(t, platformLinuxAmd64.String(), image1.GetImageMetadata().Platform)
+	assert.Len(t, image1.Spec.Layers, 8)
+
+	assert.Equal(t, registry.Namespace, image2.Namespace)
+	assert.Equal(t, registry.Name, image2.GetImageMetadata().Registry)
+	assert.Equal(t, repositoryName, image2.GetImageMetadata().Repository)
+	assert.Equal(t, imageTag, image2.GetImageMetadata().Tag)
+	assert.Equal(t, digestLinuxArm64.String(), image2.GetImageMetadata().Digest)
+	assert.Equal(t, platformLinuxArm64.String(), image2.GetImageMetadata().Platform)
+	assert.Len(t, image2.Spec.Layers, 8)
 }
 
 func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
@@ -214,15 +220,16 @@ func TestImageDetailsToImage(t *testing.T) {
 	ref, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registry, repo, tag))
 	require.NoError(t, err)
 
-	image, err := imageDetailsToImage(ref, details)
+	image, err := imageDetailsToImage(ref, details, "registry", "default")
 	require.NoError(t, err)
 
 	assert.Equal(t, image.Name, computeImageUID(ref, digest.String()))
-	assert.Equal(t, image.Labels[v1alpha1.ImageRegistryLabel], registry)
-	assert.Equal(t, image.Labels[v1alpha1.ImageRepositoryLabel], repo)
-	assert.Equal(t, image.Labels[v1alpha1.ImageTagLabel], tag)
-	assert.Equal(t, image.Labels[v1alpha1.ImagePlatformLabel], platform.String())
-	assert.Equal(t, image.Labels[v1alpha1.ImageDigestLabel], digest.String())
+	assert.Equal(t, "default", image.Namespace)
+	assert.Equal(t, "registry", image.GetImageMetadata().Registry)
+	assert.Equal(t, repo, image.GetImageMetadata().Repository)
+	assert.Equal(t, tag, image.GetImageMetadata().Tag)
+	assert.Equal(t, platform.String(), image.GetImageMetadata().Platform)
+	assert.Equal(t, digest.String(), image.GetImageMetadata().Digest)
 
 	assert.Len(t, image.Spec.Layers, numberOfLayers)
 	for i := range numberOfLayers {
