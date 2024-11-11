@@ -17,6 +17,14 @@ limitations under the License.
 
 package v1alpha1
 
+// ImageListerExpansion allows custom methods to be added to
+// ImageLister.
+type ImageListerExpansion interface{}
+
+// ImageNamespaceListerExpansion allows custom methods to be added to
+// ImageNamespaceLister.
+type ImageNamespaceListerExpansion interface{}
+
 // SBOMListerExpansion allows custom methods to be added to
 // SBOMLister.
 type SBOMListerExpansion interface{}

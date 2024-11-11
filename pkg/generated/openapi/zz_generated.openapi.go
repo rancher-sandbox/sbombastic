@@ -28,6 +28,12 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.Image":            schema_sbombastic_api_storage_v1alpha1_Image(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer":       schema_sbombastic_api_storage_v1alpha1_ImageLayer(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageList":        schema_sbombastic_api_storage_v1alpha1_ImageList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata":    schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec":        schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageStatus":      schema_sbombastic_api_storage_v1alpha1_ImageStatus(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":             schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":         schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec":         schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref),
@@ -89,6 +95,236 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/runtime.TypeMeta":                            schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
 		"k8s.io/apimachinery/pkg/runtime.Unknown":                             schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
 		"k8s.io/apimachinery/pkg/version.Info":                                schema_k8sio_apimachinery_pkg_version_Info(ref),
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_Image(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Image is the Schema for the images API",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec", "github.com/rancher/sbombastic/api/storage/v1alpha1.ImageStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_ImageLayer(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ImageLayer define a layer part of an OCI Image",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"command": {
+						SchemaProps: spec.SchemaProps{
+							Description: "command is the command that led to the creation of the layer. The contents are base64 encoded",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "digest is the Hash of the compressed layer",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"diffID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "diffID is the Hash of the uncompressed layer",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"command", "digest", "diffID"},
+			},
+		},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_ImageList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ImageList contains a list of Image",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.Image"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.Image", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"registry": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"repository": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"platform": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+				},
+				Required: []string{"registry", "repository", "tag", "digest", "platform"},
+			},
+		},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ImageSpec defines the desired state of Image",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"imageMetadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Metadata of the image",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
+					"layers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "List of the layers that make the image",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"imageMetadata"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer", "github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_ImageStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ImageStatus defines the observed state of Image",
+				Type:        []string{"object"},
+			},
+		},
 	}
 }
 
@@ -195,17 +431,23 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref common.ReferenceCallbac
 				Description: "SBOMSpec defines the desired state of a SBOM",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"imageMetadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
 					"data": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
-				Required: []string{"data"},
+				Required: []string{"imageMetadata", "data"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

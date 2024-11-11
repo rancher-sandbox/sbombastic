@@ -31,6 +31,14 @@ import (
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
 	// Group=storage.sbombastic.rancher.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithKind("Image"):
+		return &storagev1alpha1.ImageApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("ImageLayer"):
+		return &storagev1alpha1.ImageLayerApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("ImageMetadata"):
+		return &storagev1alpha1.ImageMetadataApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("ImageSpec"):
+		return &storagev1alpha1.ImageSpecApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("SBOM"):
 		return &storagev1alpha1.SBOMApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("SBOMSpec"):
