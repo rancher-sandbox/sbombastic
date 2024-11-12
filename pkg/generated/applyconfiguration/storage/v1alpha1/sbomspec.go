@@ -24,13 +24,22 @@ import (
 // SBOMSpecApplyConfiguration represents a declarative configuration of the SBOMSpec type for use
 // with apply.
 type SBOMSpecApplyConfiguration struct {
-	Data *runtime.RawExtension `json:"data,omitempty"`
+	ImageMetadata *ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
+	Data          *runtime.RawExtension            `json:"data,omitempty"`
 }
 
 // SBOMSpecApplyConfiguration constructs a declarative configuration of the SBOMSpec type for use with
 // apply.
 func SBOMSpec() *SBOMSpecApplyConfiguration {
 	return &SBOMSpecApplyConfiguration{}
+}
+
+// WithImageMetadata sets the ImageMetadata field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the ImageMetadata field is set to the value of the last call.
+func (b *SBOMSpecApplyConfiguration) WithImageMetadata(value *ImageMetadataApplyConfiguration) *SBOMSpecApplyConfiguration {
+	b.ImageMetadata = value
+	return b
 }
 
 // WithData sets the Data field in the declarative configuration to the given value

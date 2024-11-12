@@ -15,7 +15,7 @@ spec:
       labels:
         worker: "true"
     spec:
-      serviceAccountName: apiserver
+      serviceAccountName: controller-manager
       containers:
         - name: wardle-server
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}

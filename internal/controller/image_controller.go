@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
@@ -47,7 +46,7 @@ type ImageReconciler struct {
 func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	var image v1alpha1.Image
+	var image storagev1alpha1.Image
 	if err := r.Get(ctx, req.NamespacedName, &image); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, fmt.Errorf("unable to fetch Image: %w", err)
@@ -80,7 +79,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller with the Manager.
 func (r *ImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.Image{}).
+		For(&storagev1alpha1.Image{}).
 		Complete(r)
 	if err != nil {
 		return fmt.Errorf("failed to create Image controller: %w", err)

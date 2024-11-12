@@ -35,6 +35,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	db.MustExec(storage.CreateImageTableSQL)
 	db.MustExec(storage.CreateSBOMTableSQL)
 
 	ctx := genericapiserver.SetupSignalContext()

@@ -32,6 +32,11 @@ type SBOMList struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
 
 // SBOM represents a Software Bill of Materials of an OCI artifact
 type SBOM struct {
@@ -44,11 +49,16 @@ type SBOM struct {
 
 // SBOMSpec defines the desired state of a SBOM
 type SBOMSpec struct {
-	Data runtime.RawExtension `json:"data"`
+	ImageMetadata ImageMetadata        `json:"imageMetadata"`
+	Data          runtime.RawExtension `json:"data"`
 }
 
 // SBOMStatus defines the observed state of a SBOM
 type SBOMStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+func (s *SBOM) GetImageMetadata() ImageMetadata {
+	return s.Spec.ImageMetadata
 }

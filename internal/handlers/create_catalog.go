@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
@@ -98,7 +99,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 			continue
 		}
 
-		images, err := h.refToImages(registryClient, ref)
+		images, err := h.refToImages(registryClient, ref, registry.Name, registry.Namespace)
 		if err != nil {
 			h.logger.Error(
 				"cannot convert reference to Image",
@@ -167,17 +168,17 @@ func (h *CreateCatalogHandler) discoverImages(ctx context.Context, registryClien
 	return contents, nil
 }
 
-func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client, ref name.Reference) ([]v1alpha1.Image, error) {
+func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client, ref name.Reference, registryName, registryNamespace string) ([]storagev1alpha1.Image, error) {
 	platforms, err := h.refToPlatforms(registryClient, ref)
 	if err != nil {
-		return []v1alpha1.Image{}, fmt.Errorf("cannot get platforms for %s: %w", ref, err)
+		return []storagev1alpha1.Image{}, fmt.Errorf("cannot get platforms for %s: %w", ref, err)
 	}
 	if platforms == nil {
 		// add a `nil` platform to the list of platforms, this will be used to get the default platform
 		platforms = append(platforms, nil)
 	}
 
-	images := []v1alpha1.Image{}
+	images := []storagev1alpha1.Image{}
 
 	for _, platform := range platforms {
 		imageDetails, err := registryClient.GetImageDetails(ref, platform)
@@ -195,7 +196,7 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 			continue
 		}
 
-		image, err := imageDetailsToImage(ref, imageDetails)
+		image, err := imageDetailsToImage(ref, imageDetails, registryName, registryNamespace)
 		if err != nil {
 			h.logger.Error("cannot convert image details to image", zap.Error(err))
 			continue
@@ -257,8 +258,8 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 	return transport
 }
 
-func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails) (v1alpha1.Image, error) {
-	imageLayers := []v1alpha1.ImageLayer{}
+func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registryName, registryNamespace string) (storagev1alpha1.Image, error) {
+	imageLayers := []storagev1alpha1.ImageLayer{}
 
 	// There can be more history entries than layers, as some history entries are empty layers
 	// For example, a command like "ENV VAR=1" will create a new history entry but no new layer
@@ -269,19 +270,19 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 		}
 
 		if len(details.Layers) < layerCounter {
-			return v1alpha1.Image{}, fmt.Errorf("layer %d not found - got only %d layers", layerCounter, len(details.Layers))
+			return storagev1alpha1.Image{}, fmt.Errorf("layer %d not found - got only %d layers", layerCounter, len(details.Layers))
 		}
 		layer := details.Layers[layerCounter]
 		digest, err := layer.Digest()
 		if err != nil {
-			return v1alpha1.Image{}, fmt.Errorf("cannot read layer digest: %w", err)
+			return storagev1alpha1.Image{}, fmt.Errorf("cannot read layer digest: %w", err)
 		}
 		diffID, err := layer.DiffID()
 		if err != nil {
-			return v1alpha1.Image{}, fmt.Errorf("cannot read layer diffID: %w", err)
+			return storagev1alpha1.Image{}, fmt.Errorf("cannot read layer diffID: %w", err)
 		}
 
-		imageLayers = append(imageLayers, v1alpha1.ImageLayer{
+		imageLayers = append(imageLayers, storagev1alpha1.ImageLayer{
 			Command: base64.StdEncoding.EncodeToString([]byte(history.CreatedBy)),
 			Digest:  digest.String(),
 			DiffID:  diffID.String(),
@@ -290,18 +291,19 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 		layerCounter++
 	}
 
-	image := v1alpha1.Image{
+	image := storagev1alpha1.Image{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: computeImageUID(ref, details.Digest.String()),
-			Labels: map[string]string{
-				v1alpha1.ImageRegistryLabel:   ref.Context().RegistryStr(),
-				v1alpha1.ImageRepositoryLabel: ref.Context().RepositoryStr(),
-				v1alpha1.ImageTagLabel:        ref.Identifier(),
-				v1alpha1.ImagePlatformLabel:   details.Platform.String(),
-				v1alpha1.ImageDigestLabel:     details.Digest.String(),
-			},
+			Name:      computeImageUID(ref, details.Digest.String()),
+			Namespace: registryNamespace,
 		},
-		Spec: v1alpha1.ImageSpec{
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:   registryName,
+				Repository: ref.Context().RepositoryStr(),
+				Tag:        ref.Identifier(),
+				Platform:   details.Platform.String(),
+				Digest:     details.Digest.String(),
+			},
 			Layers: imageLayers,
 		},
 	}

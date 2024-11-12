@@ -75,7 +75,7 @@ func (c *client) Catalog(ctx context.Context, registry name.Registry) ([]string,
 
 	catalogger, err := puller.Catalogger(ctx, registry)
 	if err != nil {
-		return []string{}, fmt.Errorf("cannot create catologger for %s: %w", registry.Name(), err)
+		return []string{}, fmt.Errorf("cannot create catalogger for %s: %w", registry.Name(), err)
 	}
 
 	repositories := []string{}

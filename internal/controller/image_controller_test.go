@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
@@ -35,7 +35,7 @@ import (
 var _ = Describe("Image Controller", func() {
 	When("An Image without a SBOM is created", func() {
 		var reconciler ImageReconciler
-		var image v1alpha1.Image
+		var image storagev1alpha1.Image
 
 		BeforeEach(func(ctx context.Context) {
 			By("Creating a new RegistryReconciler")
@@ -44,7 +44,7 @@ var _ = Describe("Image Controller", func() {
 			}
 
 			By("Creating the Image")
-			image = v1alpha1.Image{
+			image = storagev1alpha1.Image{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.New().String(),
 					Namespace: "default",

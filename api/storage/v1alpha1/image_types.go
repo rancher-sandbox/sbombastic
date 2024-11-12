@@ -20,17 +20,37 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	ImageRegistryLabel   = "sbombastic.rancher.io/registry"
-	ImageRepositoryLabel = "sbombastic.rancher.io/repository"
-	ImageTagLabel        = "sbombastic.rancher.io/tag"
-	ImageDigestLabel     = "sbombastic.rancher.io/digest"
-	ImagePlatformLabel   = "sbombastic.rancher.io/platform"
-)
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ImageList contains a list of Image
+type ImageList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Image `json:"items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
+
+// Image is the Schema for the images API
+type Image struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ImageSpec   `json:"spec,omitempty"`
+	Status ImageStatus `json:"status,omitempty"`
+}
 
 // ImageSpec defines the desired state of Image
 type ImageSpec struct {
-	// list of the layers that make the image
+	// Metadata of the image
+	ImageMetadata `json:"imageMetadata"`
+	// List of the layers that make the image
 	Layers []ImageLayer `json:"layers,omitempty"`
 }
 
@@ -51,27 +71,6 @@ type ImageStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-
-// Image is the Schema for the images API
-type Image struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   ImageSpec   `json:"spec,omitempty"`
-	Status ImageStatus `json:"status,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// ImageList contains a list of Image
-type ImageList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Image `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Image{}, &ImageList{})
+func (i *Image) GetImageMetadata() ImageMetadata {
+	return i.Spec.ImageMetadata
 }

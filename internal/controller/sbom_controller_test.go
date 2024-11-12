@@ -58,13 +58,18 @@ var _ = Describe("SBOM Controller", func() {
 			Expect(k8sClient.Create(ctx, &registry)).To(Succeed())
 
 			By("Creating an Image")
-			image := v1alpha1.Image{
+			image := storagev1alpha1.Image{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.New().String(),
 					Namespace: "default",
-					Labels: map[string]string{
-						v1alpha1.ImageRegistryLabel:   registry.Name,
-						v1alpha1.ImageRepositoryLabel: "sbombastic",
+				},
+				Spec: storagev1alpha1.ImageSpec{
+					ImageMetadata: storagev1alpha1.ImageMetadata{
+						Registry:   registry.Name,
+						Repository: "sbombastic",
+						Tag:        "latest",
+						Platform:   "linux/amd64",
+						Digest:     "sha:123",
 					},
 				},
 			}
@@ -75,11 +80,15 @@ var _ = Describe("SBOM Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.New().String(),
 					Namespace: "default",
-					Labels: map[string]string{
-						v1alpha1.ImageRegistryLabel: registry.Name,
-					},
 				},
 				Spec: storagev1alpha1.SBOMSpec{
+					ImageMetadata: storagev1alpha1.ImageMetadata{
+						Registry:   registry.Name,
+						Repository: "sbombastic",
+						Tag:        "latest",
+						Platform:   "linux/amd64",
+						Digest:     "sha:123",
+					},
 					Data: runtime.RawExtension{
 						Raw: []byte("{}"),
 					},

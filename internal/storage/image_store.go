@@ -12,8 +12,8 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
-const CreateSBOMTableSQL = `
-CREATE TABLE IF NOT EXISTS sboms (
+const CreateImageTableSQL = `
+CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY,
     name VARCHAR(253) NOT NULL,
     namespace VARCHAR(253) NOT NULL,
@@ -22,24 +22,24 @@ CREATE TABLE IF NOT EXISTS sboms (
 );
 `
 
-// NewSBOMStore returns a store registry that will work against API services.
-func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB) (*registry.Store, error) {
-	strategy := newSBOMStrategy(scheme)
+// NewImageStore returns a store registry that will work against API services.
+func NewImageStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB) (*registry.Store, error) {
+	strategy := newImageStrategy(scheme)
 
-	newFunc := func() runtime.Object { return &v1alpha1.SBOM{} }
-	newListFunc := func() runtime.Object { return &v1alpha1.SBOMList{} }
+	newFunc := func() runtime.Object { return &v1alpha1.Image{} }
+	newListFunc := func() runtime.Object { return &v1alpha1.ImageList{} }
 
 	store := &registry.Store{
 		NewFunc:                   newFunc,
 		NewListFunc:               newListFunc,
 		PredicateFunc:             matcher,
-		DefaultQualifiedResource:  v1alpha1.Resource("sboms"),
-		SingularQualifiedResource: v1alpha1.Resource("sbom"),
+		DefaultQualifiedResource:  v1alpha1.Resource("images"),
+		SingularQualifiedResource: v1alpha1.Resource("image"),
 		Storage: registry.DryRunnableStorage{
 			Storage: &store{
 				db:          db,
 				broadcaster: watch.NewBroadcaster(1000, watch.WaitIfChannelFull),
-				table:       "sboms",
+				table:       "image",
 				newFunc:     newFunc,
 				newListFunc: newListFunc,
 			},
@@ -49,7 +49,7 @@ func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, 
 		DeleteStrategy: strategy,
 
 		// TODO: define table converter that exposes more than name/creation timestamp
-		TableConvertor: rest.NewDefaultTableConvertor(v1alpha1.Resource("sboms")),
+		TableConvertor: rest.NewDefaultTableConvertor(v1alpha1.Resource("images")),
 	}
 
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: getAttrs}

@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -40,21 +42,57 @@ func Resource(resource string) schema.GroupResource {
 
 var (
 	// SchemeBuilder is the scheme builder with scheme init functions to run for this API package
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	SchemeBuilder = runtime.NewSchemeBuilder(AddKnownTypes)
 	// AddToScheme is a common registration function for mapping packaged scoped group & version keys to a scheme
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
 // Adds the list of known types to the given scheme.
-func addKnownTypes(scheme *runtime.Scheme) error {
+func AddKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ScanResult{},
-		&ScanResultList{},
+		&Image{},
+		&ImageList{},
+
 		&SBOM{},
 		&SBOMList{},
+
+		&ScanResult{},
+		&ScanResultList{},
+
 		&metav1.GetOptions{},
 		&metav1.CreateOptions{},
 		&metav1.ListOptions{},
 	)
+
+	err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Image"), imageMetadataFieldSelectorConversion)
+	if err != nil {
+		return fmt.Errorf("unable to add field selector conversion function to Image: %w", err)
+	}
+
+	err = scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("SBOM"), imageMetadataFieldSelectorConversion)
+	if err != nil {
+		return fmt.Errorf("unable to add field selector conversion function to SBOM: %w", err)
+	}
 	return nil
+}
+
+func imageMetadataFieldSelectorConversion(label, value string) (string, string, error) {
+	switch label {
+	case "metadata.name":
+		return label, value, nil
+	case "metadata.namespace":
+		return label, value, nil
+	case "spec.imageMetadata.registry":
+		return label, value, nil
+	case "spec.imageMetadata.repository":
+		return label, value, nil
+	case "spec.imageMetadata.tag":
+		return label, value, nil
+	case "spec.imageMetadata.platform":
+		return label, value, nil
+	case "spec.imageMetadata.digest":
+		return label, value, nil
+	default:
+		return "", "", fmt.Errorf("%q is not a known field selector: only %q, %q, %q", label, "metadata.name", "metadata.namespace", "spec.imageMetadata.*")
+	}
 }

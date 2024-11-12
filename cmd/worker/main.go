@@ -22,12 +22,16 @@ import (
 )
 
 func main() {
-	logger, err := zap.NewProduction()
+	// TODO: add CLI flags for log level
+	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %v", err))
 	}
 	defer logger.Sync() //nolint: errcheck // flushes buffer, ignore error
 
+	logger.Info("Starting worker")
+
+	// TODO: add CLI flags for NATS server address
 	sub, err := messaging.NewSubscription("nats://controller-nats.sbombastic.svc.cluster.local",
 		"worker")
 	if err != nil {
@@ -65,10 +69,8 @@ func main() {
 		cancel()
 	}()
 
-	go func() {
-		err := subscriber.Run(ctx)
-		if err != nil {
-			logger.Fatal("Error running worker subscriber", zap.Error(err))
-		}
-	}()
+	err = subscriber.Run(ctx)
+	if err != nil {
+		logger.Fatal("Error running worker subscriber", zap.Error(err))
+	}
 }

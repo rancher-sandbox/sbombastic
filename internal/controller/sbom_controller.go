@@ -18,12 +18,11 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,25 +56,20 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
 	}
 
-	registryName, found := sbom.Labels[v1alpha1.ImageRegistryLabel]
-	if !found {
-		return ctrl.Result{}, errors.New("SBOM does not have a registry label")
-	}
-
 	var sbomList storagev1alpha1.SBOMList
-	err := r.List(ctx, &sbomList, client.InNamespace(req.Namespace), client.MatchingLabelsSelector{
-		Selector: labels.SelectorFromSet(map[string]string{
-			v1alpha1.ImageRegistryLabel: registryName,
+	err := r.List(ctx, &sbomList, client.InNamespace(req.Namespace), client.MatchingFieldsSelector{
+		Selector: fields.SelectorFromSet(map[string]string{
+			"spec.imageMetadata.registry": sbom.GetImageMetadata().Registry,
 		}),
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to list SBOMs: %w", err)
 	}
 
-	var imageList v1alpha1.ImageList
-	err = r.List(ctx, &imageList, client.InNamespace(req.Namespace), client.MatchingLabelsSelector{
-		Selector: labels.SelectorFromSet(map[string]string{
-			v1alpha1.ImageRegistryLabel: registryName,
+	var imageList storagev1alpha1.ImageList
+	err = r.List(ctx, &imageList, client.InNamespace(req.Namespace), client.MatchingFieldsSelector{
+		Selector: fields.SelectorFromSet(map[string]string{
+			"spec.imageMetadata.registry": sbom.GetImageMetadata().Registry,
 		}),
 	})
 	if err != nil {
@@ -84,11 +78,11 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Check if all images have SBOMs
 	if len(sbomList.Items) == len(imageList.Items) {
-		log.Info("Registry discovery is completed.", "name", registryName, "namespace", req.Namespace)
+		log.Info("Registry discovery is completed.", "name", sbom.GetImageMetadata().Registry, "namespace", req.Namespace)
 
 		var registry v1alpha1.Registry
 		err := r.Get(ctx, client.ObjectKey{
-			Name:      registryName,
+			Name:      sbom.GetImageMetadata().Registry,
 			Namespace: req.Namespace,
 		}, &registry)
 		if err != nil {

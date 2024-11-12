@@ -27,6 +27,10 @@ type FakeStorageV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeStorageV1alpha1) Images(namespace string) v1alpha1.ImageInterface {
+	return &FakeImages{c, namespace}
+}
+
 func (c *FakeStorageV1alpha1) SBOMs(namespace string) v1alpha1.SBOMInterface {
 	return &FakeSBOMs{c, namespace}
 }

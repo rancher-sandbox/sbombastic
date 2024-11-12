@@ -110,12 +110,15 @@ func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(v1alpha1.GroupName, Scheme, metav1.ParameterCodec, Codecs)
 
 	v1alpha1storage := map[string]rest.Storage{}
-
+	imageStore, err := storage.NewImageStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
+	if err != nil {
+		return nil, fmt.Errorf("error creating Image store: %w", err)
+	}
 	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
 	if err != nil {
 		return nil, fmt.Errorf("error creating SBOM store: %w", err)
 	}
-
+	v1alpha1storage["images"] = imageStore
 	v1alpha1storage["sboms"] = sbomStore
 	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage
 
