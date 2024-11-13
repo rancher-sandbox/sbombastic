@@ -32,6 +32,7 @@ type ImageList struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registryURI`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`

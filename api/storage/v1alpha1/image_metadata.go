@@ -4,6 +4,8 @@ package v1alpha1
 type ImageMetadata struct {
 	// Registry specifies the name of the Registry object in the same namespace where the image is stored.
 	Registry string `json:"registry"`
+	// RegistryURI specifies the URI of the registry where the image is stored. Example: "registry-1.docker.io:5000".`
+	RegistryURI string `json:"registryURI"`
 	// Repository specifies the repository path of the image. Example: "rancher/sbombastic".
 	Repository string `json:"repository"`
 	// Tag specifies the tag of the image. Example: "latest".

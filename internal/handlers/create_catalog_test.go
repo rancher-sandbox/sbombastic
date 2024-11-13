@@ -33,18 +33,18 @@ import (
 )
 
 func TestCreateCatalogHandler_Handle(t *testing.T) {
-	registryURL := "registry.test"
+	registryURI := "registry.test"
 	repositoryName := "repo1"
 	imageTag := "tag1"
 
-	repository, err := name.NewRepository(path.Join(registryURL, repositoryName))
+	repository, err := name.NewRepository(path.Join(registryURI, repositoryName))
 	require.NoError(t, err)
-	image, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registryURL, repositoryName, imageTag))
+	image, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag))
 	require.NoError(t, err)
 
 	mockRegistryClient := registryMocks.NewClient(t)
 	mockRegistryClient.On("ListRepositoryContents", context.Background(), repository).
-		Return([]string{fmt.Sprintf("%s/%s:%s", registryURL, repositoryName, imageTag)}, nil)
+		Return([]string{fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag)}, nil)
 
 	platformLinuxAmd64 := cranev1.Platform{
 		Architecture: "amd64",
@@ -108,7 +108,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: v1alpha1.RegistrySpec{
-			URL:          registryURL,
+			URI:          registryURI,
 			Repositories: []string{repositoryName},
 		},
 	}
@@ -139,6 +139,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	assert.Equal(t, registry.Namespace, image1.Namespace)
 	assert.Equal(t, registry.Name, image1.GetImageMetadata().Registry)
+	assert.Equal(t, registry.Spec.URI, image1.GetImageMetadata().RegistryURI)
 	assert.Equal(t, repositoryName, image1.GetImageMetadata().Repository)
 	assert.Equal(t, imageTag, image1.GetImageMetadata().Tag)
 	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
@@ -147,6 +148,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	assert.Equal(t, registry.Namespace, image2.Namespace)
 	assert.Equal(t, registry.Name, image2.GetImageMetadata().Registry)
+	assert.Equal(t, registry.Spec.URI, image2.GetImageMetadata().RegistryURI)
 	assert.Equal(t, repositoryName, image2.GetImageMetadata().Repository)
 	assert.Equal(t, imageTag, image2.GetImageMetadata().Tag)
 	assert.Equal(t, digestLinuxArm64.String(), image2.GetImageMetadata().Digest)
@@ -165,7 +167,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			name: "repositories are not specified",
 			registry: &v1alpha1.Registry{
 				Spec: v1alpha1.RegistrySpec{
-					URL:          "registry.test",
+					URI:          "registry.test",
 					Repositories: []string{},
 				},
 			},
@@ -179,7 +181,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			name: "repositories are specified",
 			registry: &v1alpha1.Registry{
 				Spec: v1alpha1.RegistrySpec{
-					URL:          "registry.test",
+					URI:          "registry.test",
 					Repositories: []string{"repo3"},
 				},
 			},
@@ -214,10 +216,10 @@ func TestImageDetailsToImage(t *testing.T) {
 	require.NoError(t, err)
 	numberOfLayers := len(details.Layers)
 
-	registry := "registry.test"
+	registryURI := "registry.test"
 	repo := "repo1"
 	tag := "latest"
-	ref, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registry, repo, tag))
+	ref, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registryURI, repo, tag))
 	require.NoError(t, err)
 
 	image, err := imageDetailsToImage(ref, details, "registry", "default")
@@ -226,6 +228,7 @@ func TestImageDetailsToImage(t *testing.T) {
 	assert.Equal(t, image.Name, computeImageUID(ref, digest.String()))
 	assert.Equal(t, "default", image.Namespace)
 	assert.Equal(t, "registry", image.GetImageMetadata().Registry)
+	assert.Equal(t, registryURI, image.GetImageMetadata().RegistryURI)
 	assert.Equal(t, repo, image.GetImageMetadata().Repository)
 	assert.Equal(t, tag, image.GetImageMetadata().Tag)
 	assert.Equal(t, platform.String(), image.GetImageMetadata().Platform)

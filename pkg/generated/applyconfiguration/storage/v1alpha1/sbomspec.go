@@ -25,7 +25,7 @@ import (
 // with apply.
 type SBOMSpecApplyConfiguration struct {
 	ImageMetadata *ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
-	Data          *runtime.RawExtension            `json:"data,omitempty"`
+	SPDX          *runtime.RawExtension            `json:"spdx,omitempty"`
 }
 
 // SBOMSpecApplyConfiguration constructs a declarative configuration of the SBOMSpec type for use with
@@ -42,10 +42,10 @@ func (b *SBOMSpecApplyConfiguration) WithImageMetadata(value *ImageMetadataApply
 	return b
 }
 
-// WithData sets the Data field in the declarative configuration to the given value
+// WithSPDX sets the SPDX field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Data field is set to the value of the last call.
-func (b *SBOMSpecApplyConfiguration) WithData(value runtime.RawExtension) *SBOMSpecApplyConfiguration {
-	b.Data = &value
+// If called multiple times, the SPDX field is set to the value of the last call.
+func (b *SBOMSpecApplyConfiguration) WithSPDX(value runtime.RawExtension) *SBOMSpecApplyConfiguration {
+	b.SPDX = &value
 	return b
 }

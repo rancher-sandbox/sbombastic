@@ -37,14 +37,14 @@ func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory,
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
-		logger:                logger,
+		logger:                logger.Named("create_catalog_handler"),
 	}
 }
 
 func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	createCatalogMessage, ok := message.(*messaging.CreateCatalog)
 	if !ok {
-		return fmt.Errorf("expected *messaging.CreateCatalog, got %T", message)
+		return fmt.Errorf("expected CreateCatalog, got %T", message)
 	}
 
 	h.logger.Debug("Catalog creation requested",
@@ -52,8 +52,10 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		zap.String("namespace", createCatalogMessage.RegistryNamespace),
 	)
 
+	ctx := context.Background()
+
 	registry := &v1alpha1.Registry{}
-	err := h.k8sClient.Get(context.Background(), client.ObjectKey{
+	err := h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      createCatalogMessage.RegistryName,
 		Namespace: createCatalogMessage.RegistryNamespace,
 	}, registry)
@@ -67,7 +69,6 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 
 	transport := h.transportFromRegistry(registry)
 	registryClient := h.registryClientFactory(transport)
-	ctx := context.Background()
 
 	repositories, err := h.discoverRepositories(ctx, registryClient, registry)
 	if err != nil {
@@ -128,7 +129,7 @@ func (h *CreateCatalogHandler) NewMessage() messaging.Message {
 // discoverRepositories discovers all the repositories in a registry.
 // Returns the list of fully qualified repository names (e.g. registryclientexample.com/repo)
 func (h *CreateCatalogHandler) discoverRepositories(ctx context.Context, registryClient registryclient.Client, registry *v1alpha1.Registry) ([]string, error) {
-	reg, err := name.NewRegistry(registry.Spec.URL)
+	reg, err := name.NewRegistry(registry.Spec.URI)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse registry %s %s: %w", registry.Name, registry.Namespace, err)
 	}
@@ -298,11 +299,12 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:   registryName,
-				Repository: ref.Context().RepositoryStr(),
-				Tag:        ref.Identifier(),
-				Platform:   details.Platform.String(),
-				Digest:     details.Digest.String(),
+				Registry:    registryName,
+				RegistryURI: ref.Context().RegistryStr(),
+				Repository:  ref.Context().RepositoryStr(),
+				Tag:         ref.Identifier(),
+				Platform:    details.Platform.String(),
+				Digest:      details.Digest.String(),
 			},
 			Layers: imageLayers,
 		},

@@ -39,6 +39,15 @@ func (b *ImageSpecApplyConfiguration) WithRegistry(value string) *ImageSpecApply
 	return b
 }
 
+// WithRegistryURI sets the RegistryURI field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the RegistryURI field is set to the value of the last call.
+func (b *ImageSpecApplyConfiguration) WithRegistryURI(value string) *ImageSpecApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.RegistryURI = &value
+	return b
+}
+
 // WithRepository sets the Repository field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Repository field is set to the value of the last call.
@@ -57,21 +66,21 @@ func (b *ImageSpecApplyConfiguration) WithTag(value string) *ImageSpecApplyConfi
 	return b
 }
 
-// WithDigest sets the Digest field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Digest field is set to the value of the last call.
-func (b *ImageSpecApplyConfiguration) WithDigest(value string) *ImageSpecApplyConfiguration {
-	b.ensureImageMetadataApplyConfigurationExists()
-	b.ImageMetadataApplyConfiguration.Digest = &value
-	return b
-}
-
 // WithPlatform sets the Platform field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Platform field is set to the value of the last call.
 func (b *ImageSpecApplyConfiguration) WithPlatform(value string) *ImageSpecApplyConfiguration {
 	b.ensureImageMetadataApplyConfigurationExists()
 	b.ImageMetadataApplyConfiguration.Platform = &value
+	return b
+}
+
+// WithDigest sets the Digest field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Digest field is set to the value of the last call.
+func (b *ImageSpecApplyConfiguration) WithDigest(value string) *ImageSpecApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Digest = &value
 	return b
 }
 

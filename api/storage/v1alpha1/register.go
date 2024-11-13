@@ -84,6 +84,8 @@ func imageMetadataFieldSelectorConversion(label, value string) (string, string, 
 		return label, value, nil
 	case "spec.imageMetadata.registry":
 		return label, value, nil
+	case "spec.imageMetadata.registryURI":
+		return label, value, nil
 	case "spec.imageMetadata.repository":
 		return label, value, nil
 	case "spec.imageMetadata.tag":

@@ -54,7 +54,7 @@ var _ = Describe("Registry Controller", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.RegistrySpec{
-					URL:          "ghcr.io/rancher",
+					URI:          "ghcr.io/rancher",
 					Repositories: []string{"sbombastic"},
 				},
 			}
@@ -157,7 +157,7 @@ var _ = Describe("Registry Controller", func() {
 					},
 				},
 				Spec: v1alpha1.RegistrySpec{
-					URL:          "ghcr.io/rancher",
+					URI:          "ghcr.io/rancher",
 					Repositories: []string{"sbombastic-dev", "sbombastic-prod"},
 				},
 			}

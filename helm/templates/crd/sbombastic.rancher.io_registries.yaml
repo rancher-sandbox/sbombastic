@@ -58,8 +58,8 @@ spec:
                 items:
                   type: string
                 type: array
-              url:
-                description: URL is the URL of the container registry
+              uri:
+                description: URI is the URI of the container registry
                 type: string
             type: object
           status:
