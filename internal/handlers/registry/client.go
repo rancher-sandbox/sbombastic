@@ -58,7 +58,7 @@ type client struct {
 func NewClient(transport http.RoundTripper, logger *zap.Logger) Client {
 	return &client{
 		transport: transport,
-		logger:    logger.With(zap.String("component", "registry-client")),
+		logger:    logger.Named("registry_client"),
 	}
 }
 
