@@ -17,6 +17,12 @@ spec:
     spec:
       serviceAccountName: controller-manager
       containers:
-        - name: wardle-server
+        - name: worker
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp-volume
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
