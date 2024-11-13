@@ -1,0 +1,69 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "docker.io/busybox:1.37.0",
+  "documentNamespace": "http://aquasecurity.github.io/trivy/container_image/docker.io/busybox:1.37.0-6710085e-e250-4707-b32d-622386cd36cf",
+  "creationInfo": {
+    "creators": [
+      "Organization: aquasecurity",
+      "Tool: trivy-dev"
+    ],
+    "created": "2024-11-13T11:26:32Z"
+  },
+  "packages": [
+    {
+      "name": "docker.io/busybox:1.37.0",
+      "SPDXID": "SPDXRef-ContainerImage-d3b9519a14ac59dd",
+      "downloadLocation": "NONE",
+      "filesAnalyzed": false,
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:oci/busybox@sha256%3A768e5c6f5cb6db0794eec98dc7a967f40631746c32232b78a3105fb946f3ab83?arch=amd64\u0026repository_url=index.docker.io%2Flibrary%2Fbusybox"
+        }
+      ],
+      "primaryPackagePurpose": "CONTAINER",
+      "annotations": [
+        {
+          "annotator": "Tool: trivy-dev",
+          "annotationDate": "2024-11-13T11:26:32Z",
+          "annotationType": "OTHER",
+          "comment": "DiffID: sha256:58f32e9504c8eb248292326a1975174b0560f7a3ad1b75880b9571c4eb7144a0"
+        },
+        {
+          "annotator": "Tool: trivy-dev",
+          "annotationDate": "2024-11-13T11:26:32Z",
+          "annotationType": "OTHER",
+          "comment": "ImageID: sha256:27a71e19c95622dce4d60d4a3760707495c9875f5c5322c5bd535214799593ce"
+        },
+        {
+          "annotator": "Tool: trivy-dev",
+          "annotationDate": "2024-11-13T11:26:32Z",
+          "annotationType": "OTHER",
+          "comment": "RepoDigest: busybox@sha256:768e5c6f5cb6db0794eec98dc7a967f40631746c32232b78a3105fb946f3ab83"
+        },
+        {
+          "annotator": "Tool: trivy-dev",
+          "annotationDate": "2024-11-13T11:26:32Z",
+          "annotationType": "OTHER",
+          "comment": "RepoTag: busybox:1.37.0"
+        },
+        {
+          "annotator": "Tool: trivy-dev",
+          "annotationDate": "2024-11-13T11:26:32Z",
+          "annotationType": "OTHER",
+          "comment": "SchemaVersion: 2"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-ContainerImage-d3b9519a14ac59dd",
+      "relationshipType": "DESCRIBES"
+    }
+  ]
+}
