@@ -6,13 +6,15 @@ import (
 	"io"
 	"os"
 
-	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 	"go.uber.org/zap"
+
+	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 type GenerateSBOMHandler struct {
@@ -32,7 +34,7 @@ func NewGenerateSBOMHandler(k8sClient client.Client, workDir string, logger *zap
 func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	generateSBOMMessage, ok := message.(*messaging.GenerateSBOM)
 	if !ok {
-		return fmt.Errorf("expected GenerateSBOM, got %T", message)
+		return fmt.Errorf("unexpected message type: %T", message)
 	}
 
 	h.logger.Debug("SBOM generation requested",
@@ -57,22 +59,22 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 
 	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
 	if err != nil {
-		return fmt.Errorf("failed to create temporary file: %w", err)
+		return fmt.Errorf("failed to create temporary SBOM file: %w", err)
 	}
 	defer func() {
 		if err := sbomFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary file", zap.Error(err))
+			h.logger.Error("failed to close temporary SBOM file", zap.Error(err))
 		}
 
 		if err := os.Remove(sbomFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary file", zap.Error(err))
+			h.logger.Error("failed to remove temporary SBOM file", zap.Error(err))
 		}
 	}()
 
 	app := trivyCommands.NewApp()
 	app.SetArgs([]string{
 		"image",
-		"--cache-dir", "/tmp",
+		"--cache-dir", h.workDir,
 		"--format", "spdx-json",
 		"--output", sbomFile.Name(),
 		fmt.Sprintf("%s/%s:%s", image.GetImageMetadata().RegistryURI, image.GetImageMetadata().Repository, image.GetImageMetadata().Tag),
@@ -82,9 +84,12 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.Debug("SBOM generated")
+	h.logger.Debug("SBOM generated",
+		zap.String("image", image.Name),
+		zap.String("namespace", image.Namespace),
+	)
 
-	bytes, err := io.ReadAll(sbomFile)
+	spdxBytes, err := io.ReadAll(sbomFile)
 	if err != nil {
 		return fmt.Errorf("failed to read SBOM output: %w", err)
 	}
@@ -96,7 +101,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		},
 		Spec: storagev1alpha1.SBOMSpec{
 			ImageMetadata: image.GetImageMetadata(),
-			SPDX:          runtime.RawExtension{Raw: bytes},
+			SPDX:          runtime.RawExtension{Raw: spdxBytes},
 		},
 	}
 	if err := h.k8sClient.Create(ctx, sbom); err != nil {
