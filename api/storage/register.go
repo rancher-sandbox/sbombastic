@@ -32,8 +32,14 @@ var (
 // Adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&v1alpha1.Image{},
+		&v1alpha1.ImageList{},
+
 		&v1alpha1.SBOM{},
 		&v1alpha1.SBOMList{},
+
+		&v1alpha1.VulnerabilityReport{},
+		&v1alpha1.VulnerabilityReportList{},
 	)
 	return nil
 }

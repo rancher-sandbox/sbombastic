@@ -29,7 +29,7 @@ type StorageV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ImagesGetter
 	SBOMsGetter
-	ScanResultsGetter
+	VulnerabilityReportsGetter
 }
 
 // StorageV1alpha1Client is used to interact with features provided by the storage.sbombastic.rancher.io group.
@@ -45,8 +45,8 @@ func (c *StorageV1alpha1Client) SBOMs(namespace string) SBOMInterface {
 	return newSBOMs(c, namespace)
 }
 
-func (c *StorageV1alpha1Client) ScanResults(namespace string) ScanResultInterface {
-	return newScanResults(c, namespace)
+func (c *StorageV1alpha1Client) VulnerabilityReports(namespace string) VulnerabilityReportInterface {
+	return newVulnerabilityReports(c, namespace)
 }
 
 // NewForConfig creates a new StorageV1alpha1Client for the given config.
