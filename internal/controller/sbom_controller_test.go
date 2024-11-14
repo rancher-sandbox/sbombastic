@@ -30,6 +30,8 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
+	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
 var _ = Describe("SBOM Controller", func() {
@@ -98,6 +100,14 @@ var _ = Describe("SBOM Controller", func() {
 		})
 
 		It("should successfully reconcile the resource", func(ctx context.Context) {
+			By("Ensuring the right message is published to the worker queue")
+			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
+			mockPublisher.On("Publish", &messaging.ScanSBOM{
+				SBOMName:      sbom.Name,
+				SBOMNamespace: sbom.Namespace,
+			}).Return(nil)
+			reconciler.Publisher = mockPublisher
+
 			By("Reconciling the Registry")
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{

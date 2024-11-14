@@ -30,12 +30,14 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // SBOMReconciler reconciles a SBOM object
 type SBOMReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme    *runtime.Scheme
+	Publisher messaging.Publisher
 }
 
 // +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=sboms,verbs=get;list;watch;create;update;patch;delete
@@ -54,6 +56,14 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 
 		return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
+	}
+
+	scanSBOM := &messaging.ScanSBOM{
+		SBOMName:      sbom.Name,
+		SBOMNamespace: sbom.Namespace,
+	}
+	if err := r.Publisher.Publish(scanSBOM); err != nil {
+		return ctrl.Result{}, fmt.Errorf("unable to publish ScanSBOM message: %w", err)
 	}
 
 	var sbomList storagev1alpha1.SBOMList
