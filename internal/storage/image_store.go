@@ -39,7 +39,7 @@ func NewImageStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter,
 			Storage: &store{
 				db:          db,
 				broadcaster: watch.NewBroadcaster(1000, watch.WaitIfChannelFull),
-				table:       "image",
+				table:       "images",
 				newFunc:     newFunc,
 				newListFunc: newListFunc,
 			},

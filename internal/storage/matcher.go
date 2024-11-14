@@ -40,11 +40,12 @@ func getAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	}
 
 	selectableFields := fields.Set{
-		"spec.imageMetadata.Registry":   imageMetadataAccessor.GetImageMetadata().Registry,
-		"spec.imageMetadata.Repository": imageMetadataAccessor.GetImageMetadata().Repository,
-		"spec.imageMetadata.Tag":        imageMetadataAccessor.GetImageMetadata().Tag,
-		"spec.imageMetadata.Platform":   imageMetadataAccessor.GetImageMetadata().Platform,
-		"spec.imageMetadata.Digest":     imageMetadataAccessor.GetImageMetadata().Digest,
+		"spec.imageMetadata.Registry":    imageMetadataAccessor.GetImageMetadata().Registry,
+		"spec.imageMetadata.RegistryURI": imageMetadataAccessor.GetImageMetadata().RegistryURI,
+		"spec.imageMetadata.Repository":  imageMetadataAccessor.GetImageMetadata().Repository,
+		"spec.imageMetadata.Tag":         imageMetadataAccessor.GetImageMetadata().Tag,
+		"spec.imageMetadata.Platform":    imageMetadataAccessor.GetImageMetadata().Platform,
+		"spec.imageMetadata.Digest":      imageMetadataAccessor.GetImageMetadata().Digest,
 	}
 
 	return labels.Set(objMeta.GetLabels()), generic.MergeFieldsSets(selectableMetadata, selectableFields), nil

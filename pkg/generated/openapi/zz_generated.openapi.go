@@ -236,45 +236,59 @@ func schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "ImageMetadata contains the metadata details of an image.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"registry": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Registry specifies the name of the Registry object in the same namespace where the image is stored.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"registryURI": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RegistryURI specifies the URI of the registry where the image is stored. Example: \"registry-1.docker.io:5000\".`",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"repository": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Repository specifies the repository path of the image. Example: \"rancher/sbombastic\".",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"tag": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
-						},
-					},
-					"digest": {
-						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Tag specifies the tag of the image. Example: \"latest\".",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"platform": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Platform specifies the platform of the image. Example \"linux/amd64\".",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Digest specifies the sha256 digest of the image.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
-				Required: []string{"registry", "repository", "tag", "digest", "platform"},
+				Required: []string{"registry", "registryURI", "repository", "tag", "platform", "digest"},
 			},
 		},
 	}
@@ -437,13 +451,14 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref common.ReferenceCallbac
 							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
 						},
 					},
-					"data": {
+					"spdx": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+							Description: "SPDX contains the SPDX document of the SBOM in JSON format",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
-				Required: []string{"imageMetadata", "data"},
+				Required: []string{"imageMetadata", "spdx"},
 			},
 		},
 		Dependencies: []string{

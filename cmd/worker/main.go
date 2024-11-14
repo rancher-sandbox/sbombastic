@@ -53,10 +53,10 @@ func main() {
 	registryClientFactory := func(transport http.RoundTripper) registry.Client {
 		return registry.NewClient(transport, logger)
 	}
-	createCatalogHandler := handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, logger)
 
 	handlers := messaging.HandlerRegistry{
-		messaging.CreateCatalogType: createCatalogHandler,
+		messaging.CreateCatalogType: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, logger),
+		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, "/var/run/worker", logger),
 	}
 	subscriber := messaging.NewSubscriber(sub, handlers, logger)
 

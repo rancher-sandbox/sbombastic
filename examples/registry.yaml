@@ -3,7 +3,5 @@ kind: Registry
 metadata:
   name: my-first-registry
   namespace: default
-  labels:
-    sample-label: "true"
 spec:
-  foo: bar
+  uri: docker-registry.default.svc.cluster.local

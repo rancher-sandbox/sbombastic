@@ -43,19 +43,32 @@ spec:
                 description: Metadata of the image
                 properties:
                   digest:
+                    description: Digest specifies the sha256 digest of the image.
                     type: string
                   platform:
+                    description: Platform specifies the platform of the image. Example
+                      "linux/amd64".
                     type: string
                   registry:
+                    description: Registry specifies the name of the Registry object
+                      in the same namespace where the image is stored.
+                    type: string
+                  registryURI:
+                    description: 'RegistryURI specifies the URI of the registry where
+                      the image is stored. Example: "registry-1.docker.io:5000".`'
                     type: string
                   repository:
+                    description: 'Repository specifies the repository path of the
+                      image. Example: "rancher/sbombastic".'
                     type: string
                   tag:
+                    description: 'Tag specifies the tag of the image. Example: "latest".'
                     type: string
                 required:
                 - digest
                 - platform
                 - registry
+                - registryURI
                 - repository
                 - tag
                 type: object
@@ -90,9 +103,10 @@ spec:
         type: object
     selectableFields:
     - jsonPath: .spec.imageMetadata.registry
+    - jsonPath: .spec.imageMetadata.registryURI
     - jsonPath: .spec.imageMetadata.repository
     - jsonPath: .spec.imageMetadata.tag
-    - jsonPath: .spec.imageMetadata.digest
     - jsonPath: .spec.imageMetadata.platform
+    - jsonPath: .spec.imageMetadata.digest
     served: true
     storage: true

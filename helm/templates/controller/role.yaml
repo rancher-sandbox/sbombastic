@@ -7,7 +7,6 @@ rules:
 - apiGroups:
   - sbombastic.rancher.io
   resources:
-  - images
   - registries
   verbs:
   - create
@@ -20,14 +19,12 @@ rules:
 - apiGroups:
   - sbombastic.rancher.io
   resources:
-  - images/finalizers
   - registries/finalizers
   verbs:
   - update
 - apiGroups:
   - sbombastic.rancher.io
   resources:
-  - images/status
   - registries/status
   verbs:
   - get
@@ -36,6 +33,7 @@ rules:
 - apiGroups:
   - storage.sbombastic.rancher.io
   resources:
+  - images
   - sboms
   verbs:
   - create
@@ -48,12 +46,14 @@ rules:
 - apiGroups:
   - storage.sbombastic.rancher.io
   resources:
+  - images/finalizers
   - sboms/finalizers
   verbs:
   - update
 - apiGroups:
   - storage.sbombastic.rancher.io
   resources:
+  - images/status
   - sboms/status
   verbs:
   - get

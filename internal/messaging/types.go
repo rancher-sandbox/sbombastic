@@ -15,13 +15,13 @@ func (m *CreateCatalog) MessageType() string {
 	return CreateCatalogType
 }
 
-const CreateSBOMType = "CreateSBOM"
+const GenerateSBOMType = "GenerateSBOM"
 
-type CreateSBOM struct {
+type GenerateSBOM struct {
 	ImageName      string `json:"imageName"`
 	ImageNamespace string `json:"imageNamespace"`
 }
 
-func (m *CreateSBOM) MessageType() string {
-	return CreateSBOMType
+func (m *GenerateSBOM) MessageType() string {
+	return GenerateSBOMType
 }

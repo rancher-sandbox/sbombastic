@@ -56,7 +56,7 @@ var _ = Describe("Image Controller", func() {
 		It("should successfully reconcile the resource", func(ctx context.Context) {
 			By("Ensuring the right message is published to the worker queue")
 			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
-			mockPublisher.On("Publish", &messaging.CreateSBOM{
+			mockPublisher.On("Publish", &messaging.GenerateSBOM{
 				ImageName:      image.Name,
 				ImageNamespace: image.Namespace,
 			}).Return(nil)

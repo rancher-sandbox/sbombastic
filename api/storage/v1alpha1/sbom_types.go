@@ -33,6 +33,7 @@ type SBOMList struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registryURI`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
@@ -49,8 +50,9 @@ type SBOM struct {
 
 // SBOMSpec defines the desired state of a SBOM
 type SBOMSpec struct {
-	ImageMetadata ImageMetadata        `json:"imageMetadata"`
-	Data          runtime.RawExtension `json:"data"`
+	ImageMetadata ImageMetadata `json:"imageMetadata"`
+	// SPDX contains the SPDX document of the SBOM in JSON format
+	SPDX runtime.RawExtension `json:"spdx"`
 }
 
 // SBOMStatus defines the observed state of a SBOM

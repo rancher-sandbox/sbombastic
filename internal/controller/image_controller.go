@@ -37,9 +37,9 @@ type ImageReconciler struct {
 	Publisher messaging.Publisher
 }
 
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=images/finalizers,verbs=update
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=images,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=images/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=images/finalizers,verbs=update
 
 // Reconcile reconciles an Image.
 // If the Image doesn't have the SBOM, it sends a create SBOM request to the workers.
@@ -60,7 +60,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		if apierrors.IsNotFound(err) {
 			log.Info("Creating SBOM of Image", "name", image.Name, "namespace", image.Namespace)
 
-			msg := messaging.CreateSBOM{
+			msg := messaging.GenerateSBOM{
 				ImageName:      image.Name,
 				ImageNamespace: image.Namespace,
 			}

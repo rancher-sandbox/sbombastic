@@ -220,7 +220,7 @@ func (in *SBOMList) DeepCopyObject() runtime.Object {
 func (in *SBOMSpec) DeepCopyInto(out *SBOMSpec) {
 	*out = *in
 	out.ImageMetadata = in.ImageMetadata
-	in.Data.DeepCopyInto(&out.Data)
+	in.SPDX.DeepCopyInto(&out.SPDX)
 	return
 }
 

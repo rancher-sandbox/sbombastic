@@ -51,7 +51,7 @@ var _ = Describe("SBOM Controller", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.RegistrySpec{
-					URL:          "ghcr.io/rancher",
+					URI:          "ghcr.io/rancher",
 					Repositories: []string{"sbombastic"},
 				},
 			}
@@ -89,7 +89,7 @@ var _ = Describe("SBOM Controller", func() {
 						Platform:   "linux/amd64",
 						Digest:     "sha:123",
 					},
-					Data: runtime.RawExtension{
+					SPDX: runtime.RawExtension{
 						Raw: []byte("{}"),
 					},
 				},

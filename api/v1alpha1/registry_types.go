@@ -27,8 +27,8 @@ const (
 
 // RegistrySpec defines the desired state of Registry
 type RegistrySpec struct {
-	// URL is the URL of the container registry
-	URL string `json:"url,omitempty"`
+	// URI is the URI of the container registry
+	URI string `json:"uri,omitempty"`
 	// Repositories is the list of the repositories to be scanned
 	// An empty list means all the repositories found in the registry are going to be scanned
 	Repositories []string `json:"repositories,omitempty"`

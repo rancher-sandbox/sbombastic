@@ -20,11 +20,12 @@ package v1alpha1
 // ImageMetadataApplyConfiguration represents a declarative configuration of the ImageMetadata type for use
 // with apply.
 type ImageMetadataApplyConfiguration struct {
-	Registry   *string `json:"registry,omitempty"`
-	Repository *string `json:"repository,omitempty"`
-	Tag        *string `json:"tag,omitempty"`
-	Digest     *string `json:"digest,omitempty"`
-	Platform   *string `json:"platform,omitempty"`
+	Registry    *string `json:"registry,omitempty"`
+	RegistryURI *string `json:"registryURI,omitempty"`
+	Repository  *string `json:"repository,omitempty"`
+	Tag         *string `json:"tag,omitempty"`
+	Platform    *string `json:"platform,omitempty"`
+	Digest      *string `json:"digest,omitempty"`
 }
 
 // ImageMetadataApplyConfiguration constructs a declarative configuration of the ImageMetadata type for use with
@@ -38,6 +39,14 @@ func ImageMetadata() *ImageMetadataApplyConfiguration {
 // If called multiple times, the Registry field is set to the value of the last call.
 func (b *ImageMetadataApplyConfiguration) WithRegistry(value string) *ImageMetadataApplyConfiguration {
 	b.Registry = &value
+	return b
+}
+
+// WithRegistryURI sets the RegistryURI field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the RegistryURI field is set to the value of the last call.
+func (b *ImageMetadataApplyConfiguration) WithRegistryURI(value string) *ImageMetadataApplyConfiguration {
+	b.RegistryURI = &value
 	return b
 }
 
@@ -57,18 +66,18 @@ func (b *ImageMetadataApplyConfiguration) WithTag(value string) *ImageMetadataAp
 	return b
 }
 
-// WithDigest sets the Digest field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Digest field is set to the value of the last call.
-func (b *ImageMetadataApplyConfiguration) WithDigest(value string) *ImageMetadataApplyConfiguration {
-	b.Digest = &value
-	return b
-}
-
 // WithPlatform sets the Platform field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Platform field is set to the value of the last call.
 func (b *ImageMetadataApplyConfiguration) WithPlatform(value string) *ImageMetadataApplyConfiguration {
 	b.Platform = &value
+	return b
+}
+
+// WithDigest sets the Digest field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Digest field is set to the value of the last call.
+func (b *ImageMetadataApplyConfiguration) WithDigest(value string) *ImageMetadataApplyConfiguration {
+	b.Digest = &value
 	return b
 }

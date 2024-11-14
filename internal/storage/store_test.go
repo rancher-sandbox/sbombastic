@@ -334,7 +334,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					UID:       "test-uid",
 				},
 				Spec: v1alpha1.SBOMSpec{
-					Data: runtime.RawExtension{
+					SPDX: runtime.RawExtension{
 						Raw: []byte("{}"),
 					},
 				},
@@ -347,7 +347,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					ResourceVersion: "2",
 				},
 				Spec: v1alpha1.SBOMSpec{
-					Data: runtime.RawExtension{
+					SPDX: runtime.RawExtension{
 						Raw: []byte(`{"foo": "bar"}`),
 					},
 				},
@@ -366,7 +366,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					UID:       "test-uid",
 				},
 				Spec: v1alpha1.SBOMSpec{
-					Data: runtime.RawExtension{
+					SPDX: runtime.RawExtension{
 						Raw: []byte("{}"),
 					},
 				},
@@ -397,7 +397,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			}
 
 			tryUpdate := func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
-				input.(*v1alpha1.SBOM).Spec.Data.Raw = []byte(`{"foo": "bar"}`)
+				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo": "bar"}`)
 
 				return input, ptr.To(uint64(0)), nil
 			}
