@@ -73,6 +73,7 @@ spec:
                 - tag
                 type: object
               spdx:
+                description: SPDX contains the SPDX document of the SBOM in JSON format
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
             required:

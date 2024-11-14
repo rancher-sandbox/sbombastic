@@ -453,7 +453,8 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref common.ReferenceCallbac
 					},
 					"spdx": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+							Description: "SPDX contains the SPDX document of the SBOM in JSON format",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
