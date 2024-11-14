@@ -44,7 +44,7 @@ func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory,
 func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	createCatalogMessage, ok := message.(*messaging.CreateCatalog)
 	if !ok {
-		return fmt.Errorf("expected CreateCatalog, got %T", message)
+		return fmt.Errorf("unexpected message type: %T", message)
 	}
 
 	h.logger.Debug("Catalog creation requested",
