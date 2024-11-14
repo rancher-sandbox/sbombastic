@@ -55,7 +55,7 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	err = json.Unmarshal(data, expectedSPDX)
 	require.NoError(t, err)
 
-	handler := NewGenerateSBOMHandler(k8sClient, zap.NewNop())
+	handler := NewGenerateSBOMHandler(k8sClient, "/tmp", zap.NewNop())
 
 	err = handler.Handle(&messaging.GenerateSBOM{
 		ImageName:      image.Name,

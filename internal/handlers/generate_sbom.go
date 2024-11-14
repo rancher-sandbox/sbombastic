@@ -17,12 +17,14 @@ import (
 
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
+	workDir   string
 	logger    *zap.Logger
 }
 
-func NewGenerateSBOMHandler(k8sClient client.Client, logger *zap.Logger) *GenerateSBOMHandler {
+func NewGenerateSBOMHandler(k8sClient client.Client, workDir string, logger *zap.Logger) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
 		k8sClient: k8sClient,
+		workDir:   workDir,
 		logger:    logger.Named("generate_sbom_handler"),
 	}
 }
@@ -53,7 +55,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		zap.Any("image", image),
 	)
 
-	sbomFile, err := os.CreateTemp("/tmp", "trivy.sbom.*.json")
+	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %w", err)
 	}

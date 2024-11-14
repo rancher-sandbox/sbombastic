@@ -21,8 +21,8 @@ spec:
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
           volumeMounts:
-            - mountPath: /tmp
-              name: tmp-volume
+            - mountPath: /var/run/worker
+              name: run-volume
       volumes:
-        - name: tmp-volume
+        - name: run-volume
           emptyDir: {}
