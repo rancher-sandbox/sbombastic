@@ -90,6 +90,10 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		"sbom",
 		"--cache-dir", h.workDir,
 		"--format", "sarif",
+		// Use the public ECR repository to bypass GitHub's rate limits.
+		// Refer to https://github.com/orgs/community/discussions/139074 for details.
+		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
+		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
 		"--output", reportFile.Name(),
 		sbomFile.Name(),
 	})
