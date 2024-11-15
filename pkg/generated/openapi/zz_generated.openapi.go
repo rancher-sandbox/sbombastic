@@ -28,73 +28,73 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.Image":            schema_sbombastic_api_storage_v1alpha1_Image(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer":       schema_sbombastic_api_storage_v1alpha1_ImageLayer(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageList":        schema_sbombastic_api_storage_v1alpha1_ImageList(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata":    schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec":        schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageStatus":      schema_sbombastic_api_storage_v1alpha1_ImageStatus(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":             schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":         schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec":         schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMStatus":       schema_sbombastic_api_storage_v1alpha1_SBOMStatus(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult":       schema_sbombastic_api_storage_v1alpha1_ScanResult(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultList":   schema_sbombastic_api_storage_v1alpha1_ScanResultList(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultSpec":   schema_sbombastic_api_storage_v1alpha1_ScanResultSpec(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultStatus": schema_sbombastic_api_storage_v1alpha1_ScanResultStatus(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                       schema_pkg_apis_meta_v1_APIGroup(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroupList":                   schema_pkg_apis_meta_v1_APIGroupList(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResource":                    schema_pkg_apis_meta_v1_APIResource(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResourceList":                schema_pkg_apis_meta_v1_APIResourceList(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.APIVersions":                    schema_pkg_apis_meta_v1_APIVersions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ApplyOptions":                   schema_pkg_apis_meta_v1_ApplyOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Condition":                      schema_pkg_apis_meta_v1_Condition(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions":                  schema_pkg_apis_meta_v1_CreateOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions":                  schema_pkg_apis_meta_v1_DeleteOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Duration":                       schema_pkg_apis_meta_v1_Duration(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.FieldSelectorRequirement":       schema_pkg_apis_meta_v1_FieldSelectorRequirement(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.FieldsV1":                       schema_pkg_apis_meta_v1_FieldsV1(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions":                     schema_pkg_apis_meta_v1_GetOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupKind":                      schema_pkg_apis_meta_v1_GroupKind(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupResource":                  schema_pkg_apis_meta_v1_GroupResource(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersion":                   schema_pkg_apis_meta_v1_GroupVersion(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionForDiscovery":       schema_pkg_apis_meta_v1_GroupVersionForDiscovery(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionKind":               schema_pkg_apis_meta_v1_GroupVersionKind(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionResource":           schema_pkg_apis_meta_v1_GroupVersionResource(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.InternalEvent":                  schema_pkg_apis_meta_v1_InternalEvent(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector":                  schema_pkg_apis_meta_v1_LabelSelector(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement":       schema_pkg_apis_meta_v1_LabelSelectorRequirement(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.List":                           schema_pkg_apis_meta_v1_List(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta":                       schema_pkg_apis_meta_v1_ListMeta(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions":                    schema_pkg_apis_meta_v1_ListOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ManagedFieldsEntry":             schema_pkg_apis_meta_v1_ManagedFieldsEntry(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime":                      schema_pkg_apis_meta_v1_MicroTime(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta":                     schema_pkg_apis_meta_v1_ObjectMeta(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.OwnerReference":                 schema_pkg_apis_meta_v1_OwnerReference(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.PartialObjectMetadata":          schema_pkg_apis_meta_v1_PartialObjectMetadata(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.PartialObjectMetadataList":      schema_pkg_apis_meta_v1_PartialObjectMetadataList(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Patch":                          schema_pkg_apis_meta_v1_Patch(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions":                   schema_pkg_apis_meta_v1_PatchOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Preconditions":                  schema_pkg_apis_meta_v1_Preconditions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.RootPaths":                      schema_pkg_apis_meta_v1_RootPaths(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.ServerAddressByClientCIDR":      schema_pkg_apis_meta_v1_ServerAddressByClientCIDR(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Status":                         schema_pkg_apis_meta_v1_Status(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusCause":                    schema_pkg_apis_meta_v1_StatusCause(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusDetails":                  schema_pkg_apis_meta_v1_StatusDetails(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Table":                          schema_pkg_apis_meta_v1_Table(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.TableColumnDefinition":          schema_pkg_apis_meta_v1_TableColumnDefinition(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.TableOptions":                   schema_pkg_apis_meta_v1_TableOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.TableRow":                       schema_pkg_apis_meta_v1_TableRow(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.TableRowCondition":              schema_pkg_apis_meta_v1_TableRowCondition(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Time":                           schema_pkg_apis_meta_v1_Time(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Timestamp":                      schema_pkg_apis_meta_v1_Timestamp(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.TypeMeta":                       schema_pkg_apis_meta_v1_TypeMeta(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions":                  schema_pkg_apis_meta_v1_UpdateOptions(ref),
-		"k8s.io/apimachinery/pkg/apis/meta/v1.WatchEvent":                     schema_pkg_apis_meta_v1_WatchEvent(ref),
-		"k8s.io/apimachinery/pkg/runtime.RawExtension":                        schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref),
-		"k8s.io/apimachinery/pkg/runtime.TypeMeta":                            schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
-		"k8s.io/apimachinery/pkg/runtime.Unknown":                             schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
-		"k8s.io/apimachinery/pkg/version.Info":                                schema_k8sio_apimachinery_pkg_version_Info(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.Image":                     schema_sbombastic_api_storage_v1alpha1_Image(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer":                schema_sbombastic_api_storage_v1alpha1_ImageLayer(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageList":                 schema_sbombastic_api_storage_v1alpha1_ImageList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata":             schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec":                 schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageStatus":               schema_sbombastic_api_storage_v1alpha1_ImageStatus(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":                      schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":                  schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec":                  schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMStatus":                schema_sbombastic_api_storage_v1alpha1_SBOMStatus(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport":       schema_sbombastic_api_storage_v1alpha1_VulnerabilityReport(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportList":   schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec":   schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportSpec(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportStatus": schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportStatus(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                                schema_pkg_apis_meta_v1_APIGroup(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroupList":                            schema_pkg_apis_meta_v1_APIGroupList(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResource":                             schema_pkg_apis_meta_v1_APIResource(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResourceList":                         schema_pkg_apis_meta_v1_APIResourceList(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.APIVersions":                             schema_pkg_apis_meta_v1_APIVersions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ApplyOptions":                            schema_pkg_apis_meta_v1_ApplyOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Condition":                               schema_pkg_apis_meta_v1_Condition(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions":                           schema_pkg_apis_meta_v1_CreateOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions":                           schema_pkg_apis_meta_v1_DeleteOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Duration":                                schema_pkg_apis_meta_v1_Duration(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.FieldSelectorRequirement":                schema_pkg_apis_meta_v1_FieldSelectorRequirement(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.FieldsV1":                                schema_pkg_apis_meta_v1_FieldsV1(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions":                              schema_pkg_apis_meta_v1_GetOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupKind":                               schema_pkg_apis_meta_v1_GroupKind(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupResource":                           schema_pkg_apis_meta_v1_GroupResource(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersion":                            schema_pkg_apis_meta_v1_GroupVersion(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionForDiscovery":                schema_pkg_apis_meta_v1_GroupVersionForDiscovery(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionKind":                        schema_pkg_apis_meta_v1_GroupVersionKind(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.GroupVersionResource":                    schema_pkg_apis_meta_v1_GroupVersionResource(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.InternalEvent":                           schema_pkg_apis_meta_v1_InternalEvent(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector":                           schema_pkg_apis_meta_v1_LabelSelector(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement":                schema_pkg_apis_meta_v1_LabelSelectorRequirement(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.List":                                    schema_pkg_apis_meta_v1_List(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta":                                schema_pkg_apis_meta_v1_ListMeta(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions":                             schema_pkg_apis_meta_v1_ListOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ManagedFieldsEntry":                      schema_pkg_apis_meta_v1_ManagedFieldsEntry(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime":                               schema_pkg_apis_meta_v1_MicroTime(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta":                              schema_pkg_apis_meta_v1_ObjectMeta(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.OwnerReference":                          schema_pkg_apis_meta_v1_OwnerReference(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.PartialObjectMetadata":                   schema_pkg_apis_meta_v1_PartialObjectMetadata(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.PartialObjectMetadataList":               schema_pkg_apis_meta_v1_PartialObjectMetadataList(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Patch":                                   schema_pkg_apis_meta_v1_Patch(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions":                            schema_pkg_apis_meta_v1_PatchOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Preconditions":                           schema_pkg_apis_meta_v1_Preconditions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.RootPaths":                               schema_pkg_apis_meta_v1_RootPaths(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.ServerAddressByClientCIDR":               schema_pkg_apis_meta_v1_ServerAddressByClientCIDR(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Status":                                  schema_pkg_apis_meta_v1_Status(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusCause":                             schema_pkg_apis_meta_v1_StatusCause(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.StatusDetails":                           schema_pkg_apis_meta_v1_StatusDetails(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Table":                                   schema_pkg_apis_meta_v1_Table(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.TableColumnDefinition":                   schema_pkg_apis_meta_v1_TableColumnDefinition(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.TableOptions":                            schema_pkg_apis_meta_v1_TableOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.TableRow":                                schema_pkg_apis_meta_v1_TableRow(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.TableRowCondition":                       schema_pkg_apis_meta_v1_TableRowCondition(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Time":                                    schema_pkg_apis_meta_v1_Time(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Timestamp":                               schema_pkg_apis_meta_v1_Timestamp(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.TypeMeta":                                schema_pkg_apis_meta_v1_TypeMeta(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions":                           schema_pkg_apis_meta_v1_UpdateOptions(ref),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.WatchEvent":                              schema_pkg_apis_meta_v1_WatchEvent(ref),
+		"k8s.io/apimachinery/pkg/runtime.RawExtension":                                 schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref),
+		"k8s.io/apimachinery/pkg/runtime.TypeMeta":                                     schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
+		"k8s.io/apimachinery/pkg/runtime.Unknown":                                      schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
+		"k8s.io/apimachinery/pkg/version.Info":                                         schema_k8sio_apimachinery_pkg_version_Info(ref),
 	}
 }
 
@@ -477,11 +477,11 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMStatus(ref common.ReferenceCallb
 	}
 }
 
-func schema_sbombastic_api_storage_v1alpha1_ScanResult(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReport(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ScanResult is the Schema for the scanresults API",
+				Description: "VulnerabilityReport is the Schema for the scanresults API",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -507,28 +507,28 @@ func schema_sbombastic_api_storage_v1alpha1_ScanResult(ref common.ReferenceCallb
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultSpec"),
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultStatus"),
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultSpec", "github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResultStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec", "github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
-func schema_sbombastic_api_storage_v1alpha1_ScanResultList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ScanResultList contains a list of ScanResult",
+				Description: "VulnerabilityReportList contains a list of ScanResult",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -558,7 +558,7 @@ func schema_sbombastic_api_storage_v1alpha1_ScanResultList(ref common.ReferenceC
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult"),
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport"),
 									},
 								},
 							},
@@ -569,35 +569,43 @@ func schema_sbombastic_api_storage_v1alpha1_ScanResultList(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ScanResult", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
-func schema_sbombastic_api_storage_v1alpha1_ScanResultSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ScanResultSpec defines the desired state of ScanResult",
+				Description: "VulnerabilityReportSpec defines the desired state of a VulnerabilityReport",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"foo": {
+					"imageMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Foo is an example field of ScanResult.",
-							Type:        []string{"string"},
-							Format:      "",
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
+					"sarif": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SARIF is the vulnerability report in SARIF format",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
+				Required: []string{"imageMetadata", "sarif"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
-func schema_sbombastic_api_storage_v1alpha1_ScanResultStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ScanResultStatus defines the observed state of ScanResult",
+				Description: "VulnerabilityReportStatus defines the observed state of ScanResult",
 				Type:        []string{"object"},
 			},
 		},

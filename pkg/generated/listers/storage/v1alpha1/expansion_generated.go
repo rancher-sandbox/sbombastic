@@ -33,10 +33,10 @@ type SBOMListerExpansion interface{}
 // SBOMNamespaceLister.
 type SBOMNamespaceListerExpansion interface{}
 
-// ScanResultListerExpansion allows custom methods to be added to
-// ScanResultLister.
-type ScanResultListerExpansion interface{}
+// VulnerabilityReportListerExpansion allows custom methods to be added to
+// VulnerabilityReportLister.
+type VulnerabilityReportListerExpansion interface{}
 
-// ScanResultNamespaceListerExpansion allows custom methods to be added to
-// ScanResultNamespaceLister.
-type ScanResultNamespaceListerExpansion interface{}
+// VulnerabilityReportNamespaceListerExpansion allows custom methods to be added to
+// VulnerabilityReportNamespaceLister.
+type VulnerabilityReportNamespaceListerExpansion interface{}

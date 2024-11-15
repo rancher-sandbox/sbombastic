@@ -35,8 +35,8 @@ func (c *FakeStorageV1alpha1) SBOMs(namespace string) v1alpha1.SBOMInterface {
 	return &FakeSBOMs{c, namespace}
 }
 
-func (c *FakeStorageV1alpha1) ScanResults(namespace string) v1alpha1.ScanResultInterface {
-	return &FakeScanResults{c, namespace}
+func (c *FakeStorageV1alpha1) VulnerabilityReports(namespace string) v1alpha1.VulnerabilityReportInterface {
+	return &FakeVulnerabilityReports{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

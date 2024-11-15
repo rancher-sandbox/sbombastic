@@ -9,16 +9,18 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
-	"github.com/spdx/tools-golang/spdx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/spdx/tools-golang/spdx"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
@@ -31,8 +33,8 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 			ImageMetadata: storagev1alpha1.ImageMetadata{
 				Registry:    "docker",
 				RegistryURI: "docker.io",
-				Repository:  "busybox",
-				Tag:         "1.37.0",
+				Repository:  "golang",
+				Tag:         "1.12-alpine",
 				Platform:    "linux/amd64",
 				Digest:      "sha256:123",
 			},
@@ -47,12 +49,12 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 		WithRuntimeObjects(image).
 		Build()
 
-	fixturePath := filepath.Join("..", "..", "test", "fixtures", "busybox-1.37.0.spdx.json")
-	data, err := os.ReadFile(fixturePath)
+	spdxPath := filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine.spdx.json")
+	spdxData, err := os.ReadFile(spdxPath)
 	require.NoError(t, err)
 
 	expectedSPDX := &spdx.Document{}
-	err = json.Unmarshal(data, expectedSPDX)
+	err = json.Unmarshal(spdxData, expectedSPDX)
 	require.NoError(t, err)
 
 	handler := NewGenerateSBOMHandler(k8sClient, "/tmp", zap.NewNop())

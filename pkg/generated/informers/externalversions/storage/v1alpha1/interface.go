@@ -27,8 +27,8 @@ type Interface interface {
 	Images() ImageInformer
 	// SBOMs returns a SBOMInformer.
 	SBOMs() SBOMInformer
-	// ScanResults returns a ScanResultInformer.
-	ScanResults() ScanResultInformer
+	// VulnerabilityReports returns a VulnerabilityReportInformer.
+	VulnerabilityReports() VulnerabilityReportInformer
 }
 
 type version struct {
@@ -52,7 +52,7 @@ func (v *version) SBOMs() SBOMInformer {
 	return &sBOMInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ScanResults returns a ScanResultInformer.
-func (v *version) ScanResults() ScanResultInformer {
-	return &scanResultInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// VulnerabilityReports returns a VulnerabilityReportInformer.
+func (v *version) VulnerabilityReports() VulnerabilityReportInformer {
+	return &vulnerabilityReportInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

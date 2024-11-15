@@ -4,7 +4,11 @@ type Message interface {
 	MessageType() string
 }
 
-const CreateCatalogType = "CreateCatalog"
+const (
+	CreateCatalogType = "CreateCatalog"
+	GenerateSBOMType  = "GenerateSBOM"
+	ScanSBOMType      = "ScanSBOM"
+)
 
 type CreateCatalog struct {
 	RegistryName      string `json:"registryName"`
@@ -15,8 +19,6 @@ func (m *CreateCatalog) MessageType() string {
 	return CreateCatalogType
 }
 
-const GenerateSBOMType = "GenerateSBOM"
-
 type GenerateSBOM struct {
 	ImageName      string `json:"imageName"`
 	ImageNamespace string `json:"imageNamespace"`
@@ -24,4 +26,13 @@ type GenerateSBOM struct {
 
 func (m *GenerateSBOM) MessageType() string {
 	return GenerateSBOMType
+}
+
+type ScanSBOM struct {
+	SBOMName      string `json:"sbomName"`
+	SBOMNamespace string `json:"sbomNamespace"`
+}
+
+func (m *ScanSBOM) MessageType() string {
+	return ScanSBOMType
 }

@@ -43,10 +43,10 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &storagev1alpha1.SBOMApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("SBOMSpec"):
 		return &storagev1alpha1.SBOMSpecApplyConfiguration{}
-	case v1alpha1.SchemeGroupVersion.WithKind("ScanResult"):
-		return &storagev1alpha1.ScanResultApplyConfiguration{}
-	case v1alpha1.SchemeGroupVersion.WithKind("ScanResultSpec"):
-		return &storagev1alpha1.ScanResultSpecApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("VulnerabilityReport"):
+		return &storagev1alpha1.VulnerabilityReportApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("VulnerabilityReportSpec"):
+		return &storagev1alpha1.VulnerabilityReportSpecApplyConfiguration{}
 
 	}
 	return nil

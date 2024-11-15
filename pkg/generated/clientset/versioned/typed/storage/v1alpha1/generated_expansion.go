@@ -21,4 +21,4 @@ type ImageExpansion interface{}
 
 type SBOMExpansion interface{}
 
-type ScanResultExpansion interface{}
+type VulnerabilityReportExpansion interface{}

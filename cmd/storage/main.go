@@ -37,6 +37,7 @@ func main() {
 
 	db.MustExec(storage.CreateImageTableSQL)
 	db.MustExec(storage.CreateSBOMTableSQL)
+	db.MustExec(storage.CreateVulnerabilityReportTableSQL)
 
 	ctx := genericapiserver.SetupSignalContext()
 	options := server.NewWardleServerOptions(os.Stdout, os.Stderr, db)

@@ -56,8 +56,8 @@ func AddKnownTypes(scheme *runtime.Scheme) error {
 		&SBOM{},
 		&SBOMList{},
 
-		&ScanResult{},
-		&ScanResultList{},
+		&VulnerabilityReport{},
+		&VulnerabilityReportList{},
 
 		&metav1.GetOptions{},
 		&metav1.CreateOptions{},
