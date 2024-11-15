@@ -15,7 +15,7 @@ spec:
       labels:
         worker: "true"
     spec:
-      serviceAccountName: controller-manager
+      serviceAccountName: worker
       containers:
         - name: worker
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
