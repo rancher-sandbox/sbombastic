@@ -1,8 +1,0 @@
-apiVersion: storage.sbombastic.rancher.io/v1alpha1
-kind: ScanResult
-metadata:
-  name: my-first-scanresult
-  labels:
-    sample-label: "true"
-spec:
-  foo: bar
