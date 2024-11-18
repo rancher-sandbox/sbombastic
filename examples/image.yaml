@@ -1,11 +1,8 @@
 apiVersion: storage.sbombastic.rancher.io/v1alpha1
 kind: Image
 metadata:
-  creationTimestamp: "2024-11-15T16:02:47Z"
   name: 82df15a51db0bb0182ee86c6d084c43d1c2731e36c68900ee59c88747dd4af10
   namespace: default
-  resourceVersion: "1"
-  uid: be4efbf7-feb9-4952-8a7f-04ec03c89c9b
 spec:
   imageMetadata:
     digest: sha256:6169c4bcc1982095067d85edf58fdcc3bd8505aef728610c5b728f3cf1cec46b
