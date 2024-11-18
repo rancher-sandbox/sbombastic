@@ -10,10 +10,12 @@ import (
 	"reflect"
 	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 
 	sq "github.com/Masterminds/squirrel"
@@ -338,18 +340,18 @@ func (s *store) GuaranteedUpdate(
 		return storage.NewInternalErrorf("invalid key: %s", key)
 	}
 
-	for {
-		tx, err := s.db.BeginTxx(ctx, nil)
-		if err != nil {
-			return err
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := tx.Rollback(); !errors.Is(err, sql.ErrTxDone) {
+			log.Printf("failed to rollback transaction: %v", err)
 		}
+	}()
 
-		defer func() {
-			if err := tx.Rollback(); !errors.Is(err, sql.ErrTxDone) {
-				log.Printf("failed to rollback transaction: %v", err)
-			}
-		}()
-
+	for {
 		query, args, err := sq.Select("*").
 			From(s.table).
 			Where(sq.Eq{"name": name, "namespace": namespace}).
@@ -388,7 +390,12 @@ func (s *store) GuaranteedUpdate(
 
 		updatedObj, _, err := tryUpdate(obj, storage.ResponseMeta{})
 		if err != nil {
-			continue
+			if apierrors.IsConflict(err) && strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
+				// retry update on optimistic lock conflict
+				continue
+			}
+
+			return err
 		}
 
 		version, err := s.Versioner().ObjectResourceVersion(obj)
