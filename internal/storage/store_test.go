@@ -69,6 +69,9 @@ func (suite *storeTestSuite) TestCreate() {
 
 	suite.EqualValues(sbom, out)
 	suite.Equal("1", out.ResourceVersion)
+
+	err = suite.store.Create(context.Background(), key, sbom, out, 0)
+	suite.Require().Equal(storage.NewKeyExistsError(key, 0).Error(), err.Error())
 }
 
 func (suite *storeTestSuite) TestDelete() {

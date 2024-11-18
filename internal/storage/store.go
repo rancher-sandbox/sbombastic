@@ -67,14 +67,24 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 	query, args, err := sq.Insert(s.table).
 		Columns("name", "namespace", "object").
 		Values(name, namespace, bytes).
+		Suffix("ON CONFLICT DO NOTHING").
 		ToSql()
 	if err != nil {
 		return storage.NewInternalError(err.Error())
 	}
 
-	_, err = s.db.ExecContext(ctx, query, args...)
+	result, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return storage.NewInternalError(err.Error())
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return storage.NewInternalError(err.Error())
+	}
+
+	if rowsAffected == 0 {
+		return storage.NewKeyExistsError(key, 0)
 	}
 
 	if err := s.broadcaster.Action(watch.Added, obj); err != nil {
