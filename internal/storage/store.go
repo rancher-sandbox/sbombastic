@@ -119,7 +119,7 @@ func (s *store) Delete(
 		return storage.NewInternalError(err.Error())
 	}
 	defer func() {
-		if err := tx.Rollback(); !errors.Is(err, sql.ErrTxDone) {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Printf("failed to rollback transaction: %v", err)
 		}
 	}()
@@ -356,7 +356,7 @@ func (s *store) GuaranteedUpdate(
 	}
 
 	defer func() {
-		if err := tx.Rollback(); !errors.Is(err, sql.ErrTxDone) {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 			log.Printf("failed to rollback transaction: %v", err)
 		}
 	}()
