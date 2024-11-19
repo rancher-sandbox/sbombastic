@@ -22,6 +22,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -203,6 +206,51 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			assert.ElementsMatch(t, actual, test.expectedRepositories)
 		})
 	}
+}
+
+func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, storagev1alpha1.AddToScheme(scheme))
+	existingImages := []runtime.Object{
+		&storagev1alpha1.Image{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "image-1",
+				Namespace: "default",
+			},
+		},
+		&storagev1alpha1.Image{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "image-2",
+				Namespace: "default",
+			},
+		},
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(existingImages...).Build()
+
+	handler := &CreateCatalogHandler{
+		k8sClient: k8sClient,
+		logger:    zap.NewNop(),
+	}
+
+	ctx := context.Background()
+
+	existingImageNames := sets.New[string](
+		"image-1",
+		"image-2",
+	)
+	newImageNames := sets.New[string](
+		"image-1", // Image 2 is obsolete
+	)
+
+	err := handler.deleteObsoleteImages(ctx, existingImageNames, newImageNames, "default")
+	require.NoError(t, err)
+
+	var remainingImages storagev1alpha1.ImageList
+	err = k8sClient.List(ctx, &remainingImages, client.InNamespace("default"))
+	require.NoError(t, err)
+
+	require.Len(t, remainingImages.Items, 1)
+	assert.Equal(t, "image-1", remainingImages.Items[0].Name)
 }
 
 func TestImageDetailsToImage(t *testing.T) {
