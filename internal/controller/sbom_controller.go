@@ -123,6 +123,17 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SBOMReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Add an indexer for the field `spec.imageMetadata.registry`
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &storagev1alpha1.SBOM{}, "spec.imageMetadata.registry", func(rawObj client.Object) []string {
+		sbom, ok := rawObj.(*storagev1alpha1.SBOM)
+		if !ok {
+			panic(fmt.Sprintf("Expected SBOM, got %T", rawObj))
+		}
+		return []string{sbom.Spec.ImageMetadata.Registry}
+	}); err != nil {
+		return fmt.Errorf("unable to create field indexer: %w", err)
+	}
+
 	err := ctrl.NewControllerManagedBy(mgr).
 		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
 		For(&storagev1alpha1.SBOM{}).

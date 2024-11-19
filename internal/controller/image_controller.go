@@ -78,6 +78,17 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Add an indexer for the field `spec.imageMetadata.registry`
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(rawObj client.Object) []string {
+		sbom, ok := rawObj.(*storagev1alpha1.Image)
+		if !ok {
+			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
+		}
+		return []string{sbom.Spec.ImageMetadata.Registry}
+	}); err != nil {
+		return fmt.Errorf("unable to create field indexer: %w", err)
+	}
+
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&storagev1alpha1.Image{}).
 		Complete(r)
