@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -105,7 +106,9 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		},
 	}
 	if err := h.k8sClient.Create(ctx, sbom); err != nil {
-		return fmt.Errorf("failed to create SBOM: %w", err)
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create SBOM: %w", err)
+		}
 	}
 
 	return nil

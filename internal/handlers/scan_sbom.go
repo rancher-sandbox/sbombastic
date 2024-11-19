@@ -12,6 +12,7 @@ import (
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
@@ -117,14 +118,16 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 			Name:      sbom.Name,
 			Namespace: sbom.Namespace,
 		},
-		Spec: storagev1alpha1.VulnerabilityReportSpec{
+	}
+	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
+		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
 			ImageMetadata: sbom.GetImageMetadata(),
 			SARIF:         runtime.RawExtension{Raw: reportBytes},
-		},
-	}
-
-	if err := h.k8sClient.Create(ctx, vulnerabilityReport); err != nil {
-		return fmt.Errorf("failed to create vulnerability report: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create or update vulnerability report: %w", err)
 	}
 
 	return nil

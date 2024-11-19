@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -75,7 +76,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("cannot discover repositories: %w", err)
 	}
 
-	var imageNames []string
+	discoveredImageNames := sets.Set[string]{}
 	for _, repository := range repositories {
 		repoImages, err := h.discoverImages(ctx, registryClient, repository)
 		if err != nil {
@@ -86,38 +87,42 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 			)
 			continue
 		}
-		imageNames = append(imageNames, repoImages...)
+		discoveredImageNames.Insert(repoImages...)
 	}
 
-	for _, imageName := range imageNames {
-		ref, err := name.ParseReference(imageName)
+	existingImageList := &storagev1alpha1.ImageList{}
+	if err := h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
+		return fmt.Errorf("cannot list existing images: %w", err)
+	}
+	existingImageNames := sets.Set[string]{}
+	for _, existingImage := range existingImageList.Items {
+		existingImageNames.Insert(existingImage.Name)
+	}
+
+	for newImageName := range discoveredImageNames {
+		ref, err := name.ParseReference(newImageName)
 		if err != nil {
-			h.logger.Error(
-				"cannot parse image name",
-				zap.String("image", imageName),
-				zap.Error(err),
-			)
-			continue
+			return fmt.Errorf("cannot parse reference %s: %w", newImageName, err)
 		}
 
 		images, err := h.refToImages(registryClient, ref, registry.Name, registry.Namespace)
 		if err != nil {
-			h.logger.Error(
-				"cannot convert reference to Image",
-				zap.String("image", ref.Name()),
-				zap.Error(err),
-			)
-			continue
+			return fmt.Errorf("cannot get images for %s: %w", ref, err)
 		}
 		for _, image := range images {
-			// TODO: ignore creation of images that already exist
+			if existingImageNames.Has(image.Name) {
+				continue
+			}
+
 			if err := h.k8sClient.Create(ctx, &image); err != nil {
 				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
 			}
 		}
 	}
 
-	// TODO: remove images that are not in the registry anymore
+	if err := h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
+		return fmt.Errorf("cannot delete obsolete images: %w", err)
+	}
 
 	return nil
 }
@@ -257,6 +262,28 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 	}
 
 	return transport
+}
+
+// deleteObsoleteImages deletes images that are not present in the discovered registry anymore.
+func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existingImageNames sets.Set[string], discoveredImageNames sets.Set[string], namespace string) error {
+	for existingImageName := range existingImageNames {
+		if discoveredImageNames.Has(existingImageName) {
+			continue
+		}
+
+		existingImage := storagev1alpha1.Image{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      existingImageName,
+				Namespace: namespace,
+			},
+		}
+
+		if err := h.k8sClient.Delete(ctx, &existingImage); err != nil {
+			return fmt.Errorf("cannot delete image %s: %w", existingImageName, err)
+		}
+	}
+
+	return nil
 }
 
 func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registryName, registryNamespace string) (storagev1alpha1.Image, error) {
