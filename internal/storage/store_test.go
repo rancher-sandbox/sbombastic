@@ -322,6 +322,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 		key                 string
 		ignoreNotFound      bool
 		preconditions       *storage.Preconditions
+		tryUpdate           storage.UpdateFunc
 		sbom                *v1alpha1.SBOM
 		expectedUpdatedSBOM *v1alpha1.SBOM
 		expectedError       error
@@ -330,11 +331,15 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			name:          "happy path",
 			key:           keyPrefix + "/default/test1",
 			preconditions: &storage.Preconditions{},
+			tryUpdate: func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
+				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo": "bar"}`)
+				return input, ptr.To(uint64(0)), nil
+			},
 			sbom: &v1alpha1.SBOM{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test1",
 					Namespace: "default",
-					UID:       "test-uid",
+					UID:       "test1-uid",
 				},
 				Spec: v1alpha1.SBOMSpec{
 					SPDX: runtime.RawExtension{
@@ -346,7 +351,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "test1",
 					Namespace:       "default",
-					UID:             "test-uid",
+					UID:             "test1-uid",
 					ResourceVersion: "2",
 				},
 				Spec: v1alpha1.SBOMSpec{
@@ -358,15 +363,19 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 		},
 		{
 			name: "preconditions failed",
-			key:  keyPrefix + "/default/test",
+			key:  keyPrefix + "/default/test2",
 			preconditions: &storage.Preconditions{
 				UID: ptr.To(types.UID("incorrect-uid")),
+			},
+			tryUpdate: func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
+				suite.Fail("tryUpdate should not be called when preconditions fail")
+				return nil, nil, nil
 			},
 			sbom: &v1alpha1.SBOM{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test2",
 					Namespace: "default",
-					UID:       "test-uid",
+					UID:       "test2-uid",
 				},
 				Spec: v1alpha1.SBOMSpec{
 					SPDX: runtime.RawExtension{
@@ -374,19 +383,48 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					},
 				},
 			},
-			expectedError: storage.NewInvalidObjError(keyPrefix+"/default/test",
-				"Precondition failed: UID in precondition: incorrect-uid, UID in object meta: test-uid"),
+			expectedError: storage.NewInvalidObjError(keyPrefix+"/default/test2",
+				"Precondition failed: UID in precondition: incorrect-uid, UID in object meta: test2-uid"),
+		},
+		{
+			name:          "tryUpdate failed with a non-conflict error",
+			key:           keyPrefix + "/default/test3",
+			preconditions: &storage.Preconditions{},
+			tryUpdate: func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
+				return nil, nil, storage.NewInternalError("tryUpdate failed")
+			},
+			sbom: &v1alpha1.SBOM{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test3",
+					Namespace: "default",
+					UID:       "test3-uid",
+				},
+				Spec: v1alpha1.SBOMSpec{
+					SPDX: runtime.RawExtension{
+						Raw: []byte("{}"),
+					},
+				},
+			},
+			expectedError: storage.NewInternalError("tryUpdate failed"),
 		},
 		{
 			name:          "not found",
 			key:           keyPrefix + "/default/notfound",
 			preconditions: &storage.Preconditions{},
+			tryUpdate: func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
+				suite.Fail("tryUpdate should not be called when object is not found")
+				return nil, nil, nil
+			},
 			expectedError: storage.NewKeyNotFoundError(keyPrefix+"/default/notfound", 0),
 		},
 		{
-			name:                "not found with ignore not found",
-			key:                 keyPrefix + "/default/notfound",
-			preconditions:       &storage.Preconditions{},
+			name:          "not found with ignore not found",
+			key:           keyPrefix + "/default/notfound",
+			preconditions: &storage.Preconditions{},
+			tryUpdate: func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
+				suite.Fail("tryUpdate should not be called when object is not found")
+				return nil, nil, nil
+			},
 			ignoreNotFound:      true,
 			expectedUpdatedSBOM: &v1alpha1.SBOM{},
 		},
@@ -399,13 +437,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				suite.Require().NoError(err)
 			}
 
-			tryUpdate := func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
-				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo": "bar"}`)
-
-				return input, ptr.To(uint64(0)), nil
-			}
 			updatedSBOM := &v1alpha1.SBOM{}
-			err := suite.store.GuaranteedUpdate(context.Background(), test.key, updatedSBOM, test.ignoreNotFound, test.preconditions, tryUpdate, nil)
+			err := suite.store.GuaranteedUpdate(context.Background(), test.key, updatedSBOM, test.ignoreNotFound, test.preconditions, test.tryUpdate, nil)
 
 			if test.expectedError != nil {
 				suite.Require().Error(err)
@@ -414,7 +447,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				if test.sbom != nil {
 					// If there is an error, the original object should not be updated.
 					currentSBOM := &v1alpha1.SBOM{}
-					err := suite.store.Get(context.Background(), keyPrefix+"/default/test", storage.GetOptions{}, currentSBOM)
+					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
 					suite.Require().NoError(err)
 					suite.Equal(test.sbom, currentSBOM)
 				}
