@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
@@ -20,13 +21,15 @@ import (
 
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
+	scheme    *runtime.Scheme
 	workDir   string
 	logger    *zap.Logger
 }
 
-func NewGenerateSBOMHandler(k8sClient client.Client, workDir string, logger *zap.Logger) *GenerateSBOMHandler {
+func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *zap.Logger) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
 		k8sClient: k8sClient,
+		scheme:    scheme,
 		workDir:   workDir,
 		logger:    logger.Named("generate_sbom_handler"),
 	}
@@ -105,6 +108,10 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 			SPDX:          runtime.RawExtension{Raw: spdxBytes},
 		},
 	}
+	if err := controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
 	if err := h.k8sClient.Create(ctx, sbom); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create SBOM: %w", err)
