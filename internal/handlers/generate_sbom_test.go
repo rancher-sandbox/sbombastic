@@ -57,7 +57,7 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	err = json.Unmarshal(spdxData, expectedSPDX)
 	require.NoError(t, err)
 
-	handler := NewGenerateSBOMHandler(k8sClient, "/tmp", zap.NewNop())
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", zap.NewNop())
 
 	err = handler.Handle(&messaging.GenerateSBOM{
 		ImageName:      image.Name,
@@ -72,7 +72,8 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	}, sbom)
 	require.NoError(t, err)
 
-	require.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
+	assert.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
+	assert.Equal(t, image.UID, sbom.GetOwnerReferences()[0].UID)
 
 	generatedSPDX := &spdx.Document{}
 	err = json.Unmarshal(sbom.Spec.SPDX.Raw, generatedSPDX)

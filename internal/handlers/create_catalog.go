@@ -18,8 +18,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -31,13 +33,15 @@ import (
 type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
 	k8sClient             client.Client
+	scheme                *runtime.Scheme
 	logger                *zap.Logger
 }
 
-func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory, k8sClient client.Client, logger *zap.Logger) *CreateCatalogHandler {
+func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory, k8sClient client.Client, scheme *runtime.Scheme, logger *zap.Logger) *CreateCatalogHandler {
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
+		scheme:                scheme,
 		logger:                logger.Named("create_catalog_handler"),
 	}
 }
@@ -105,10 +109,11 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 			return fmt.Errorf("cannot parse reference %s: %w", newImageName, err)
 		}
 
-		images, err := h.refToImages(registryClient, ref, registry.Name, registry.Namespace)
+		images, err := h.refToImages(registryClient, ref, registry)
 		if err != nil {
 			return fmt.Errorf("cannot get images for %s: %w", ref, err)
 		}
+
 		for _, image := range images {
 			if existingImageNames.Has(image.Name) {
 				continue
@@ -174,7 +179,7 @@ func (h *CreateCatalogHandler) discoverImages(ctx context.Context, registryClien
 	return contents, nil
 }
 
-func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client, ref name.Reference, registryName, registryNamespace string) ([]storagev1alpha1.Image, error) {
+func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client, ref name.Reference, registry *v1alpha1.Registry) ([]storagev1alpha1.Image, error) {
 	platforms, err := h.refToPlatforms(registryClient, ref)
 	if err != nil {
 		return []storagev1alpha1.Image{}, fmt.Errorf("cannot get platforms for %s: %w", ref, err)
@@ -202,10 +207,14 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 			continue
 		}
 
-		image, err := imageDetailsToImage(ref, imageDetails, registryName, registryNamespace)
+		image, err := imageDetailsToImage(ref, imageDetails, registry)
 		if err != nil {
 			h.logger.Error("cannot convert image details to image", zap.Error(err))
 			continue
+		}
+
+		if err := controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
+			return nil, fmt.Errorf("cannot set owner reference: %w", err)
 		}
 
 		images = append(images, image)
@@ -286,7 +295,7 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existin
 	return nil
 }
 
-func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registryName, registryNamespace string) (storagev1alpha1.Image, error) {
+func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registry *v1alpha1.Registry) (storagev1alpha1.Image, error) {
 	imageLayers := []storagev1alpha1.ImageLayer{}
 
 	// There can be more history entries than layers, as some history entries are empty layers
@@ -322,11 +331,11 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 	image := storagev1alpha1.Image{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      computeImageUID(ref, details.Digest.String()),
-			Namespace: registryNamespace,
+			Namespace: registry.Namespace,
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    registryName,
+				Registry:    registry.Name,
 				RegistryURI: ref.Context().RegistryStr(),
 				Repository:  ref.Context().RepositoryStr(),
 				Tag:         ref.Identifier(),
