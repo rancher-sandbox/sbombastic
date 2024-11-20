@@ -55,7 +55,7 @@ func main() {
 	}
 
 	handlers := messaging.HandlerRegistry{
-		messaging.CreateCatalogType: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, logger),
+		messaging.CreateCatalogType: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, logger),
 		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, "/var/run/worker", logger),
 		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, "/var/run/worker", logger),
 	}

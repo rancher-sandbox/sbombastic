@@ -124,7 +124,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		WithRuntimeObjects(registry).
 		Build()
 
-	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, zap.NewNop())
+	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, zap.NewNop())
 	err = handler.Handle(&messaging.CreateCatalog{
 		RegistryName:      registry.Name,
 		RegistryNamespace: registry.Namespace,
@@ -148,6 +148,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
 	assert.Equal(t, platformLinuxAmd64.String(), image1.GetImageMetadata().Platform)
 	assert.Len(t, image1.Spec.Layers, 8)
+	assert.Equal(t, registry.UID, image1.GetOwnerReferences()[0].UID)
 
 	assert.Equal(t, registry.Namespace, image2.Namespace)
 	assert.Equal(t, registry.Name, image2.GetImageMetadata().Registry)
@@ -157,6 +158,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, digestLinuxArm64.String(), image2.GetImageMetadata().Digest)
 	assert.Equal(t, platformLinuxArm64.String(), image2.GetImageMetadata().Platform)
 	assert.Len(t, image2.Spec.Layers, 8)
+	assert.Equal(t, registry.UID, image2.GetOwnerReferences()[0].UID)
 }
 
 func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
@@ -270,12 +272,23 @@ func TestImageDetailsToImage(t *testing.T) {
 	ref, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registryURI, repo, tag))
 	require.NoError(t, err)
 
-	image, err := imageDetailsToImage(ref, details, "registry", "default")
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:          registryURI,
+			Repositories: []string{repo},
+		},
+	}
+
+	image, err := imageDetailsToImage(ref, details, registry)
 	require.NoError(t, err)
 
 	assert.Equal(t, image.Name, computeImageUID(ref, digest.String()))
 	assert.Equal(t, "default", image.Namespace)
-	assert.Equal(t, "registry", image.GetImageMetadata().Registry)
+	assert.Equal(t, "test-registry", image.GetImageMetadata().Registry)
 	assert.Equal(t, registryURI, image.GetImageMetadata().RegistryURI)
 	assert.Equal(t, repo, image.GetImageMetadata().Repository)
 	assert.Equal(t, tag, image.GetImageMetadata().Tag)
