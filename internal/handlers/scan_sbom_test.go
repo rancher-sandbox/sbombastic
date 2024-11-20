@@ -53,7 +53,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 	err = json.Unmarshal(reportData, expectedReport)
 	require.NoError(t, err)
 
-	handler := NewScanSBOMHandler(k8sClient, "/tmp", zap.NewNop())
+	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", zap.NewNop())
 
 	err = handler.Handle(&messaging.ScanSBOM{
 		SBOMName:      sbom.Name,
@@ -67,6 +67,9 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 		Namespace: sbom.Namespace,
 	}, vulnerabilityReport)
 	require.NoError(t, err)
+
+	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
+	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
 
 	report := &sarif.Report{}
 	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)

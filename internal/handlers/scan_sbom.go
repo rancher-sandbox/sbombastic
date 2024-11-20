@@ -20,13 +20,15 @@ import (
 
 type ScanSBOMHandler struct {
 	k8sClient client.Client
+	scheme    *runtime.Scheme
 	workDir   string
 	logger    *zap.Logger
 }
 
-func NewScanSBOMHandler(k8sClient client.Client, workDir string, logger *zap.Logger) *ScanSBOMHandler {
+func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *zap.Logger) *ScanSBOMHandler {
 	return &ScanSBOMHandler{
 		k8sClient: k8sClient,
+		scheme:    scheme,
 		workDir:   workDir,
 		logger:    logger.Named("scan_sbom_handler"),
 	}
@@ -119,6 +121,10 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 			Namespace: sbom.Namespace,
 		},
 	}
+	if err := controllerutil.SetControllerReference(sbom, vulnerabilityReport, h.scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
 			ImageMetadata: sbom.GetImageMetadata(),
