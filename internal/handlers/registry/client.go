@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"go.uber.org/zap"
 )
 
 type ImageDetails struct {
@@ -52,18 +52,18 @@ type ClientFactory func(http.RoundTripper) Client
 
 type client struct {
 	transport http.RoundTripper
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
-func NewClient(transport http.RoundTripper, logger *zap.Logger) Client {
+func NewClient(transport http.RoundTripper, logger *slog.Logger) Client {
 	return &client{
 		transport: transport,
-		logger:    logger.Named("registry_client"),
+		logger:    logger.With("component", "registry_client"),
 	}
 }
 
 func (c *client) Catalog(ctx context.Context, registry name.Registry) ([]string, error) {
-	c.logger.Debug("Catalog called", zap.Any("registry", registry))
+	c.logger.DebugContext(ctx, "Catalog called", "registry", registry)
 
 	puller, err := remote.NewPuller(
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
@@ -90,16 +90,16 @@ func (c *client) Catalog(ctx context.Context, registry name.Registry) ([]string,
 		}
 	}
 
-	c.logger.Debug("Repositories found",
-		zap.String("registry", registry.Name()),
-		zap.Int("number", len(repositories)),
-		zap.Strings("repositories", repositories))
+	c.logger.DebugContext(ctx, "Repositories found",
+		"registry", registry.Name(),
+		"number", len(repositories),
+		"repositories", repositories)
 
 	return repositories, nil
 }
 
 func (c *client) ListRepositoryContents(ctx context.Context, repo name.Repository) ([]string, error) {
-	c.logger.Debug("List repository contents", zap.Any("repository", repo))
+	c.logger.DebugContext(ctx, "List repository contents", "repository", repo)
 
 	puller, err := remote.NewPuller(
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
@@ -125,16 +125,16 @@ func (c *client) ListRepositoryContents(ctx context.Context, repo name.Repositor
 		}
 	}
 
-	c.logger.Debug("Images found",
-		zap.String("repository", repo.Name()),
-		zap.Int("number", len(images)),
-		zap.Strings("images", images))
+	c.logger.DebugContext(ctx, "Images found",
+		"repository", repo.Name(),
+		"number", len(images),
+		"images", images)
 
 	return images, nil
 }
 
 func (c *client) GetImageIndex(ref name.Reference) (cranev1.ImageIndex, error) {
-	c.logger.Debug("GetImageIndex called", zap.String("image", ref.Name()))
+	c.logger.Debug("GetImageIndex called", "image", ref.Name())
 
 	index, err := remote.Index(ref,
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
@@ -147,7 +147,7 @@ func (c *client) GetImageIndex(ref name.Reference) (cranev1.ImageIndex, error) {
 }
 
 func (c *client) GetImageDetails(ref name.Reference, platform *cranev1.Platform) (ImageDetails, error) {
-	c.logger.Debug("GetImageDetails called", zap.String("image", ref.Name()), zap.Any("platform", platform))
+	c.logger.Debug("GetImageDetails called", "image", ref.Name(), "platform", platform)
 
 	options := []remote.Option{
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),

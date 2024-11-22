@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
-
-	"go.uber.org/zap"
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,15 +22,15 @@ type GenerateSBOMHandler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
 	workDir   string
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
-func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *zap.Logger) *GenerateSBOMHandler {
+func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,
 		workDir:   workDir,
-		logger:    logger.Named("generate_sbom_handler"),
+		logger:    logger.With("handler", "generate_sbom_handler"),
 	}
 }
 
@@ -42,8 +41,8 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("SBOM generation requested",
-		zap.String("image", generateSBOMMessage.ImageName),
-		zap.String("namespace", generateSBOMMessage.ImageNamespace),
+		"image", generateSBOMMessage.ImageName,
+		"namespace", generateSBOMMessage.ImageNamespace,
 	)
 
 	ctx := context.Background()
@@ -58,7 +57,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("Image found",
-		zap.Any("image", image),
+		"image", image,
 	)
 
 	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
@@ -67,11 +66,11 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 	defer func() {
 		if err := sbomFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary SBOM file", zap.Error(err))
+			h.logger.Error("failed to close temporary SBOM file", "error", err)
 		}
 
 		if err := os.Remove(sbomFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary SBOM file", zap.Error(err))
+			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
 
@@ -89,8 +88,8 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("SBOM generated",
-		zap.String("image", image.Name),
-		zap.String("namespace", image.Namespace),
+		"image", image.Name,
+		"namespace", image.Namespace,
 	)
 
 	spdxBytes, err := io.ReadAll(sbomFile)

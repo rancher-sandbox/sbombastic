@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"go.uber.org/zap"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,32 +21,34 @@ import (
 
 func main() {
 	// TODO: add CLI flags for log level
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(fmt.Sprintf("failed to create logger: %v", err))
+	opts := slog.HandlerOptions{
+		Level: slog.LevelDebug,
 	}
-	defer logger.Sync() //nolint: errcheck // flushes buffer, ignore error
-
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "worker")
 	logger.Info("Starting worker")
 
 	// TODO: add CLI flags for NATS server address
 	sub, err := messaging.NewSubscription("nats://controller-nats.sbombastic.svc.cluster.local",
 		"worker")
 	if err != nil {
-		logger.Fatal("Error creating subscription", zap.Error(err))
+		logger.Error("Error creating subscription", "error", err)
+		os.Exit(1)
 	}
 
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
-		logger.Fatal("Error adding v1alpha1 to scheme", zap.Error(err))
+		logger.Error("Error adding v1alpha1 to scheme", "error", err)
+		os.Exit(1)
 	}
 	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
-		logger.Fatal("Error adding storagev1alpha1 to scheme", zap.Error(err))
+		logger.Error("Error adding storagev1alpha1 to scheme", "error", err)
+		os.Exit(1)
 	}
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
-		logger.Fatal("Error creating k8s client", zap.Error(err))
+		logger.Error("Error creating k8s client", "error", err)
+		os.Exit(1)
 	}
 	registryClientFactory := func(transport http.RoundTripper) registry.Client {
 		return registry.NewClient(transport, logger)
@@ -72,6 +72,7 @@ func main() {
 
 	err = subscriber.Run(ctx)
 	if err != nil {
-		logger.Fatal("Error running worker subscriber", zap.Error(err))
+		logger.Error("Error running worker subscriber", "error", err)
+		os.Exit(1)
 	}
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,7 +53,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 	err = json.Unmarshal(reportData, expectedReport)
 	require.NoError(t, err)
 
-	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", zap.NewNop())
+	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
 	err = handler.Handle(&messaging.ScanSBOM{
 		SBOMName:      sbom.Name,
