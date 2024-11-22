@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -42,6 +43,7 @@ func (suite *storeTestSuite) SetupTest() {
 		table:       "sboms",
 		newFunc:     func() runtime.Object { return &v1alpha1.SBOM{} },
 		newListFunc: func() runtime.Object { return &v1alpha1.SBOMList{} },
+		logger:      slog.Default(),
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -39,6 +39,7 @@ type store struct {
 	table       string
 	newFunc     func() runtime.Object
 	newListFunc func() runtime.Object
+	logger      *slog.Logger
 }
 
 // Returns Versioner associated with this interface.
@@ -50,6 +51,8 @@ func (s *store) Versioner() storage.Versioner {
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object, _ uint64) error {
+	s.logger.DebugContext(ctx, "Creating object", "key", key, "object", obj)
+
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
 		return storage.NewInternalErrorf("invalid key: %s", key)
@@ -109,6 +112,8 @@ func (s *store) Delete(
 	ctx context.Context, key string, out runtime.Object, preconditions *storage.Preconditions,
 	validateDeletion storage.ValidateObjectFunc, _ runtime.Object,
 ) error {
+	s.logger.DebugContext(ctx, "Deleting object", "key", key)
+
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
 		return storage.NewInternalErrorf("invalid key: %s", key)
@@ -120,7 +125,7 @@ func (s *store) Delete(
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Printf("failed to rollback transaction: %v", err)
+			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
@@ -171,6 +176,8 @@ func (s *store) Delete(
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions) (watch.Interface, error) {
+	s.logger.DebugContext(ctx, "Watching object", "key", key, "options", opts)
+
 	if opts.ResourceVersion == "" {
 		return s.broadcaster.Watch()
 	}
@@ -217,6 +224,8 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, objPtr runtime.Object) error {
+	s.logger.DebugContext(ctx, "Getting object", "key", key, "options", opts)
+
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
 		return storage.NewInternalErrorf("invalid key: %s", key)
@@ -259,6 +268,8 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
+	s.logger.DebugContext(ctx, "Getting list", "key", key, "options", opts)
+
 	queryBuilder := sq.Select("*").From(s.table)
 	namespace := extractNamespace(key)
 	if namespace != "" {
@@ -345,6 +356,8 @@ func (s *store) GuaranteedUpdate(
 	tryUpdate storage.UpdateFunc,
 	_ runtime.Object,
 ) error {
+	s.logger.DebugContext(ctx, "Guaranteed update", "key", key)
+
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
 		return storage.NewInternalErrorf("invalid key: %s", key)
@@ -357,7 +370,7 @@ func (s *store) GuaranteedUpdate(
 
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Printf("failed to rollback transaction: %v", err)
+			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
@@ -401,6 +414,8 @@ func (s *store) GuaranteedUpdate(
 		updatedObj, _, err := tryUpdate(obj, storage.ResponseMeta{})
 		if err != nil {
 			if apierrors.IsConflict(err) && strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
+				s.logger.DebugContext(ctx, "Optimistic lock conflict", "key", key, "error", err)
+
 				// retry update on optimistic lock conflict
 				continue
 			}
@@ -454,6 +469,8 @@ func (s *store) GuaranteedUpdate(
 
 // Count returns number of different entries under the key (generally being path prefix).
 func (s *store) Count(key string) (int64, error) {
+	s.logger.Debug("Counting objects", "key", key)
+
 	namespace := extractNamespace(key)
 
 	queryBuilder := sq.Select("COUNT(*)").From(s.table)

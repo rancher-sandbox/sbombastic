@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +98,7 @@ func (cfg *Config) Complete() CompletedConfig {
 }
 
 // New returns a new instance of WardleServer from the given config.
-func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
+func (c completedConfig) New(db *sqlx.DB, logger *slog.Logger) (*WardleServer, error) {
 	genericServer, err := c.GenericConfig.New("sample-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, fmt.Errorf("error creating generic server: %w", err)
@@ -109,15 +110,15 @@ func (c completedConfig) New(db *sqlx.DB) (*WardleServer, error) {
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(v1alpha1.GroupName, Scheme, metav1.ParameterCodec, Codecs)
 
-	imageStore, err := storage.NewImageStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
+	imageStore, err := storage.NewImageStore(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Image store: %w", err)
 	}
-	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db)
+	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating SBOM store: %w", err)
 	}
-	vulnerabilityReportStore, err := storage.NewVulnerabilityReport(Scheme, c.GenericConfig.RESTOptionsGetter, db)
+	vulnerabilityReportStore, err := storage.NewVulnerabilityReport(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating VulnerabilityReport store: %w", err)
 	}

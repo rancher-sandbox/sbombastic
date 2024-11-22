@@ -19,7 +19,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
+	"log/slog"
 	"math"
 	"net"
 
@@ -46,15 +46,13 @@ import (
 
 // WardleServerOptions contains state for master/api server
 type WardleServerOptions struct {
-	RecommendedOptions *genericoptions.RecommendedOptions
-
+	RecommendedOptions    *genericoptions.RecommendedOptions
 	SharedInformerFactory informers.SharedInformerFactory
-	StdOut                io.Writer
-	StdErr                io.Writer
-
-	DB *sqlx.DB
 
 	AlternateDNS []string
+
+	DB     *sqlx.DB
+	Logger *slog.Logger
 }
 
 func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
@@ -77,17 +75,14 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 }
 
 // NewWardleServerOptions returns a new WardleServerOptions
-func NewWardleServerOptions(out, errOut io.Writer, db *sqlx.DB) *WardleServerOptions {
+func NewWardleServerOptions(db *sqlx.DB, logger *slog.Logger) *WardleServerOptions {
 	o := &WardleServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
 			"/registry/sbombastic.rancher.io",
 			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
 		),
-
-		DB: db,
-
-		StdOut: out,
-		StdErr: errOut,
+		DB:     db,
+		Logger: logger,
 	}
 
 	// Disable etcd
@@ -216,7 +211,7 @@ func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
 		return err
 	}
 
-	server, err := config.Complete().New(o.DB)
+	server, err := config.Complete().New(o.DB, o.Logger)
 	if err != nil {
 		return fmt.Errorf("error creating server: %w", err)
 	}

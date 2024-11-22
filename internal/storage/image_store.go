@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS images (
 `
 
 // NewImageStore returns a store registry that will work against API services.
-func NewImageStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB) (*registry.Store, error) {
+func NewImageStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB, logger *slog.Logger) (*registry.Store, error) {
 	strategy := newImageStrategy(scheme)
 
 	newFunc := func() runtime.Object { return &v1alpha1.Image{} }
@@ -42,6 +43,7 @@ func NewImageStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter,
 				table:       "images",
 				newFunc:     newFunc,
 				newListFunc: newListFunc,
+				logger:      logger.With("store", "image"),
 			},
 		},
 		CreateStrategy: strategy,

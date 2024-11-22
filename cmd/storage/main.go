@@ -18,6 +18,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/jmoiron/sqlx"
@@ -30,6 +31,12 @@ import (
 )
 
 func main() {
+	// TODO: add CLI flags
+	opts := slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "storage")
+
 	db, err := sqlx.Connect("sqlite", "storage.db")
 	if err != nil {
 		log.Fatalln(err)
@@ -40,7 +47,7 @@ func main() {
 	db.MustExec(storage.CreateVulnerabilityReportTableSQL)
 
 	ctx := genericapiserver.SetupSignalContext()
-	options := server.NewWardleServerOptions(os.Stdout, os.Stderr, db)
+	options := server.NewWardleServerOptions(db, logger)
 	cmd := server.NewCommandStartWardleServer(ctx, options)
 	code := cli.Run(cmd)
 	os.Exit(code)

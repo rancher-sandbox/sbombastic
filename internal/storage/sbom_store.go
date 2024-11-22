@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS sboms (
 `
 
 // NewSBOMStore returns a store registry that will work against API services.
-func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB) (*registry.Store, error) {
+func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB, logger *slog.Logger) (*registry.Store, error) {
 	strategy := newSBOMStrategy(scheme)
 
 	newFunc := func() runtime.Object { return &v1alpha1.SBOM{} }
@@ -42,6 +43,7 @@ func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, 
 				table:       "sboms",
 				newFunc:     newFunc,
 				newListFunc: newListFunc,
+				logger:      logger.With("store", "sbom"),
 			},
 		},
 		CreateStrategy: strategy,
