@@ -7,6 +7,7 @@ godebug default=go1.23
 require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/aquasecurity/trivy v0.57.0
+	github.com/go-logr/logr v1.4.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
@@ -15,10 +16,10 @@ require (
 	github.com/nats-io/nats.go v1.37.0
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
+	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
-	go.uber.org/zap v1.27.0
 	k8s.io/apimachinery v0.31.2
 	k8s.io/apiserver v0.31.1
 	k8s.io/client-go v0.31.2
@@ -163,7 +164,6 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
@@ -292,7 +292,6 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openvex/discovery v0.1.1-0.20240802171711-7c54efc57553 // indirect
 	github.com/openvex/go-vex v0.2.5 // indirect
-	github.com/owenrumney/go-sarif/v2 v2.3.3 // indirect
 	github.com/owenrumney/squealer v1.2.4 // indirect
 	github.com/package-url/packageurl-go v0.1.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
@@ -373,6 +372,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.21.0 // indirect

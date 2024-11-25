@@ -8,10 +8,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
-
-	"go.uber.org/zap"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
@@ -34,15 +33,15 @@ type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
 	k8sClient             client.Client
 	scheme                *runtime.Scheme
-	logger                *zap.Logger
+	logger                *slog.Logger
 }
 
-func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory, k8sClient client.Client, scheme *runtime.Scheme, logger *zap.Logger) *CreateCatalogHandler {
+func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory, k8sClient client.Client, scheme *runtime.Scheme, logger *slog.Logger) *CreateCatalogHandler {
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
 		scheme:                scheme,
-		logger:                logger.Named("create_catalog_handler"),
+		logger:                logger.With("handler", "create_catalog_handler"),
 	}
 }
 
@@ -53,8 +52,8 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("Catalog creation requested",
-		zap.String("registry", createCatalogMessage.RegistryName),
-		zap.String("namespace", createCatalogMessage.RegistryNamespace),
+		"registry", createCatalogMessage.RegistryName,
+		"namespace", createCatalogMessage.RegistryNamespace,
 	)
 
 	ctx := context.Background()
@@ -68,9 +67,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("cannot get registry %s/%s: %w", createCatalogMessage.RegistryNamespace, createCatalogMessage.RegistryName, err)
 	}
 
-	h.logger.Debug("Registry found",
-		zap.Any("registry", registry),
-	)
+	h.logger.Debug("Registry found", "registry", registry)
 
 	transport := h.transportFromRegistry(registry)
 	registryClient := h.registryClientFactory(transport)
@@ -84,19 +81,14 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	for _, repository := range repositories {
 		repoImages, err := h.discoverImages(ctx, registryClient, repository)
 		if err != nil {
-			h.logger.Error(
-				"cannot discover images",
-				zap.String("repository", repository),
-				zap.Error(err),
-			)
-			continue
+			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, err)
 		}
 		discoveredImageNames.Insert(repoImages...)
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
 	if err := h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
-		return fmt.Errorf("cannot list existing images: %w", err)
+		return fmt.Errorf("cannot list existing images in registry %s: %w", registry.Name, err)
 	}
 	existingImageNames := sets.Set[string]{}
 	for _, existingImage := range existingImageList.Items {
@@ -126,7 +118,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	if err := h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
-		return fmt.Errorf("cannot delete obsolete images: %w", err)
+		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
 	}
 
 	return nil
@@ -199,18 +191,12 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 				platformStr = platform.String()
 			}
 
-			h.logger.Error(
-				"cannot get image details",
-				zap.String("image", ref.Name()),
-				zap.String("platform", platformStr),
-				zap.Error(err))
-			continue
+			return nil, fmt.Errorf("cannot get image details for %s %s: %w", ref, platformStr, err)
 		}
 
 		image, err := imageDetailsToImage(ref, imageDetails, registry)
 		if err != nil {
-			h.logger.Error("cannot convert image details to image", zap.Error(err))
-			continue
+			return nil, fmt.Errorf("cannot convert image details to image: %w", err)
 		}
 
 		if err := controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
@@ -230,8 +216,8 @@ func (h *CreateCatalogHandler) refToPlatforms(registryClient registryclient.Clie
 	if err != nil {
 		h.logger.Debug(
 			"image doesn't seem to be multi-architecture",
-			zap.String("image", ref.Name()),
-			zap.Error(err))
+			"image", ref.Name(),
+			"error", err)
 		return []*cranev1.Platform(nil), nil
 	}
 
@@ -258,7 +244,7 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 	if len(registry.Spec.CABundle) > 0 {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			h.logger.Error("cannot load system cert pool, using empty pool", zap.Error(err))
+			h.logger.Error("cannot load system cert pool, using empty pool", "error", err)
 			rootCAs = x509.NewCertPool()
 		}
 
@@ -266,7 +252,9 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 		if ok {
 			transport.TLSClientConfig.RootCAs = rootCAs
 		} else {
-			h.logger.Info("cannot load the given CA bundle")
+			h.logger.Info("cannot load the given CA bundle",
+				"registry", registry.Name,
+				"namespace", registry.Namespace)
 		}
 	}
 

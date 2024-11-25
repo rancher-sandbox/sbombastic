@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 	"strconv"
@@ -14,8 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"go.uber.org/zap"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
@@ -124,7 +123,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		WithRuntimeObjects(registry).
 		Build()
 
-	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, zap.NewNop())
+	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, slog.Default())
 	err = handler.Handle(&messaging.CreateCatalog{
 		RegistryName:      registry.Name,
 		RegistryNamespace: registry.Namespace,
@@ -231,7 +230,7 @@ func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
 
 	handler := &CreateCatalogHandler{
 		k8sClient: k8sClient,
-		logger:    zap.NewNop(),
+		logger:    slog.Default(),
 	}
 
 	ctx := context.Background()

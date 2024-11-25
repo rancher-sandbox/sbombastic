@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
 
 type testHandler struct {
@@ -25,8 +25,6 @@ func (h *testHandler) NewMessage() Message {
 }
 
 func TestSubscriber_Run(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-
 	ns, err := NewServer()
 	require.NoError(t, err)
 	defer ns.Shutdown()
@@ -55,7 +53,7 @@ func TestSubscriber_Run(t *testing.T) {
 	handlers := HandlerRegistry{
 		"test-type": testHandler,
 	}
-	subscriber := NewSubscriber(sub, handlers, logger)
+	subscriber := NewSubscriber(sub, handlers, slog.Default())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -91,8 +89,6 @@ func TestSubscriber_Run(t *testing.T) {
 }
 
 func TestProcessMessage(t *testing.T) {
-	logger := zaptest.NewLogger(t) // Use zaptest for logger
-
 	tests := []struct {
 		name          string
 		msg           *nats.Msg
@@ -161,7 +157,7 @@ func TestProcessMessage(t *testing.T) {
 
 			subscriber := &Subscriber{
 				handlers: handlers,
-				logger:   logger,
+				logger:   slog.Default(),
 			}
 
 			err := subscriber.processMessage(test.msg)

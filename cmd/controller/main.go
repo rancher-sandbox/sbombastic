@@ -19,6 +19,8 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
+	"log/slog"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -30,11 +32,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/go-logr/logr"
 	"github.com/nats-io/nats.go"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -42,19 +44,6 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 	// +kubebuilder:scaffold:imports
 )
-
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(storagev1alpha1.AddToScheme(scheme))
-
-	// +kubebuilder:scaffold:scheme
-}
 
 //nolint:funlen // TODO: refactor to reduce function length
 func main() {
@@ -64,6 +53,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var logLevel string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -74,13 +64,22 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
+	flag.StringVar(&logLevel, "log-level", "info", "Log level")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	slogLevel, err := parseLogLevel(logLevel)
+	if err != nil {
+		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		os.Exit(1)
+	}
+
+	opts := slog.HandlerOptions{
+		Level: slogLevel,
+	}
+	logger := logr.FromSlogHandler(slog.NewJSONHandler(os.Stdout, &opts))
+	ctrl.SetLogger(logger)
+
+	setupLog := logger.WithName("setup")
 
 	ns, err := messaging.NewServer()
 	if err != nil {
@@ -144,6 +143,13 @@ func main() {
 		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/metrics/filters#WithAuthenticationAndAuthorization
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
+
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(storagev1alpha1.AddToScheme(scheme))
+
+	// +kubebuilder:scaffold:scheme
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -212,4 +218,13 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func parseLogLevel(s string) (slog.Level, error) {
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(s)); err != nil {
+		return level, fmt.Errorf("unable to parse log level: %w", err)
+	}
+
+	return level, nil
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -22,15 +22,15 @@ type ScanSBOMHandler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
 	workDir   string
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
-func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *zap.Logger) *ScanSBOMHandler {
+func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *ScanSBOMHandler {
 	return &ScanSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,
 		workDir:   workDir,
-		logger:    logger.Named("scan_sbom_handler"),
+		logger:    logger.With("handler", "scan_sbom_handler"),
 	}
 }
 
@@ -41,8 +41,8 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("SBOM scan requested",
-		zap.String("sbom", scanSBOMMessage.SBOMName),
-		zap.String("namespace", scanSBOMMessage.SBOMNamespace),
+		"sbom", scanSBOMMessage.SBOMName,
+		"namespace", scanSBOMMessage.SBOMNamespace,
 	)
 
 	ctx := context.Background()
@@ -62,11 +62,11 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 	defer func() {
 		if err := sbomFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary SBOM file", zap.Error(err))
+			h.logger.Error("failed to close temporary SBOM file", "error", err)
 		}
 
 		if err := os.Remove(sbomFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary SBOM file", zap.Error(err))
+			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
 
@@ -80,11 +80,11 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 	defer func() {
 		if err := reportFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary report file", zap.Error(err))
+			h.logger.Error("failed to close temporary report file", "error", err)
 		}
 
 		if err := os.Remove(reportFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary repoort file", zap.Error(err))
+			h.logger.Error("failed to remove temporary repoort file", "error", err)
 		}
 	}()
 
@@ -106,8 +106,8 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	h.logger.Debug("SBOM scanned",
-		zap.String("sbom", scanSBOMMessage.SBOMName),
-		zap.String("namespace", scanSBOMMessage.SBOMNamespace),
+		"sbom", scanSBOMMessage.SBOMName,
+		"namespace", scanSBOMMessage.SBOMNamespace,
 	)
 
 	reportBytes, err := io.ReadAll(reportFile)

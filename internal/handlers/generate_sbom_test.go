@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	"github.com/spdx/tools-golang/spdx"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +57,7 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	err = json.Unmarshal(spdxData, expectedSPDX)
 	require.NoError(t, err)
 
-	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", zap.NewNop())
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
 	err = handler.Handle(&messaging.GenerateSBOM{
 		ImageName:      image.Name,

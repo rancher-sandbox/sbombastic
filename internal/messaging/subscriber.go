@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"go.uber.org/zap"
 )
 
 type HandlerRegistry map[string]Handler
@@ -16,14 +16,14 @@ type HandlerRegistry map[string]Handler
 type Subscriber struct {
 	sub      *nats.Subscription
 	handlers HandlerRegistry
-	logger   *zap.Logger
+	logger   *slog.Logger
 }
 
-func NewSubscriber(sub *nats.Subscription, handlers HandlerRegistry, logger *zap.Logger) *Subscriber {
+func NewSubscriber(sub *nats.Subscription, handlers HandlerRegistry, logger *slog.Logger) *Subscriber {
 	return &Subscriber{
 		sub:      sub,
 		handlers: handlers,
-		logger:   logger,
+		logger:   logger.With("component", "subscriber"),
 	}
 }
 
@@ -31,7 +31,7 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Info("Subscriber shutting down...")
+			s.logger.InfoContext(ctx, "Subscriber shutting down...")
 
 			return nil
 		default:
@@ -45,13 +45,14 @@ func (s *Subscriber) Run(ctx context.Context) error {
 			}
 
 			for _, msg := range msgs {
-				s.logger.Debug("Processing message", zap.Any("message", msg))
+				s.logger.DebugContext(ctx, "Processing message", "message", msg)
 				if err := s.processMessage(msg); err != nil {
-					s.logger.Error("Failed to process message",
-						zap.Error(err),
-						zap.String("subject", msg.Subject),
-						zap.Any("header", msg.Header),
-						zap.ByteString("data", msg.Data))
+					s.logger.ErrorContext(ctx, "Failed to process message",
+						"subject", msg.Subject,
+						"header", msg.Header,
+						"data", msg.Data,
+						"error", err,
+					)
 				}
 
 				if err := msg.Ack(); err != nil {
