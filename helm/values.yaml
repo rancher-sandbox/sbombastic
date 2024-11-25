@@ -4,21 +4,21 @@
 
 controller:
   image:
-    repository: ghcr.io/fabriziosestito/sbombastic/controller
+    repository: ghcr.io/rancher-sandbox/sbombastic/controller
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
 
 storage:
   image:
-    repository: ghcr.io/fabriziosestito/sbombastic/storage
+    repository: ghcr.io/rancher-sandbox/sbombastic/storage
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
 
 worker:
   image:
-    repository: ghcr.io/fabriziosestito/sbombastic/worker
+    repository: ghcr.io/rancher-sandbox/sbombastic/worker
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
