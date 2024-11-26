@@ -1,25 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: worker
+  name: {{ include "sbombastic.fullname" . }}-worker
   namespace: {{ .Release.Namespace }}
   labels:
-    worker: "true"
+    {{- include "sbombastic.labels" (merge . (dict "Component" "worker")) | nindent 4 }}
 spec:
   replicas: {{ .Values.worker.replicas }}
   selector:
     matchLabels:
-      worker: "true"
+      {{- include "sbombastic.selectorLabels" (merge . (dict "Component" "worker")) | nindent 6 }}
   template:
     metadata:
       labels:
-        worker: "true"
+        {{- include "sbombastic.selectorLabels" (merge . (dict "Component" "worker")) | nindent 8 }}
     spec:
-      serviceAccountName: worker
+      serviceAccountName: {{ include "sbombastic.fullname" . }}-worker
       containers:
         - name: worker
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          args:
+            - -nats-url
+            - {{ .Release.Name }}-controller-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
           volumeMounts:
             - mountPath: /var/run/worker
               name: run-volume

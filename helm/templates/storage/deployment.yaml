@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: storage
+  name: {{ include "sbombastic.fullname" . }}-storage
   namespace: {{ .Release.Namespace }}
   labels:
-    apiserver: "true"
+    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
 spec:
   replicas: {{ .Values.storage.replicas }}
   selector:
     matchLabels:
-      apiserver: "true"
+      {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 6 }}
   template:
     metadata:
       labels:
-        apiserver: "true"
+        {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 7 }}
     spec:
-      serviceAccountName: apiserver
+      serviceAccountName: {{ include "sbombastic.fullname" . }}-storage
       containers:
-        - name: wardle-server
+        - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}

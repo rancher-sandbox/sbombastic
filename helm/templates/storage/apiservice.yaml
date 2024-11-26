@@ -2,12 +2,14 @@ apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1alpha1.storage.sbombastic.rancher.io
+  labels:
+    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
 spec:
   insecureSkipTLSVerify: true
   group: storage.sbombastic.rancher.io
   groupPriorityMinimum: 1000
   versionPriority: 15
   service:
-    name: api
+    name: {{ include "sbombastic.fullname" . }}-storage
     namespace: {{ .Release.Namespace }}
   version: v1alpha1
