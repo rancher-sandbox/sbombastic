@@ -35,7 +35,6 @@ Common labels
 */}}
 {{- define "sbombastic.labels" -}}
 helm.sh/chart: {{ include "sbombastic.chart" . }}
-{{ include "sbombastic.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -48,6 +47,7 @@ Selector labels
 {{- define "sbombastic.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "sbombastic.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: {{ .Component | quote }}
 {{- end }}
 
 {{/*

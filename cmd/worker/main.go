@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,16 +22,27 @@ import (
 )
 
 func main() {
-	// TODO: add CLI flags for log level
+	var natsURL string
+	var logLevel string
+	var runDir string
+
+	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
+	flag.StringVar(&logLevel, "log-level", "info", "Log level")
+	flag.Parse()
+
+	slogLevel, err := parseLogLevel(logLevel)
+	if err != nil {
+		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		os.Exit(1)
+	}
 	opts := slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: slogLevel,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "worker")
 	logger.Info("Starting worker")
 
-	// TODO: add CLI flags for NATS server address
-	sub, err := messaging.NewSubscription("nats://controller-nats.sbombastic.svc.cluster.local",
-		"worker")
+	sub, err := messaging.NewSubscription(natsURL, "worker")
 	if err != nil {
 		logger.Error("Error creating subscription", "error", err)
 		os.Exit(1)
@@ -56,8 +69,8 @@ func main() {
 
 	handlers := messaging.HandlerRegistry{
 		messaging.CreateCatalogType: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, logger),
-		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, "/var/run/worker", logger),
-		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, "/var/run/worker", logger),
+		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, logger),
+		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
 	}
 	subscriber := messaging.NewSubscriber(sub, handlers, logger)
 
@@ -75,4 +88,14 @@ func main() {
 		logger.Error("Error running worker subscriber", "error", err)
 		os.Exit(1)
 	}
+}
+
+// TODO: move to a shared package
+func parseLogLevel(s string) (slog.Level, error) {
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(s)); err != nil {
+		return level, fmt.Errorf("unable to parse log level: %w", err)
+	}
+
+	return level, nil
 }

@@ -1,7 +1,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: worker-role
+  name: {{ include "sbombastic.fullname" . }}-worker
+  labels:
+    {{- include "sbombastic.labels" (merge . (dict "Component" "worker")) | nindent 4 }}
 rules:
   - apiGroups:
       - sbombastic.rancher.io

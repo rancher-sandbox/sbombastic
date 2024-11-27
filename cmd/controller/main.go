@@ -54,6 +54,7 @@ func main() {
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
 	var logLevel string
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -72,13 +73,11 @@ func main() {
 		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
 		os.Exit(1)
 	}
-
 	opts := slog.HandlerOptions{
 		Level: slogLevel,
 	}
-	logger := logr.FromSlogHandler(slog.NewJSONHandler(os.Stdout, &opts))
+	logger := logr.FromSlogHandler(slog.NewJSONHandler(os.Stdout, &opts)).WithValues("component", "controller")
 	ctrl.SetLogger(logger)
-
 	setupLog := logger.WithName("setup")
 
 	ns, err := messaging.NewServer()
@@ -220,6 +219,7 @@ func main() {
 	}
 }
 
+// TODO: move to a shared package
 func parseLogLevel(s string) (slog.Level, error) {
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(s)); err != nil {
