@@ -24,8 +24,10 @@ import (
 func main() {
 	var natsURL string
 	var logLevel string
+	var runDir string
 
-	flag.StringVar(&natsURL, "nats-url", "", "The URL of the NATS server")
+	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level")
 	flag.Parse()
 
@@ -67,8 +69,8 @@ func main() {
 
 	handlers := messaging.HandlerRegistry{
 		messaging.CreateCatalogType: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, logger),
-		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, "/var/run/worker", logger),
-		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, "/var/run/worker", logger),
+		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, logger),
+		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
 	}
 	subscriber := messaging.NewSubscriber(sub, handlers, logger)
 
