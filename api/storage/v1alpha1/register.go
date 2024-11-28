@@ -73,6 +73,11 @@ func AddKnownTypes(scheme *runtime.Scheme) error {
 	if err != nil {
 		return fmt.Errorf("unable to add field selector conversion function to SBOM: %w", err)
 	}
+
+	err = scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("VulnerabilityReport"), imageMetadataFieldSelectorConversion)
+	if err != nil {
+		return fmt.Errorf("unable to add field selector conversion function to VulnerabilityReport: %w", err)
+	}
 	return nil
 }
 
