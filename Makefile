@@ -51,7 +51,7 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
 	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=helm/templates/crd output:rbac:artifacts:config=helm/templates/controller
 	sed -i 's/controller-role/{{ include "sbombastic.fullname" . }}-controller/' helm/templates/controller/role.yaml
-	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 4 }}' helm/templates/controller/role.yaml
+	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' helm/templates/controller/role.yaml
 
 .PHONY: generate-storage-test-crd
 generate-storage-test-crd: ## Generate CRD used by the controller tests to access the storage resources. This is needed since storage does not provide CRD, being an API server extension.
