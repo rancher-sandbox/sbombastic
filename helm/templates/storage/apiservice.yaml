@@ -3,7 +3,8 @@ kind: APIService
 metadata:
   name: v1alpha1.storage.sbombastic.rancher.io
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: storage
 spec:
   insecureSkipTLSVerify: true
   group: storage.sbombastic.rancher.io

@@ -4,16 +4,19 @@ metadata:
   name: {{ include "sbombastic.fullname" . }}-worker
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "sbombastic.labels" (merge . (dict "Component" "worker")) | nindent 4 }}
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: worker
 spec:
   replicas: {{ .Values.worker.replicas }}
   selector:
     matchLabels:
-      {{- include "sbombastic.selectorLabels" (merge . (dict "Component" "worker")) | nindent 6 }}
+      {{ include "sbombastic.selectorLabels" .| nindent 6 }}
+      app.kubernetes.io/component: worker
   template:
     metadata:
       labels:
-        {{- include "sbombastic.selectorLabels" (merge . (dict "Component" "worker")) | nindent 8 }}
+        {{ include "sbombastic.labels" .| nindent 8 }}
+        app.kubernetes.io/component: worker
     spec:
       serviceAccountName: {{ include "sbombastic.fullname" . }}-worker
       containers:
