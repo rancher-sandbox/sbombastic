@@ -431,7 +431,7 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err.Error())
 		}
 
-		bytes, err := json.Marshal(destination)
+		bytes, err := json.Marshal(updatedObj)
 		if err != nil {
 			return storage.NewInternalError(err.Error())
 		}
