@@ -3,7 +3,8 @@ kind: ClusterRole
 metadata:
   name: {{ include "sbombastic.fullname" . }}-controller-metrics-auth
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 4 }}
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: controller
 rules:
 - apiGroups:
   - authentication.k8s.io

@@ -4,17 +4,20 @@ metadata:
   name: {{ include "sbombastic.fullname" . }}-controller
   namespace: {{ .Release.Namespace }}
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 4 }}
+    {{ include "sbombastic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
 spec:
   selector:
     matchLabels:
-      {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 6 }}
+      {{ include "sbombastic.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: controller
   serviceName: {{ include "sbombastic.fullname" . }}-controller
   replicas: {{ .Values.controller.replicas }}
   template:
     metadata:
       labels:
-        {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 8 }}
+        {{ include "sbombastic.labels" . | nindent 8 }}
+        app.kubernetes.io/component: controller
     spec:
       containers:
         - command:

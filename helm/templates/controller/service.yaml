@@ -4,12 +4,14 @@ metadata:
   name: {{ include "sbombastic.fullname" . }}-controller-nats
   namespace: {{ .Release.Namespace }}
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 4 }}
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: controller
 spec:
   ports:
     - port: 4222
       protocol: TCP
       targetPort: 4222
   selector:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 4 }}
+    {{ include "sbombastic.selectorLabels" .| nindent 4 }}
+    app.kubernetes.io/component: controller
   type: ClusterIP 

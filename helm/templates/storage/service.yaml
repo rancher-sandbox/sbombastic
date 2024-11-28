@@ -4,11 +4,13 @@ metadata:
   name: {{ include "sbombastic.fullname" . }}-storage
   namespace: {{ .Release.Namespace }}
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: storage
 spec:
   ports:
     - port: 443
       protocol: TCP
       targetPort: 443
   selector:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
+    {{ include "sbombastic.selectorLabels" .| nindent 4 }}
+    app.kubernetes.io/component: storage

@@ -4,16 +4,19 @@ metadata:
   name: {{ include "sbombastic.fullname" . }}-storage
   namespace: {{ .Release.Namespace }}
   labels:
-    {{ include "sbombastic.labels" (merge . (dict "Component" "storage")) | nindent 4 }}
+    {{ include "sbombastic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
 spec:
   replicas: {{ .Values.storage.replicas }}
   selector:
     matchLabels:
-      {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 6 }}
+      {{ include "sbombastic.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: storage
   template:
     metadata:
       labels:
-        {{ include "sbombastic.labels" (merge . (dict "Component" "controller")) | nindent 7 }}
+        {{ include "sbombastic.labels" . | nindent 8 }}
+        app.kubernetes.io/component: storage
     spec:
       serviceAccountName: {{ include "sbombastic.fullname" . }}-storage
       containers:
