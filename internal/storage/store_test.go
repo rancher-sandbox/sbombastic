@@ -334,7 +334,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			key:           keyPrefix + "/default/test1",
 			preconditions: &storage.Preconditions{},
 			tryUpdate: func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
-				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo": "bar"}`)
+				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo":"bar"}`)
 				return input, ptr.To(uint64(0)), nil
 			},
 			sbom: &v1alpha1.SBOM{
@@ -358,7 +358,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				},
 				Spec: v1alpha1.SBOMSpec{
 					SPDX: runtime.RawExtension{
-						Raw: []byte(`{"foo": "bar"}`),
+						Raw: []byte(`{"foo":"bar"}`),
 					},
 				},
 			},
@@ -439,23 +439,30 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				suite.Require().NoError(err)
 			}
 
-			updatedSBOM := &v1alpha1.SBOM{}
-			err := suite.store.GuaranteedUpdate(context.Background(), test.key, updatedSBOM, test.ignoreNotFound, test.preconditions, test.tryUpdate, nil)
+			destinationSBOM := &v1alpha1.SBOM{}
+			err := suite.store.GuaranteedUpdate(context.Background(), test.key, destinationSBOM, test.ignoreNotFound, test.preconditions, test.tryUpdate, nil)
 
+			currentSBOM := &v1alpha1.SBOM{}
 			if test.expectedError != nil {
 				suite.Require().Error(err)
 				suite.Require().Equal(test.expectedError.Error(), err.Error())
 
 				if test.sbom != nil {
 					// If there is an error, the original object should not be updated.
-					currentSBOM := &v1alpha1.SBOM{}
 					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
 					suite.Require().NoError(err)
 					suite.Equal(test.sbom, currentSBOM)
 				}
 			} else {
 				suite.Require().NoError(err)
-				suite.Require().Equal(test.expectedUpdatedSBOM, updatedSBOM)
+				suite.Require().Equal(test.expectedUpdatedSBOM, destinationSBOM)
+
+				if !test.ignoreNotFound {
+					// Verify the object was updated in the store.
+					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
+					suite.Require().NoError(err)
+					suite.Equal(test.expectedUpdatedSBOM, currentSBOM)
+				}
 			}
 		})
 	}
