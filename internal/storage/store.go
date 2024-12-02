@@ -315,6 +315,11 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		itemsValue.Set(reflect.Append(itemsValue, reflect.ValueOf(obj).Elem()))
 	}
 
+	// TODO: Implement pagination and use a proper resourceVersion
+	if err := s.Versioner().UpdateList(listObj, 1, "", nil); err != nil {
+		return storage.NewInternalError(err.Error())
+	}
+
 	return nil
 }
 
