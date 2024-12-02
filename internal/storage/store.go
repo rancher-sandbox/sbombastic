@@ -176,7 +176,7 @@ func (s *store) Delete(
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions) (watch.Interface, error) {
-	s.logger.DebugContext(ctx, "Watching object", "key", key, "options", opts)
+	s.logger.DebugContext(ctx, "Watching object", "key", key, "resourceVersion", opts.ResourceVersion, "progressNotify", opts.ProgressNotify)
 
 	if opts.ResourceVersion == "" {
 		return s.broadcaster.Watch()
@@ -224,7 +224,7 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, objPtr runtime.Object) error {
-	s.logger.DebugContext(ctx, "Getting object", "key", key, "options", opts)
+	s.logger.DebugContext(ctx, "Getting object", "key", key, "ignoreNotFound", opts.IgnoreNotFound, "resourceVersion", opts.ResourceVersion)
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
@@ -268,7 +268,14 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
-	s.logger.DebugContext(ctx, "Getting list", "key", key, "options", opts)
+	s.logger.DebugContext(ctx, "Getting list",
+		"key", key,
+		"resourceVersion", opts.ResourceVersion,
+		"labelSelector", opts.Predicate.Label.String(),
+		"fieldSelector", opts.Predicate.Field.String(),
+		"limit", opts.Predicate.Limit,
+		"continue", opts.Predicate.Continue,
+	)
 
 	queryBuilder := sq.Select("*").From(s.table)
 	namespace := extractNamespace(key)
