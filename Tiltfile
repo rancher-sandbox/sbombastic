@@ -1,6 +1,15 @@
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
+# Setup a development registry so we can push images to it 
+# and use them to test the scanner.
+k8s_yaml('./hack/registry.yaml')
+
+k8s_resource(
+    'dev-registry',
+    port_forwards=5000,
+)
+
 # Create the sbombastic namespace
 # This is required since the helm() function doesn't support the create_namespace flag
 load("ext://namespace", "namespace_create")
