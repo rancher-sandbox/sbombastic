@@ -4,4 +4,4 @@ metadata:
   name: my-first-registry
   namespace: default
 spec:
-  uri: docker-registry.default.svc.cluster.local
+  uri: dev-registry.default.svc.cluster.local:5000
