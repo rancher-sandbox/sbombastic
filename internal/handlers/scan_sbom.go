@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 
+	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
