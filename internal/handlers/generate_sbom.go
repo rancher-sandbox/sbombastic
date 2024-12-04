@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 
+	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
+
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,6 +81,8 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		"image",
 		"--cache-dir", h.workDir,
 		"--format", "spdx-json",
+		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
+		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
 		"--output", sbomFile.Name(),
 		fmt.Sprintf("%s/%s:%s", image.GetImageMetadata().RegistryURI, image.GetImageMetadata().Repository, image.GetImageMetadata().Tag),
 	})
