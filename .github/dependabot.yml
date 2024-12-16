@@ -5,6 +5,13 @@ updates:
   schedule:
     interval: "daily"
   open-pull-requests-limit: 10
+  groups:
+    kubernetes:
+      patterns:
+        - "sigs.k8s.io/controller-runtime"
+        - "k8s.io/apimachinery"
+        - "k8s.io/client-go"
+        - "k8s.io/component-base"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
