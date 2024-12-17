@@ -67,6 +67,7 @@ func newSBOMs(c *StorageV1alpha1Client, namespace string) *sBOMs {
 			scheme.ParameterCodec,
 			namespace,
 			func() *storagev1alpha1.SBOM { return &storagev1alpha1.SBOM{} },
-			func() *storagev1alpha1.SBOMList { return &storagev1alpha1.SBOMList{} }),
+			func() *storagev1alpha1.SBOMList { return &storagev1alpha1.SBOMList{} },
+		),
 	}
 }

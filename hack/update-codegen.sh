@@ -22,7 +22,7 @@ set -o pipefail
 # This script is adapted from k8s.io/sample-apiserver
 # Instead of vendoring the code-generator, we use `go env GOPATH` to find the code-generator package
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-CODE_GENERATOR_VERSION=$(go list -m k8s.io/code-generator | awk '{print $5}')
+CODE_GENERATOR_VERSION=$(go list -m k8s.io/code-generator | awk '{print $2}')
 GOPATH=$(go env GOPATH)
 CODEGEN_PKG="$GOPATH/pkg/mod/k8s.io/code-generator@$CODE_GENERATOR_VERSION"
 

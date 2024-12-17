@@ -28,15 +28,15 @@ type FakeStorageV1alpha1 struct {
 }
 
 func (c *FakeStorageV1alpha1) Images(namespace string) v1alpha1.ImageInterface {
-	return &FakeImages{c, namespace}
+	return newFakeImages(c, namespace)
 }
 
 func (c *FakeStorageV1alpha1) SBOMs(namespace string) v1alpha1.SBOMInterface {
-	return &FakeSBOMs{c, namespace}
+	return newFakeSBOMs(c, namespace)
 }
 
 func (c *FakeStorageV1alpha1) VulnerabilityReports(namespace string) v1alpha1.VulnerabilityReportInterface {
-	return &FakeVulnerabilityReports{c, namespace}
+	return newFakeVulnerabilityReports(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

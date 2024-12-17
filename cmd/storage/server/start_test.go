@@ -20,13 +20,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/version"
-	utilversion "k8s.io/apiserver/pkg/util/version"
+	baseversion "k8s.io/component-base/version"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWardleEmulationVersionToKubeEmulationVersion(t *testing.T) {
-	defaultKubeEffectiveVersion := utilversion.DefaultKubeEffectiveVersion()
+	defaultKubeEffectiveVersion := baseversion.DefaultKubeEffectiveVersion()
 
 	testCases := []struct {
 		desc                     string

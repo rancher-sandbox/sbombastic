@@ -67,6 +67,7 @@ func newImages(c *StorageV1alpha1Client, namespace string) *images {
 			scheme.ParameterCodec,
 			namespace,
 			func() *storagev1alpha1.Image { return &storagev1alpha1.Image{} },
-			func() *storagev1alpha1.ImageList { return &storagev1alpha1.ImageList{} }),
+			func() *storagev1alpha1.ImageList { return &storagev1alpha1.ImageList{} },
+		),
 	}
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 
@@ -116,7 +117,7 @@ func (suite *storeTestSuite) TestDelete() {
 			suite.Require().NoError(err)
 
 			out := &v1alpha1.SBOM{}
-			err = suite.store.Delete(context.Background(), key, out, test.preconditions, test.validateDeletion, nil)
+			err = suite.store.Delete(context.Background(), key, out, test.preconditions, test.validateDeletion, nil, storage.DeleteOptions{})
 
 			if test.expectedError != nil {
 				suite.Require().Error(err)
@@ -164,7 +165,7 @@ func (suite *storeTestSuite) TestWatchResourceVersionZero() {
 	validateDeletion := func(_ context.Context, _ runtime.Object) error {
 		return nil
 	}
-	err = suite.store.Delete(context.Background(), key, &v1alpha1.SBOM{}, &storage.Preconditions{}, validateDeletion, nil)
+	err = suite.store.Delete(context.Background(), key, &v1alpha1.SBOM{}, &storage.Preconditions{}, validateDeletion, nil, storage.DeleteOptions{})
 	suite.Require().NoError(err)
 
 	suite.broadcaster.Shutdown()
@@ -393,7 +394,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			key:           keyPrefix + "/default/test3",
 			preconditions: &storage.Preconditions{},
 			tryUpdate: func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
-				return nil, nil, storage.NewInternalError("tryUpdate failed")
+				return nil, nil, storage.NewInternalError(errors.New("tryUpdate failed"))
 			},
 			sbom: &v1alpha1.SBOM{
 				ObjectMeta: metav1.ObjectMeta{
@@ -407,7 +408,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					},
 				},
 			},
-			expectedError: storage.NewInternalError("tryUpdate failed"),
+			expectedError: storage.NewInternalError(errors.New("tryUpdate failed")),
 		},
 		{
 			name:          "not found",
