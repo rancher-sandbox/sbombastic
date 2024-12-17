@@ -23,7 +23,7 @@ require (
 	k8s.io/apimachinery v0.32.0
 	k8s.io/apiserver v0.32.0
 	k8s.io/client-go v0.32.0
-	k8s.io/code-generator v0.31.1
+	k8s.io/code-generator v0.32.0
 	k8s.io/component-base v0.32.0
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
@@ -430,7 +430,3 @@ require (
 	tags.cncf.io/container-device-interface v0.8.0 // indirect
 	tags.cncf.io/container-device-interface/specs-go v0.8.0 // indirect
 )
-
-// This is needed to consume the fix for the client-go extension generation
-// See https://github.com/kubernetes/code-generator/commit/06ae20b53fb128366a33c1f25f7ff57d68195b43
-replace k8s.io/code-generator => k8s.io/code-generator v0.0.0-20240928043524-06ae20b53fb1
