@@ -18,179 +18,31 @@ limitations under the License.
 package fake
 
 import (
-	context "context"
-	json "encoding/json"
-	fmt "fmt"
-
 	v1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	storagev1alpha1 "github.com/rancher/sbombastic/pkg/generated/applyconfiguration/storage/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	typedstoragev1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeSBOMs implements SBOMInterface
-type FakeSBOMs struct {
+// fakeSBOMs implements SBOMInterface
+type fakeSBOMs struct {
+	*gentype.FakeClientWithListAndApply[*v1alpha1.SBOM, *v1alpha1.SBOMList, *storagev1alpha1.SBOMApplyConfiguration]
 	Fake *FakeStorageV1alpha1
-	ns   string
 }
 
-var sbomsResource = v1alpha1.SchemeGroupVersion.WithResource("sboms")
-
-var sbomsKind = v1alpha1.SchemeGroupVersion.WithKind("SBOM")
-
-// Get takes name of the sBOM, and returns the corresponding sBOM object, and an error if there is any.
-func (c *FakeSBOMs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.SBOM, err error) {
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(sbomsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeSBOMs(fake *FakeStorageV1alpha1, namespace string) typedstoragev1alpha1.SBOMInterface {
+	return &fakeSBOMs{
+		gentype.NewFakeClientWithListAndApply[*v1alpha1.SBOM, *v1alpha1.SBOMList, *storagev1alpha1.SBOMApplyConfiguration](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("sboms"),
+			v1alpha1.SchemeGroupVersion.WithKind("SBOM"),
+			func() *v1alpha1.SBOM { return &v1alpha1.SBOM{} },
+			func() *v1alpha1.SBOMList { return &v1alpha1.SBOMList{} },
+			func(dst, src *v1alpha1.SBOMList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.SBOMList) []*v1alpha1.SBOM { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1alpha1.SBOMList, items []*v1alpha1.SBOM) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// List takes label and field selectors, and returns the list of SBOMs that match those selectors.
-func (c *FakeSBOMs) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.SBOMList, err error) {
-	emptyResult := &v1alpha1.SBOMList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(sbomsResource, sbomsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.SBOMList{ListMeta: obj.(*v1alpha1.SBOMList).ListMeta}
-	for _, item := range obj.(*v1alpha1.SBOMList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested sBOMs.
-func (c *FakeSBOMs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(sbomsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a sBOM and creates it.  Returns the server's representation of the sBOM, and an error, if there is any.
-func (c *FakeSBOMs) Create(ctx context.Context, sBOM *v1alpha1.SBOM, opts v1.CreateOptions) (result *v1alpha1.SBOM, err error) {
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(sbomsResource, c.ns, sBOM, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// Update takes the representation of a sBOM and updates it. Returns the server's representation of the sBOM, and an error, if there is any.
-func (c *FakeSBOMs) Update(ctx context.Context, sBOM *v1alpha1.SBOM, opts v1.UpdateOptions) (result *v1alpha1.SBOM, err error) {
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(sbomsResource, c.ns, sBOM, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSBOMs) UpdateStatus(ctx context.Context, sBOM *v1alpha1.SBOM, opts v1.UpdateOptions) (result *v1alpha1.SBOM, err error) {
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(sbomsResource, "status", c.ns, sBOM, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// Delete takes name of the sBOM and deletes it. Returns an error if one occurs.
-func (c *FakeSBOMs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(sbomsResource, c.ns, name, opts), &v1alpha1.SBOM{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeSBOMs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(sbomsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.SBOMList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched sBOM.
-func (c *FakeSBOMs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.SBOM, err error) {
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(sbomsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied sBOM.
-func (c *FakeSBOMs) Apply(ctx context.Context, sBOM *storagev1alpha1.SBOMApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.SBOM, err error) {
-	if sBOM == nil {
-		return nil, fmt.Errorf("sBOM provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(sBOM)
-	if err != nil {
-		return nil, err
-	}
-	name := sBOM.Name
-	if name == nil {
-		return nil, fmt.Errorf("sBOM.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(sbomsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeSBOMs) ApplyStatus(ctx context.Context, sBOM *storagev1alpha1.SBOMApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.SBOM, err error) {
-	if sBOM == nil {
-		return nil, fmt.Errorf("sBOM provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(sBOM)
-	if err != nil {
-		return nil, err
-	}
-	name := sBOM.Name
-	if name == nil {
-		return nil, fmt.Errorf("sBOM.Name must be provided to Apply")
-	}
-	emptyResult := &v1alpha1.SBOM{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(sbomsResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.SBOM), err
 }
