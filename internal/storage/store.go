@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -55,16 +56,16 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
-		return storage.NewInternalErrorf("invalid key: %s", key)
+		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
 	if err := s.Versioner().UpdateObject(obj, 1); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	bytes, err := json.Marshal(obj)
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	query, args, err := sq.Insert(s.table).
@@ -73,17 +74,17 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		Suffix("ON CONFLICT DO NOTHING").
 		ToSql()
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	result, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	if rowsAffected == 0 {
@@ -91,7 +92,7 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 	}
 
 	if err := s.broadcaster.Action(watch.Added, obj); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	if out != nil {
@@ -110,18 +111,18 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 // However, the implementations have to retry in case suggestion is stale.
 func (s *store) Delete(
 	ctx context.Context, key string, out runtime.Object, preconditions *storage.Preconditions,
-	validateDeletion storage.ValidateObjectFunc, _ runtime.Object,
+	validateDeletion storage.ValidateObjectFunc, _ runtime.Object, _ storage.DeleteOptions,
 ) error {
 	s.logger.DebugContext(ctx, "Deleting object", "key", key)
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
-		return storage.NewInternalErrorf("invalid key: %s", key)
+		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
@@ -134,7 +135,7 @@ func (s *store) Delete(
 		Suffix("RETURNING *").
 		ToSql()
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	objectRecord := &objectSchema{}
@@ -142,11 +143,11 @@ func (s *store) Delete(
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.NewKeyNotFoundError(key, 0)
 		}
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	if err := json.Unmarshal(objectRecord.Object, out); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	if err := preconditions.Check(key, out); err != nil {
@@ -158,11 +159,11 @@ func (s *store) Delete(
 	}
 
 	if err := tx.Commit(); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	if err := s.broadcaster.Action(watch.Deleted, out); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	return nil
@@ -206,7 +207,7 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 		// Cast the item address to a runtime.Object
 		item, ok := itemsValue.Index(i).Addr().Interface().(runtime.Object)
 		if !ok {
-			return nil, storage.NewInternalErrorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface())
+			return nil, storage.NewInternalError(fmt.Errorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface()))
 		}
 
 		events = append(events, watch.Event{
@@ -228,11 +229,11 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
-		return storage.NewInternalErrorf("invalid key: %s", key)
+		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
 	if err := runtime.SetZeroValue(objPtr); err != nil {
-		return storage.NewInternalErrorf("unable to set objPtr zero value: %v", err)
+		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
 	query, args, err := sq.Select("*").
@@ -240,7 +241,7 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		Where(sq.Eq{"name": name, "namespace": namespace}).
 		ToSql()
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	objectRecord := &objectSchema{}
@@ -252,12 +253,12 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 
 			return storage.NewKeyNotFoundError(key, 0)
 		}
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	err = json.Unmarshal(objectRecord.Object, objPtr)
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	return nil
@@ -284,12 +285,12 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	}
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	var objectRecords []objectSchema
 	if err := s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	itemsValue, err := getItems(listObj)
@@ -300,12 +301,12 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	for _, objectRecord := range objectRecords {
 		obj := s.newFunc()
 		if err := json.Unmarshal(objectRecord.Object, obj); err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		ok, err := opts.Predicate.Matches(obj)
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 		if !ok {
 			continue
@@ -317,7 +318,7 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 
 	// TODO: Implement pagination and use a proper resourceVersion
 	if err := s.Versioner().UpdateList(listObj, 1, "", nil); err != nil {
-		return storage.NewInternalError(err.Error())
+		return storage.NewInternalError(err)
 	}
 
 	return nil
@@ -372,7 +373,7 @@ func (s *store) GuaranteedUpdate(
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
-		return storage.NewInternalErrorf("invalid key: %s", key)
+		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
@@ -392,11 +393,11 @@ func (s *store) GuaranteedUpdate(
 			Where(sq.Eq{"name": name, "namespace": namespace}).
 			ToSql()
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		if err := runtime.SetZeroValue(destination); err != nil {
-			return storage.NewInternalErrorf("unable to set destination to zero value: %v", err)
+			return storage.NewInternalError(fmt.Errorf("unable to set destination to zero value: %w", err))
 		}
 
 		objectRecord := &objectSchema{}
@@ -415,7 +416,7 @@ func (s *store) GuaranteedUpdate(
 		obj := s.newFunc()
 		err = json.Unmarshal(objectRecord.Object, obj)
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		err = preconditions.Check(key, obj)
@@ -437,15 +438,15 @@ func (s *store) GuaranteedUpdate(
 
 		version, err := s.Versioner().ObjectResourceVersion(obj)
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 		if err := s.Versioner().UpdateObject(updatedObj, version+1); err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		bytes, err := json.Marshal(updatedObj)
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		query, args, err = sq.Update(s.table).
@@ -453,20 +454,20 @@ func (s *store) GuaranteedUpdate(
 			Where(sq.Eq{"name": name, "namespace": namespace}).
 			ToSql()
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
 		if err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		if err := tx.Commit(); err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		if err := s.broadcaster.Action(watch.Modified, updatedObj); err != nil {
-			return storage.NewInternalError(err.Error())
+			return storage.NewInternalError(err)
 		}
 
 		if err := setValue(updatedObj, destination); err != nil {
@@ -492,12 +493,12 @@ func (s *store) Count(key string) (int64, error) {
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return 0, storage.NewInternalError(err.Error())
+		return 0, storage.NewInternalError(err)
 	}
 
 	var count int64
 	if err := s.db.Get(&count, query, args...); err != nil {
-		return 0, storage.NewInternalError(err.Error())
+		return 0, storage.NewInternalError(err)
 	}
 
 	return count, nil
@@ -557,12 +558,12 @@ func extractNamespace(key string) string {
 func setValue(source, dest runtime.Object) error {
 	destValue, err := conversion.EnforcePtr(dest)
 	if err != nil {
-		return storage.NewInternalErrorf("unable to convert destination object to pointer: %v", err)
+		return storage.NewInternalError(fmt.Errorf("unable to convert destination object to pointer: %w", err))
 	}
 
 	sourceValue, err := conversion.EnforcePtr(source)
 	if err != nil {
-		return storage.NewInternalErrorf("unable to convert source object to pointer: %v", err)
+		return storage.NewInternalError(fmt.Errorf("unable to convert source object to pointer: %w", err))
 	}
 
 	destValue.Set(sourceValue)
@@ -574,12 +575,12 @@ func getItems(listObj runtime.Object) (reflect.Value, error) {
 	// Access the items field of the list object using reflection
 	itemsPtr, err := meta.GetItemsPtr(listObj)
 	if err != nil {
-		return reflect.Value{}, storage.NewInternalErrorf("unable to get items pointer: %v", err)
+		return reflect.Value{}, storage.NewInternalError(fmt.Errorf("unable to get items pointer: %w", err))
 	}
 
 	itemsValue, err := conversion.EnforcePtr(itemsPtr)
 	if err != nil || itemsValue.Kind() != reflect.Slice {
-		return reflect.Value{}, storage.NewInternalErrorf("need pointer to slice: %v", err)
+		return reflect.Value{}, storage.NewInternalError(fmt.Errorf("need pointer to slice: %w", err))
 	}
 
 	return itemsValue, nil
