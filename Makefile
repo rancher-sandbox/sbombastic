@@ -1,4 +1,4 @@
-GOLANGCI_LINT_VERSION := v1.61.0
+GOLANGCI_LINT_VERSION := v1.63.4
 CONTROLLER_TOOLS_VERSION := v0.16.5
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
@@ -22,7 +22,10 @@ fmt:
 
 .PHOHY: lint
 lint:
-	$(GOLANGCI_LINT) run 
+	$(GOLANGCI_LINT) run --verbose
+
+lint-clean:
+	$(GOLANGCI_LINT) cache clean
 
 .PHOHY: vet
 vet:

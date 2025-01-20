@@ -335,7 +335,11 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			key:           keyPrefix + "/default/test1",
 			preconditions: &storage.Preconditions{},
 			tryUpdate: func(input runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
-				input.(*v1alpha1.SBOM).Spec.SPDX.Raw = []byte(`{"foo":"bar"}`)
+				sbom, ok := input.(*v1alpha1.SBOM)
+				if !ok {
+					return nil, ptr.To(uint64(0)), errors.New("input is not of type *v1alpha1.SBOM")
+				}
+				sbom.Spec.SPDX.Raw = []byte(`{"foo":"bar"}`)
 				return input, ptr.To(uint64(0)), nil
 			},
 			sbom: &v1alpha1.SBOM{
