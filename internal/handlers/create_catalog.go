@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -69,7 +70,10 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 
 	h.logger.Debug("Registry found", "registry", registry)
 
-	transport := h.transportFromRegistry(registry)
+	transport, err := h.transportFromRegistry(registry)
+	if err != nil {
+		return fmt.Errorf("cannot create transport for registry %s: %w", registry.Name, err)
+	}
 	registryClient := h.registryClientFactory(transport)
 
 	repositories, err := h.discoverRepositories(ctx, registryClient, registry)
@@ -235,8 +239,14 @@ func (h *CreateCatalogHandler) refToPlatforms(registryClient registryclient.Clie
 }
 
 // transportFromRegistry creates a new http.RoundTripper from the options specified in the Registry spec.
-func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry) http.RoundTripper {
-	transport := remote.DefaultTransport.(*http.Transport).Clone()
+func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry) (http.RoundTripper, error) {
+	transport, ok := remote.DefaultTransport.(*http.Transport)
+	if !ok {
+		// should not happen
+		return nil, errors.New("remote.DefaultTransport is not an *http.Transport")
+	}
+	transport = transport.Clone()
+
 	transport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: registry.Spec.Insecure, //nolint:gosec // this a user provided option
 	}
@@ -258,7 +268,7 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 		}
 	}
 
-	return transport
+	return transport, nil
 }
 
 // deleteObsoleteImages deletes images that are not present in the discovered registry anymore.

@@ -36,6 +36,7 @@ func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir
 	}
 }
 
+//nolint:funlen //right now this is 2 lines too long because of error handling, if it grows more we should refactor
 func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	scanSBOMMessage, ok := message.(*messaging.ScanSBOM)
 	if !ok {
