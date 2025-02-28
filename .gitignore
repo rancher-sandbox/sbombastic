@@ -4,8 +4,5 @@ bin
 # Envtest binaries installed by setup-envtest
 .envtest
 
-# Coverage output
-cover.out
-
 # Tilt settings
 tilt-settings.yaml
