@@ -174,6 +174,9 @@ func (c *client) GetImageDetails(ref name.Reference, platform *cranev1.Platform)
 
 	// ensure platform is always set
 	platform = cfgFile.Platform()
+	if platform == nil {
+		return ImageDetails{}, fmt.Errorf("cannot get platform for %s", ref)
+	}
 
 	layers, err := img.Layers()
 	if err != nil {
