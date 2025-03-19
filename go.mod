@@ -118,19 +118,19 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.5 // indirect
 	github.com/cloudflare/circl v1.3.8 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
-	github.com/containerd/containerd v1.7.23 // indirect
+	github.com/containerd/containerd v1.7.27 // indirect
 	github.com/containerd/containerd/api v1.8.0 // indirect
-	github.com/containerd/containerd/v2 v2.0.0 // indirect
+	github.com/containerd/containerd/v2 v2.0.4 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/containerd/platforms v1.0.0-rc.0 // indirect
+	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/plugin v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
-	github.com/containerd/ttrpc v1.2.6 // indirect
-	github.com/containerd/typeurl/v2 v2.2.2 // indirect
+	github.com/containerd/ttrpc v1.2.7 // indirect
+	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46 // indirect
@@ -290,7 +290,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
-	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openvex/discovery v0.1.1-0.20240802171711-7c54efc57553 // indirect
@@ -337,7 +336,6 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
@@ -396,7 +394,7 @@ require (
 	google.golang.org/genproto v0.0.0-20240311173647-c811ad7063a7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
-	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/grpc v1.68.1 // indirect
 	google.golang.org/protobuf v1.36.3 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
@@ -425,6 +423,4 @@ require (
 	sigs.k8s.io/kustomize/api v0.17.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-	tags.cncf.io/container-device-interface v0.8.0 // indirect
-	tags.cncf.io/container-device-interface/specs-go v0.8.0 // indirect
 )
