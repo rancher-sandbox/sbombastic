@@ -1,10 +1,10 @@
-|              |                                                      |
-| :----------- | :--------------------------------------------------- |
-| Feature Name | Discovery design                                     |
-| Start Date   | Mar 20th, 2025                                       |
-| Category     |                                                      |
-| RFC PR       |                                                      |
-| State        |                                                      |
+|              |                                                          |
+| :----------- | :------------------------------------------------------- |
+| Feature Name | Discovery design                                         |
+| Start Date   | Mar 20th, 2025                                           |
+| Category     | controller, CRD                                          |
+| RFC PR       | https://github.com/rancher-sandbox/sbombastic/pull/140   |
+| State        | ACCEPTED                                                 |
 
 # Summary
 
@@ -66,10 +66,7 @@ metadata:
     sbombastic.rancher.io/running-discoveryjob-generation
     sbombastic.rancher.io/running-discoveryjob-uid
 spec:
-  url: "https://registry-1.docker.io"
-  type: "docker" # registry type, e.g., docker, GCR, ECR, etc...
-  auth:
-    secretName: "registry-secret" # secret name used for authentication
+  uri: "https://registry-1.docker.io"
   discoverySchedule:  ## for scheduled discovery
     cronSchedule: # multiple schedules are supported
       - "0 1 * * *"
@@ -163,18 +160,23 @@ status:
 
 ------
 
-An RFC is created with `ACCEPTED` as state. After discussion and adapting, if it
-merges, it is merged as `ACCEPTED`. If it is finally rejected or consensus is
-not reached, it is changed to `REJECTED` and merged.
-
-States:
-
 
 # Drawbacks
 
 [drawbacks]: #drawbacks
 
 1. The discovery-job-{registry.name} DiscoveryJob CR in every namespace needs to be reserved for scheduled discovery status.
+2. Let's say after a Registry is created by user(& the DiscoveryJob CR is created by sbombastic), user clicks "Discover Now". 
+   For sbombastic to reconcile the DiscoveryJob CR for "Discover Now", DiscoveryJob.metadata.spec needs to be changed.
+   However, currently DiscoveryJob.metadata.spec contains only registry name which probably never changes after a DiscoveryJob CR is created.
+   But we don't want Rancher UI to delete and then create the reserved DiscoveryJob CR for submitting "Discover Now" because 
+   the status of the last scheduled discovery will be lost.
+   One consideration is to add DiscoveryJob.Spec.ManualGUID (string):
+   - REST client(ex. Rancher UI) could specify a different DiscoveryJob.Spec.ManualGUID value in every "Discover Now" request(PATCH) to make sure
+     it will be reconciled by sbombastic.
+   - If we think REST client may not remember to specify a different DiscoveryJob.Spec.ManualGUID value in every "Discover Now" PATCH request,
+     sbombastic could change the DiscoveryJob.Spec.ManualGUID value when it reconciles the DiscoveryJob CR so that REST client can 
+     keep sending the PATCH request without caring about the DiscoveryJob.Spec.ManualGUID value.
 
 
 # Alternatives
