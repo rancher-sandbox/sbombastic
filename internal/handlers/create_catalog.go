@@ -107,7 +107,9 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 
 		images, err := h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			return fmt.Errorf("cannot get images for %s: %w", ref, err)
+			h.logger.Error("Error cannot get images for ref", "ref", ref, "error", err)
+			// Avoid blocking other images to be cataloged
+			continue
 		}
 
 		for _, image := range images {
