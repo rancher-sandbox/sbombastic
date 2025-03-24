@@ -16,8 +16,8 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/nats-io/nats-server/v2 v2.11.0
 	github.com/nats-io/nats.go v1.39.1
-	github.com/onsi/ginkgo/v2 v2.23.2
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/ginkgo/v2 v2.23.3
+	github.com/onsi/gomega v1.36.3
 	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.9.1
@@ -398,7 +398,7 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
