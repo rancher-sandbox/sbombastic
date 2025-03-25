@@ -70,7 +70,7 @@ func (suite *storeTestSuite) TestCreate() {
 	err := suite.store.Create(context.Background(), key, sbom, out, 0)
 	suite.Require().NoError(err)
 
-	suite.EqualValues(sbom, out)
+	suite.Equal(sbom, out)
 	suite.Equal("1", out.ResourceVersion)
 
 	err = suite.store.Create(context.Background(), key, sbom, out, 0)
@@ -107,7 +107,10 @@ func (suite *storeTestSuite) TestDelete() {
 			validateDeletion: func(_ context.Context, _ runtime.Object) error {
 				return nil
 			},
-			expectedError: storage.NewInvalidObjError(key, "Precondition failed: UID in precondition: incorrect-uid, UID in object meta: "),
+			expectedError: storage.NewInvalidObjError(
+				key,
+				"Precondition failed: UID in precondition: incorrect-uid, UID in object meta: ",
+			),
 		},
 	}
 
@@ -117,7 +120,15 @@ func (suite *storeTestSuite) TestDelete() {
 			suite.Require().NoError(err)
 
 			out := &v1alpha1.SBOM{}
-			err = suite.store.Delete(context.Background(), key, out, test.preconditions, test.validateDeletion, nil, storage.DeleteOptions{})
+			err = suite.store.Delete(
+				context.Background(),
+				key,
+				out,
+				test.preconditions,
+				test.validateDeletion,
+				nil,
+				storage.DeleteOptions{},
+			)
 
 			if test.expectedError != nil {
 				suite.Require().Error(err)
@@ -165,7 +176,15 @@ func (suite *storeTestSuite) TestWatchResourceVersionZero() {
 	validateDeletion := func(_ context.Context, _ runtime.Object) error {
 		return nil
 	}
-	err = suite.store.Delete(context.Background(), key, &v1alpha1.SBOM{}, &storage.Preconditions{}, validateDeletion, nil, storage.DeleteOptions{})
+	err = suite.store.Delete(
+		context.Background(),
+		key,
+		&v1alpha1.SBOM{},
+		&storage.Preconditions{},
+		validateDeletion,
+		nil,
+		storage.DeleteOptions{},
+	)
 	suite.Require().NoError(err)
 
 	suite.broadcaster.Shutdown()
@@ -200,7 +219,15 @@ func (suite *storeTestSuite) TestWatchSpecificResourceVersion() {
 		return input, ptr.To(uint64(0)), nil
 	}
 	updatedSBOM := &v1alpha1.SBOM{}
-	err = suite.store.GuaranteedUpdate(context.Background(), key+"/test", updatedSBOM, false, &storage.Preconditions{}, tryUpdate, nil)
+	err = suite.store.GuaranteedUpdate(
+		context.Background(),
+		key+"/test",
+		updatedSBOM,
+		false,
+		&storage.Preconditions{},
+		tryUpdate,
+		nil,
+	)
 	suite.Require().NoError(err)
 
 	suite.broadcaster.Shutdown()
@@ -312,7 +339,7 @@ func (suite *storeTestSuite) TestGetList() {
 	for _, test := range tests {
 		suite.Run(test.name, func() {
 			sbomList := &v1alpha1.SBOMList{}
-			err := suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
+			err = suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
 			suite.Require().NoError(err)
 			suite.ElementsMatch(test.expectedItems, sbomList.Items)
 		})
@@ -445,7 +472,15 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			}
 
 			destinationSBOM := &v1alpha1.SBOM{}
-			err := suite.store.GuaranteedUpdate(context.Background(), test.key, destinationSBOM, test.ignoreNotFound, test.preconditions, test.tryUpdate, nil)
+			err := suite.store.GuaranteedUpdate(
+				context.Background(),
+				test.key,
+				destinationSBOM,
+				test.ignoreNotFound,
+				test.preconditions,
+				test.tryUpdate,
+				nil,
+			)
 
 			currentSBOM := &v1alpha1.SBOM{}
 			if test.expectedError != nil {
@@ -454,7 +489,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 
 				if test.sbom != nil {
 					// If there is an error, the original object should not be updated.
-					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
+					err = suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
 					suite.Require().NoError(err)
 					suite.Equal(test.sbom, currentSBOM)
 				}
@@ -464,7 +499,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 
 				if !test.ignoreNotFound {
 					// Verify the object was updated in the store.
-					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
+					err = suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
 					suite.Require().NoError(err)
 					suite.Equal(test.expectedUpdatedSBOM, currentSBOM)
 				}
@@ -517,7 +552,8 @@ func (suite *storeTestSuite) TestCount() {
 
 	for _, test := range tests {
 		suite.Run(test.name, func() {
-			count, err := suite.store.Count(test.key)
+			var count int64
+			count, err = suite.store.Count(test.key)
 			suite.Require().NoError(err)
 			suite.Require().Equal(test.expectedCount, count)
 		})

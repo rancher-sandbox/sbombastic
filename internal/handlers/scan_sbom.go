@@ -27,7 +27,12 @@ type ScanSBOMHandler struct {
 	logger    *slog.Logger
 }
 
-func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *ScanSBOMHandler {
+func NewScanSBOMHandler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	workDir string,
+	logger *slog.Logger,
+) *ScanSBOMHandler {
 	return &ScanSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,
@@ -36,7 +41,6 @@ func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir
 	}
 }
 
-//nolint:funlen //right now this is 2 lines too long because of error handling, if it grows more we should refactor
 func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	scanSBOMMessage, ok := message.(*messaging.ScanSBOM)
 	if !ok {
@@ -64,11 +68,11 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary SBOM file: %w", err)
 	}
 	defer func() {
-		if err := sbomFile.Close(); err != nil {
+		if err = sbomFile.Close(); err != nil {
 			h.logger.Error("failed to close temporary SBOM file", "error", err)
 		}
 
-		if err := os.Remove(sbomFile.Name()); err != nil {
+		if err = os.Remove(sbomFile.Name()); err != nil {
 			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
@@ -82,11 +86,11 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary report file: %w", err)
 	}
 	defer func() {
-		if err := reportFile.Close(); err != nil {
+		if err = reportFile.Close(); err != nil {
 			h.logger.Error("failed to close temporary report file", "error", err)
 		}
 
-		if err := os.Remove(reportFile.Name()); err != nil {
+		if err = os.Remove(reportFile.Name()); err != nil {
 			h.logger.Error("failed to remove temporary repoort file", "error", err)
 		}
 	}()
@@ -104,7 +108,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		sbomFile.Name(),
 	})
 
-	if err := app.ExecuteContext(ctx); err != nil {
+	if err = app.ExecuteContext(ctx); err != nil {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
@@ -124,7 +128,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 			Namespace: sbom.Namespace,
 		},
 	}
-	if err := controllerutil.SetControllerReference(sbom, vulnerabilityReport, h.scheme); err != nil {
+	if err = controllerutil.SetControllerReference(sbom, vulnerabilityReport, h.scheme); err != nil {
 		return fmt.Errorf("failed to set owner reference: %w", err)
 	}
 

@@ -47,7 +47,9 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	mockRegistryClient := registryMocks.NewClient(t)
-	mockRegistryClient.On("ListRepositoryContents", context.Background(), repository).
+	// Use mock.MatchedBy to match any non-nil context since the handler creates its own context.Background()
+	// which cannot be directly matched in tests
+	mockRegistryClient.On("ListRepositoryContents", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil }), repository).
 		Return([]string{fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag)}, nil)
 
 	platformLinuxAmd64 := cranev1.Platform{
@@ -114,7 +116,8 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
+	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
+		Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
 
 	registry := &v1alpha1.Registry{
@@ -144,7 +147,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}
-	err = k8sClient.List(context.Background(), imageList)
+	err = k8sClient.List(t.Context(), imageList)
 
 	require.NoError(t, err)
 	require.Len(t, imageList.Items, 2)
@@ -215,7 +218,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			test.setupMock(mockRegistryClient)
 			handler := &CreateCatalogHandler{}
 
-			actual, err := handler.discoverRepositories(context.Background(), mockRegistryClient, test.registry)
+			actual, err := handler.discoverRepositories(t.Context(), mockRegistryClient, test.registry)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, actual, test.expectedRepositories)
 		})
@@ -246,7 +249,7 @@ func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
 		logger:    slog.Default(),
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	existingImageNames := sets.New[string](
 		"image-1",
@@ -309,14 +312,16 @@ func TestImageDetailsToImage(t *testing.T) {
 
 	assert.Len(t, image.Spec.Layers, numberOfLayers)
 	for i := range numberOfLayers {
-		expectedDigest, expectedDiffID, err := fakeDigestAndDiffID(i)
+		var expectedDigest, expectedDiffID cranev1.Hash
+		expectedDigest, expectedDiffID, err = fakeDigestAndDiffID(i)
 		require.NoError(t, err)
 
 		layer := image.Spec.Layers[i]
 		assert.Equal(t, expectedDigest.String(), layer.Digest)
 		assert.Equal(t, expectedDiffID.String(), layer.DiffID)
 
-		command, err := base64.StdEncoding.DecodeString(layer.Command)
+		var command []byte
+		command, err = base64.StdEncoding.DecodeString(layer.Command)
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("command-%d", i), string(command))
 	}

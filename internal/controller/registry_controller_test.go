@@ -101,45 +101,48 @@ var _ = Describe("Registry Controller", func() {
 				}))))
 		})
 
-		It("Should set the Discovery status condition to Unknown if the message cannot be published", func(ctx context.Context) {
-			By("Returning an error when publishing the message")
-			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
-			mockPublisher.On("Publish", &messaging.CreateCatalog{
-				RegistryName:      registry.Name,
-				RegistryNamespace: registry.Namespace,
-			}).Return(errors.New("failed to publish message"))
-			reconciler.Publisher = mockPublisher
+		It(
+			"Should set the Discovery status condition to Unknown if the message cannot be published",
+			func(ctx context.Context) {
+				By("Returning an error when publishing the message")
+				mockPublisher := messagingMocks.NewPublisher(GinkgoT())
+				mockPublisher.On("Publish", &messaging.CreateCatalog{
+					RegistryName:      registry.Name,
+					RegistryNamespace: registry.Namespace,
+				}).Return(errors.New("failed to publish message"))
+				reconciler.Publisher = mockPublisher
 
-			By("Reconciling the Registry")
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				By("Reconciling the Registry")
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      registry.Name,
+						Namespace: registry.Namespace,
+					},
+				})
+				Expect(err).To(HaveOccurred())
+
+				By("Checking the Registry status condition")
+				Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Name:      registry.Name,
 					Namespace: registry.Namespace,
-				},
-			})
-			Expect(err).To(HaveOccurred())
+				}, &registry)).To(Succeed())
 
-			By("Checking the Registry status condition")
-			Expect(k8sClient.Get(ctx, types.NamespacedName{
-				Name:      registry.Name,
-				Namespace: registry.Namespace,
-			}, &registry)).To(Succeed())
-
-			Expect(registry.Status.Conditions).To(ContainElement(
-				WithTransform(func(c metav1.Condition) metav1.Condition {
-					return metav1.Condition{
-						Type:    c.Type,
-						Status:  c.Status,
-						Reason:  c.Reason,
-						Message: c.Message,
-					}
-				}, Equal(metav1.Condition{
-					Type:    "Discovering",
-					Status:  metav1.ConditionUnknown,
-					Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
-					Message: "Failed to communicate with the workers",
-				}))))
-		})
+				Expect(registry.Status.Conditions).To(ContainElement(
+					WithTransform(func(c metav1.Condition) metav1.Condition {
+						return metav1.Condition{
+							Type:    c.Type,
+							Status:  c.Status,
+							Reason:  c.Reason,
+							Message: c.Message,
+						}
+					}, Equal(metav1.Condition{
+						Type:    "Discovering",
+						Status:  metav1.ConditionUnknown,
+						Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
+						Message: "Failed to communicate with the workers",
+					}))))
+			},
+		)
 	})
 
 	When("Repositories are updated", func() {

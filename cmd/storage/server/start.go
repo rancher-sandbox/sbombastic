@@ -147,7 +147,13 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 
 	// Set the emulation version mapping from the "Wardle" component to the kube component.
 	// This ensures that the emulation version of the latter is determined by the emulation version of the former.
-	utilruntime.Must(featuregate.DefaultComponentGlobalsRegistry.SetEmulationVersionMapping(apiserver.WardleComponentName, featuregate.DefaultKubeComponent, WardleVersionToKubeVersion))
+	utilruntime.Must(
+		featuregate.DefaultComponentGlobalsRegistry.SetEmulationVersionMapping(
+			apiserver.WardleComponentName,
+			featuregate.DefaultKubeComponent,
+			WardleVersionToKubeVersion,
+		),
+	)
 
 	featuregate.DefaultComponentGlobalsRegistry.AddFlags(flags)
 
@@ -155,7 +161,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 }
 
 // Validate validates WardleServerOptions
-func (o WardleServerOptions) Validate(_ []string) error {
+func (o *WardleServerOptions) Validate(_ []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	errors = append(errors, featuregate.DefaultComponentGlobalsRegistry.Validate()...)
@@ -176,16 +182,26 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
-	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(sampleopenapi.GetOpenAPIDefinitions, openapi.NewDefinitionNamer(apiserver.Scheme))
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(
+		sampleopenapi.GetOpenAPIDefinitions,
+		openapi.NewDefinitionNamer(apiserver.Scheme),
+	)
 	serverConfig.OpenAPIConfig.Info.Title = "Wardle"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(sampleopenapi.GetOpenAPIDefinitions, openapi.NewDefinitionNamer(apiserver.Scheme))
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
+		sampleopenapi.GetOpenAPIDefinitions,
+		openapi.NewDefinitionNamer(apiserver.Scheme),
+	)
 	serverConfig.OpenAPIV3Config.Info.Title = "Wardle"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
 
-	serverConfig.FeatureGate = featuregate.DefaultComponentGlobalsRegistry.FeatureGateFor(featuregate.DefaultKubeComponent)
-	serverConfig.EffectiveVersion = featuregate.DefaultComponentGlobalsRegistry.EffectiveVersionFor(apiserver.WardleComponentName)
+	serverConfig.FeatureGate = featuregate.DefaultComponentGlobalsRegistry.FeatureGateFor(
+		featuregate.DefaultKubeComponent,
+	)
+	serverConfig.EffectiveVersion = featuregate.DefaultComponentGlobalsRegistry.EffectiveVersionFor(
+		apiserver.WardleComponentName,
+	)
 
 	// As we don't have a real etcd, we need to set a dummy storage factory
 	serverConfig.RESTOptionsGetter = &genericoptions.StorageFactoryRestOptionsFactory{
@@ -204,7 +220,7 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 }
 
 // RunWardleServer starts a new WardleServer given WardleServerOptions
-func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
+func (o *WardleServerOptions) RunWardleServer(ctx context.Context) error {
 	config, err := o.Config()
 	if err != nil {
 		return err
@@ -215,7 +231,7 @@ func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
 		return fmt.Errorf("error creating server: %w", err)
 	}
 
-	if err := server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
+	if err = server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
 		return fmt.Errorf("error while running server: %w", err)
 	}
 
