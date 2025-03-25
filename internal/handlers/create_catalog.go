@@ -107,7 +107,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 
 		images, err := h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			h.logger.Error(fmt.Sprintf("cannot get images for %s: %s", ref, err.Error()))
+			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -196,20 +196,20 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 			if platform != nil {
 				platformStr = platform.String()
 			}
-			h.logger.Error(fmt.Sprintf("cannot get image details with ref: %s, platform: %s, error: %s", ref.Name(), platformStr, err.Error()))
+			h.logger.Info("cannot get image details", "reference", ref.Name(), "platform", platformStr, "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
 		image, err := imageDetailsToImage(ref, imageDetails, registry)
 		if err != nil {
-			h.logger.Error(fmt.Sprintf("cannot convert image details to image, with error: %s", err.Error()))
+			h.logger.Info("cannot convert image details to image", "reference", ref.Name(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
 		if err := controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
-			h.logger.Error(fmt.Sprintf("cannot set owner reference, with error: %s", err.Error()))
+			h.logger.Info("cannot set owner reference", "reference", ref.Name(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}

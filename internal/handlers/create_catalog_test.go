@@ -114,7 +114,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-	mockRegistryClient.On("GetImageDetails", image, mock.Anything).Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
+	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
 
 	registry := &v1alpha1.Registry{
