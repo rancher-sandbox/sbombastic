@@ -31,8 +31,8 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "docker",
-				RegistryURI: "docker.io",
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
 				Repository:  "golang",
 				Tag:         "1.12-alpine",
 				Platform:    "linux/amd64",
