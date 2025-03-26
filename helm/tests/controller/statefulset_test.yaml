@@ -1,0 +1,23 @@
+suite: "Controller StatefulSet Tests"
+templates:
+  - "templates/controller/statefulset.yaml"
+
+tests:
+  - it: "should render a StatefulSet with the correct replica count, image, and imagePullPolicy"
+    set:
+      controller:
+        replicas: 5
+        image:
+          repository: ghcr.io/rancher-sandbox/sbombastic/controller
+          tag: v0.1.0
+          pullPolicy: Always
+    asserts:
+      - equal:
+          path: "spec.replicas"
+          value: 5
+      - equal:
+          path: "spec.template.spec.containers[0].image"
+          value: "ghcr.io/rancher-sandbox/sbombastic/controller:v0.1.0"
+      - equal:
+          path: "spec.template.spec.containers[0].imagePullPolicy"
+          value: "Always"
