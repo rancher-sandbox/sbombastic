@@ -27,6 +27,12 @@ jobs:
           directory: coverage
           flags: unit-tests
           verbose: true
+      - name: Install helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+      - name: Install Helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest
+      - name: Run helm unit tests
+        run: make helm-unittest
 
   golangci:
     name: Golangci-lint
