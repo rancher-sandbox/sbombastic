@@ -84,7 +84,7 @@ func (r *ImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		if !ok {
 			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
 		}
-		return []string{sbom.Spec.ImageMetadata.Registry}
+		return []string{sbom.Spec.Registry}
 	}); err != nil {
 		return fmt.Errorf("unable to create field indexer: %w", err)
 	}

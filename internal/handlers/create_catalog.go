@@ -357,6 +357,6 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 // computeImageUID returns the sha256 of “<image-name>@sha256:<digest>`
 func computeImageUID(ref name.Reference, digest string) string {
 	sha := sha256.New()
-	sha.Write([]byte(fmt.Sprintf("%s:%s@%s", ref.Context().Name(), ref.Identifier(), digest)))
+	fmt.Fprintf(sha, "%s:%s@%s", ref.Context().Name(), ref.Identifier(), digest)
 	return hex.EncodeToString(sha.Sum(nil))
 }
