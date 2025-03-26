@@ -70,7 +70,7 @@ func (suite *storeTestSuite) TestCreate() {
 	err := suite.store.Create(context.Background(), key, sbom, out, 0)
 	suite.Require().NoError(err)
 
-	suite.EqualValues(sbom, out)
+	suite.Equal(sbom, out)
 	suite.Equal("1", out.ResourceVersion)
 
 	err = suite.store.Create(context.Background(), key, sbom, out, 0)
