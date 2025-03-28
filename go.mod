@@ -2,8 +2,6 @@ module github.com/rancher/sbombastic
 
 go 1.24
 
-toolchain go1.24.1
-
 godebug default=go1.23
 
 require (
@@ -29,7 +27,7 @@ require (
 	k8s.io/component-base v0.32.3
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
-	modernc.org/sqlite v1.36.2
+	modernc.org/sqlite v1.36.3
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 )
