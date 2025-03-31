@@ -12,6 +12,8 @@ tests:
           repository: ghcr.io/rancher-sandbox/sbombastic/storage
           tag: v0.1.0
           pullPolicy: Always
+        pvc:
+          name: sqlite-pvc-test
     asserts:
       - equal:
           path: "spec.replicas"
@@ -22,3 +24,6 @@ tests:
       - equal:
           path: "spec.template.spec.containers[0].imagePullPolicy"
           value: "Always"
+      - equal:
+          path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
+          value: "sqlite-pvc-test"

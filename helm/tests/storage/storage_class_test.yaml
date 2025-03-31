@@ -1,0 +1,27 @@
+suite: "Storage StorageClass Tests"
+
+templates:
+  - "templates/storage/storage_class.yaml"
+
+tests:
+  - it: "should render a StorageClass with the correct name, provisioner, allowVolumeExpansion and volumeBindingMode"
+    set:
+      storage:
+        storageClass:
+          name: sqlite-storageclass-test
+          provisioner: kubernetes.io/test-provisioner
+          allowVolumeExpansion: false
+          volumeBindingMode: TestBindingMode
+    asserts:
+      - equal:
+          path: "metadata.name"
+          value: "sqlite-storageclass-test"
+      - equal:
+          path: "provisioner"
+          value: "kubernetes.io/test-provisioner"
+      - equal:
+          path: "allowVolumeExpansion"
+          value: false
+      - equal:
+          path: "volumeBindingMode"
+          value: TestBindingMode
