@@ -27,7 +27,7 @@ require (
 	k8s.io/component-base v0.32.3
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
-	modernc.org/sqlite v1.36.3
+	modernc.org/sqlite v1.37.0
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 )
@@ -392,7 +392,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
@@ -401,7 +401,7 @@ require (
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/api v0.218.0 // indirect
@@ -424,9 +424,9 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kms v0.32.3 // indirect
 	k8s.io/kubectl v0.32.3 // indirect
-	modernc.org/libc v1.61.13 // indirect
+	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.8.2 // indirect
+	modernc.org/memory v1.9.1 // indirect
 	mvdan.cc/sh/v3 v3.11.0 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
