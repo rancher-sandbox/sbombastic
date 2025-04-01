@@ -25,6 +25,9 @@ spec:
           args:
             - --leader-elect
             - --health-probe-bind-address=:8081
+            {{- if .Values.storage.logLevel }}
+            - --log-level={{ .Values.storage.logLevel }}
+            {{- end }}            
           image: {{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
           name: controller

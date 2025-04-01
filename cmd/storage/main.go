@@ -23,7 +23,9 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/cmd/storage/server"
+	"github.com/rancher/sbombastic/internal/cmdutil"
 	"github.com/rancher/sbombastic/internal/storage"
+	"github.com/spf13/pflag"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/cli"
 
@@ -31,9 +33,17 @@ import (
 )
 
 func main() {
-	// TODO: add CLI flags
+	var logLevel string
+	pflag.StringVar(&logLevel, "log-level", slog.LevelDebug.String(), "Log level")
+	pflag.Parse()
+
+	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
+	if err != nil {
+		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		os.Exit(1)
+	}
 	opts := slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: slogLevel,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "storage")
 

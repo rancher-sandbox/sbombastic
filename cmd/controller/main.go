@@ -18,8 +18,6 @@ package main
 
 import (
 	"crypto/tls"
-	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -40,8 +38,10 @@ import (
 	"github.com/nats-io/nats.go"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/cmdutil"
 	"github.com/rancher/sbombastic/internal/controller"
 	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/spf13/pflag"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -55,20 +55,20 @@ func main() {
 	var tlsOpts []func(*tls.Config)
 	var logLevel string
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
+	pflag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	pflag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	pflag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.BoolVar(&secureMetrics, "metrics-secure", true,
+	pflag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
-	flag.BoolVar(&enableHTTP2, "enable-http2", false,
+	pflag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.StringVar(&logLevel, "log-level", "info", "Log level")
-	flag.Parse()
+	pflag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
+	pflag.Parse()
 
-	slogLevel, err := parseLogLevel(logLevel)
+	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
 	if err != nil {
 		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
 		os.Exit(1)
@@ -217,14 +217,4 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-// TODO: move to a shared package
-func parseLogLevel(s string) (slog.Level, error) {
-	var level slog.Level
-	if err := level.UnmarshalText([]byte(s)); err != nil {
-		return level, fmt.Errorf("unable to parse log level: %w", err)
-	}
-
-	return level, nil
 }
