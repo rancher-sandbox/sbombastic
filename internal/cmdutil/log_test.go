@@ -67,7 +67,6 @@ func TestParseLogLevel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			logLevel, err := ParseLogLevel(tt.log)
 
 			assert.Equal(t, tt.expectedLevel, logLevel)
