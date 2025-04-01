@@ -4,10 +4,11 @@ templates:
   - "templates/storage/deployment.yaml"
 
 tests:
-  - it: "should render a Deployment with the correct replica count, image, and imagePullPolicy"
+  - it: "should render a Deployment with the correct replica count, logging level, image, and imagePullPolicy"
     set:
       storage:
         replicas: 5
+        logLevel: debug
         image:
           repository: ghcr.io/rancher-sandbox/sbombastic/storage
           tag: v0.1.0
@@ -24,6 +25,9 @@ tests:
       - equal:
           path: "spec.template.spec.containers[0].imagePullPolicy"
           value: "Always"
+      - contains:
+          path: "spec.template.spec.containers[0].args"
+          content: "--log-level=debug"          
       - equal:
           path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
           value: "RELEASE-NAME-sbombastic-storage-data"
