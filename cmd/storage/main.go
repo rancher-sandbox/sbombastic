@@ -37,7 +37,7 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "storage")
 
-	db, err := sqlx.Connect("sqlite", "storage.db")
+	db, err := sqlx.Connect("sqlite", "/data/sqlite/storage.db")
 	if err != nil {
 		log.Fatalln(err)
 	}

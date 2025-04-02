@@ -23,3 +23,10 @@ spec:
         - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}
+          volumeMounts:
+            - name: sqlite-pvc
+              mountPath: /data/sqlite/
+      volumes:
+        - name: sqlite-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.pvc.name }}

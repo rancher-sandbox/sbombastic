@@ -1,0 +1,32 @@
+suite: "Storage PVC Tests"
+
+templates:
+  - "templates/storage/pvc.yaml"
+
+tests:
+  - it: "should render a PVC with the correct name, storage class, access modes and storage request"
+    set:
+      storage:
+        pvc:
+          name: sqlite-pvc-test
+          requestStorage: 10Gi
+          accessModes:
+            - ReadWriteMany
+            - ReadWriteOnce
+        storageClass:
+          name: sqlite-storageclass-test
+    asserts:
+      - equal:
+          path: "metadata.name"
+          value: "sqlite-pvc-test"
+      - equal:
+          path: "spec.storageClassName"
+          value: "sqlite-storageclass-test"
+      - equal:
+          path: "spec.accessModes"
+          value:
+            - ReadWriteMany
+            - ReadWriteOnce
+      - equal:
+          path: "spec.resources.requests.storage"
+          value: "10Gi"

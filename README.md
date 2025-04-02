@@ -15,6 +15,7 @@ make test
 ## Run the development environment with Tilt
 
 Customize `tilt-settings.yaml` to your needs.
+If running from scratch with default settings, you need to create a PersistentVolume (PV) matching the PVC specs for SQLite data persistence. See `examples/pv.yaml` for reference.
 
 Run tilt:
 

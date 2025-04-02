@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sqlite-pv
+spec:
+  capacity:
+    storage: 3Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: sqlite-storageclass
+  local:
+    path: ~/data/  # Path where persistent volume data will be stored on the node
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - kind-control-plane  # Default node name when using kind
+                - minikube            # Default node name when using minikube
+                - your-node-name      # Replace with your node name from 'kubectl get nodes' command output
