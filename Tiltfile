@@ -48,7 +48,7 @@ local_resource(
     ],
 )
 
-entrypoint = ["/controller", "-log-level=debug"]
+entrypoint = ["/controller", "--log-level=debug"]
 dockerfile = "./hack/Dockerfile.controller.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
