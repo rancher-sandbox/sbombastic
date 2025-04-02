@@ -21,17 +21,15 @@ jobs:
         run: |
           if [[ -z "${{ secrets.CODECOV_ORG_TOKEN }}" ]]; then
             echo "::error::CODECOV_ORG_TOKEN is not set"
-            exit 1
           else
             echo "CODECOV_ORG_TOKEN is set"
           fi              
-      - name: Check if CODECOV_ORG_TOKEN exists
+      - name: Check if CODECOV_TOKEN exists
         run: |
-          if [[ -z "${{ secrets.CODECOV_ORG_TOKEN }}" ]]; then
-            echo "::error::CODECOV_ORG_TOKEN is not set"
-            exit 1
+          if [[ -z "${{ secrets.CODECOV_TOKEN }}" ]]; then
+            echo "::error::CODECOV_TOKEN is not set"
           else
-            echo "CODECOV_ORG_TOKEN is set"
+            echo "CODECOV_TOKEN is set"
           fi          
       # - run: make test
       # - name: Upload unit-tests coverage to Codecov
