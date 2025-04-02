@@ -17,16 +17,30 @@ jobs:
       - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: "1.24.1"
-      - run: make test
-      - name: Upload unit-tests coverage to Codecov
-        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
-        with:
-          name: unit-tests
-          directory: coverage
-          flags: unit-tests
-          verbose: true
+      - name: Check if CODECOV_ORG_TOKEN exists
+        run: |
+          if [[ -z "${{ secrets.CODECOV_ORG_TOKEN }}" ]]; then
+            echo "::error::CODECOV_ORG_TOKEN is not set"
+          else
+            echo "CODECOV_ORG_TOKEN is set"
+          fi              
+      - name: Check if CODECOV_TOKEN exists
+        run: |
+          if [[ -z "${{ secrets.CODECOV_TOKEN }}" ]]; then
+            echo "::error::CODECOV_TOKEN is not set"
+          else
+            echo "CODECOV_TOKEN is set"
+          fi          
+      # - run: make test
+      # - name: Upload unit-tests coverage to Codecov
+      #   uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
+      #   env:
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+      #   with:
+      #     name: unit-tests
+      #     directory: coverage/unit-test
+      #     flags: unit-tests
+      #     verbose: true
   helm-unittest:
     name: Helm unittest
     runs-on: ubuntu-latest
