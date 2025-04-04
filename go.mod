@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/nats-io/nats-server/v2 v2.11.0
-	github.com/nats-io/nats.go v1.40.1
+	github.com/nats-io/nats.go v1.41.0
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
 	github.com/owenrumney/go-sarif/v2 v2.3.3
