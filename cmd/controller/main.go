@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -42,7 +43,6 @@ import (
 	"github.com/rancher/sbombastic/internal/cmdutil"
 	"github.com/rancher/sbombastic/internal/controller"
 	"github.com/rancher/sbombastic/internal/messaging"
-	"github.com/spf13/pflag"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -57,18 +57,18 @@ type Config struct {
 
 func parseFlags() Config {
 	var cfg Config
-	pflag.StringVar(&cfg.MetricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
+	flag.StringVar(&cfg.MetricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
-	pflag.StringVar(&cfg.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	pflag.BoolVar(&cfg.EnableLeaderElection, "leader-elect", false,
+	flag.StringVar(&cfg.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&cfg.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	pflag.BoolVar(&cfg.SecureMetrics, "metrics-secure", true,
+	flag.BoolVar(&cfg.SecureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
-	pflag.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
+	flag.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	pflag.StringVar(&cfg.LogLevel, "log-level", slog.LevelInfo.String(), "Log level")
-	pflag.Parse()
+	flag.StringVar(&cfg.LogLevel, "log-level", slog.LevelInfo.String(), "Log level")
+	flag.Parse()
 	return cfg
 }
 

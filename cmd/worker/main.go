@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
-	"github.com/spf13/pflag"
 )
 
 func main() {
@@ -26,10 +26,10 @@ func main() {
 	var logLevel string
 	var runDir string
 
-	pflag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
-	pflag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
-	pflag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
-	pflag.Parse()
+	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
+	flag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
+	flag.Parse()
 
 	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
 	if err != nil {
