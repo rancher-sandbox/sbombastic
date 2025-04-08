@@ -47,7 +47,9 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	mockRegistryClient := registryMocks.NewClient(t)
-	mockRegistryClient.On("ListRepositoryContents", context.Background(), repository).
+	// Use mock.MatchedBy to match any non-nil context since the handler creates its own context.Background()
+	// which cannot be directly matched in tests
+	mockRegistryClient.On("ListRepositoryContents", mock.MatchedBy(func(c context.Context) bool { return c != nil }), repository).
 		Return([]string{fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag)}, nil)
 
 	platformLinuxAmd64 := cranev1.Platform{
@@ -145,7 +147,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}
-	err = k8sClient.List(context.Background(), imageList)
+	err = k8sClient.List(t.Context(), imageList)
 
 	require.NoError(t, err)
 	require.Len(t, imageList.Items, 2)
@@ -216,7 +218,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			test.setupMock(mockRegistryClient)
 			handler := &CreateCatalogHandler{}
 
-			actual, err := handler.discoverRepositories(context.Background(), mockRegistryClient, test.registry)
+			actual, err := handler.discoverRepositories(t.Context(), mockRegistryClient, test.registry)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, actual, test.expectedRepositories)
 		})
@@ -247,7 +249,7 @@ func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
 		logger:    slog.Default(),
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	existingImageNames := sets.New[string](
 		"image-1",
