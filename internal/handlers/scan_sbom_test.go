@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -62,7 +61,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
-	err = k8sClient.Get(context.Background(), client.ObjectKey{
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
 		Name:      sbom.Name,
 		Namespace: sbom.Namespace,
 	}, vulnerabilityReport)
