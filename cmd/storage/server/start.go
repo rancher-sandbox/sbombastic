@@ -231,7 +231,7 @@ func (o *WardleServerOptions) RunWardleServer(ctx context.Context) error {
 		return fmt.Errorf("error creating server: %w", err)
 	}
 
-	if err := server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
+	if err = server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
 		return fmt.Errorf("error while running server: %w", err)
 	}
 

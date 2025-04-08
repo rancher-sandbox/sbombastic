@@ -339,8 +339,8 @@ func (suite *storeTestSuite) TestGetList() {
 	for _, test := range tests {
 		suite.Run(test.name, func() {
 			sbomList := &v1alpha1.SBOMList{}
-			err := suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
-			suite.Require().NoError(err)
+			getListErr := suite.store.GetList(context.Background(), key, test.listOptions, sbomList)
+			suite.Require().NoError(getListErr)
 			suite.ElementsMatch(test.expectedItems, sbomList.Items)
 		})
 	}
@@ -489,8 +489,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 
 				if test.sbom != nil {
 					// If there is an error, the original object should not be updated.
-					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
-					suite.Require().NoError(err)
+					getErr := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
+					suite.Require().NoError(getErr)
 					suite.Equal(test.sbom, currentSBOM)
 				}
 			} else {
@@ -499,8 +499,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 
 				if !test.ignoreNotFound {
 					// Verify the object was updated in the store.
-					err := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
-					suite.Require().NoError(err)
+					getErr := suite.store.Get(context.Background(), test.key, storage.GetOptions{}, currentSBOM)
+					suite.Require().NoError(getErr)
 					suite.Equal(test.expectedUpdatedSBOM, currentSBOM)
 				}
 			}
@@ -552,8 +552,8 @@ func (suite *storeTestSuite) TestCount() {
 
 	for _, test := range tests {
 		suite.Run(test.name, func() {
-			count, err := suite.store.Count(test.key)
-			suite.Require().NoError(err)
+			count, countErr := suite.store.Count(test.key)
+			suite.Require().NoError(countErr)
 			suite.Require().Equal(test.expectedCount, count)
 		})
 	}

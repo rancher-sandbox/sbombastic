@@ -81,9 +81,9 @@ func (c *client) Catalog(ctx context.Context, registry name.Registry) ([]string,
 	repositories := []string{}
 
 	for catalogger.HasNext() {
-		repos, err := catalogger.Next(ctx)
-		if err != nil {
-			return []string{}, fmt.Errorf("cannot iterate over repository %s contents: %w", registry.Name(), err)
+		repos, nextErr := catalogger.Next(ctx)
+		if nextErr != nil {
+			return []string{}, fmt.Errorf("cannot iterate over repository %s contents: %w", registry.Name(), nextErr)
 		}
 		for _, repo := range repos.Repos {
 			repositories = append(repositories, path.Join(registry.Name(), repo))
@@ -116,9 +116,9 @@ func (c *client) ListRepositoryContents(ctx context.Context, repo name.Repositor
 
 	images := []string{}
 	for lister.HasNext() {
-		tags, err := lister.Next(ctx)
-		if err != nil {
-			return []string{}, fmt.Errorf("cannot iterate over repository contents: %w", err)
+		tags, nextErr := lister.Next(ctx)
+		if nextErr != nil {
+			return []string{}, fmt.Errorf("cannot iterate over repository contents: %w", nextErr)
 		}
 		for _, tag := range tags.Tags {
 			images = append(images, repo.Tag(tag).String())

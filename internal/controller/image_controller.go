@@ -65,7 +65,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				ImageNamespace: image.Namespace,
 			}
 
-			if err := r.Publisher.Publish(&msg); err != nil {
+			if err = r.Publisher.Publish(&msg); err != nil {
 				return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
 			}
 		} else {

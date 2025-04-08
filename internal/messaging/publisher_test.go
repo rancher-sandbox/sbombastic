@@ -33,8 +33,8 @@ func TestPublisher_Publish(t *testing.T) {
 	sub, err := js.SubscribeSync(sbombasticSubject)
 	require.NoError(t, err)
 	defer func() {
-		err := sub.Unsubscribe()
-		require.NoError(t, err)
+		unsubscribeErr := sub.Unsubscribe()
+		require.NoError(t, unsubscribeErr)
 	}()
 
 	receivedMsg, err := sub.NextMsg(2 * time.Second)

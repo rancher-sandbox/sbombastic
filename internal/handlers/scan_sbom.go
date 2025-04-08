@@ -68,12 +68,12 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary SBOM file: %w", err)
 	}
 	defer func() {
-		if err := sbomFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary SBOM file", "error", err)
+		if closeErr := sbomFile.Close(); closeErr != nil {
+			h.logger.Error("failed to close temporary SBOM file", "error", closeErr)
 		}
 
-		if err := os.Remove(sbomFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary SBOM file", "error", err)
+		if removeErr := os.Remove(sbomFile.Name()); removeErr != nil {
+			h.logger.Error("failed to remove temporary SBOM file", "error", removeErr)
 		}
 	}()
 
@@ -86,12 +86,12 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary report file: %w", err)
 	}
 	defer func() {
-		if err := reportFile.Close(); err != nil {
-			h.logger.Error("failed to close temporary report file", "error", err)
+		if closeErr := reportFile.Close(); closeErr != nil {
+			h.logger.Error("failed to close temporary report file", "error", closeErr)
 		}
 
-		if err := os.Remove(reportFile.Name()); err != nil {
-			h.logger.Error("failed to remove temporary repoort file", "error", err)
+		if removeErr := os.Remove(reportFile.Name()); removeErr != nil {
+			h.logger.Error("failed to remove temporary repoort file", "error", removeErr)
 		}
 	}()
 
@@ -108,8 +108,8 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		sbomFile.Name(),
 	})
 
-	if err := app.ExecuteContext(ctx); err != nil {
-		return fmt.Errorf("failed to execute trivy: %w", err)
+	if executeErr := app.ExecuteContext(ctx); executeErr != nil {
+		return fmt.Errorf("failed to execute trivy: %w", executeErr)
 	}
 
 	h.logger.Debug("SBOM scanned",
@@ -128,8 +128,8 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 			Namespace: sbom.Namespace,
 		},
 	}
-	if err := controllerutil.SetControllerReference(sbom, vulnerabilityReport, h.scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
+	if setOwnerReferenceErr := controllerutil.SetControllerReference(sbom, vulnerabilityReport, h.scheme); setOwnerReferenceErr != nil {
+		return fmt.Errorf("failed to set owner reference: %w", setOwnerReferenceErr)
 	}
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
