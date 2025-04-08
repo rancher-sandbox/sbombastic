@@ -107,7 +107,10 @@ func (suite *storeTestSuite) TestDelete() {
 			validateDeletion: func(_ context.Context, _ runtime.Object) error {
 				return nil
 			},
-			expectedError: storage.NewInvalidObjError(key, "Precondition failed: UID in precondition: incorrect-uid, UID in object meta: "),
+			expectedError: storage.NewInvalidObjError(
+				key,
+				"Precondition failed: UID in precondition: incorrect-uid, UID in object meta: ",
+			),
 		},
 	}
 
@@ -117,7 +120,15 @@ func (suite *storeTestSuite) TestDelete() {
 			suite.Require().NoError(err)
 
 			out := &v1alpha1.SBOM{}
-			err = suite.store.Delete(context.Background(), key, out, test.preconditions, test.validateDeletion, nil, storage.DeleteOptions{})
+			err = suite.store.Delete(
+				context.Background(),
+				key,
+				out,
+				test.preconditions,
+				test.validateDeletion,
+				nil,
+				storage.DeleteOptions{},
+			)
 
 			if test.expectedError != nil {
 				suite.Require().Error(err)
@@ -165,7 +176,15 @@ func (suite *storeTestSuite) TestWatchResourceVersionZero() {
 	validateDeletion := func(_ context.Context, _ runtime.Object) error {
 		return nil
 	}
-	err = suite.store.Delete(context.Background(), key, &v1alpha1.SBOM{}, &storage.Preconditions{}, validateDeletion, nil, storage.DeleteOptions{})
+	err = suite.store.Delete(
+		context.Background(),
+		key,
+		&v1alpha1.SBOM{},
+		&storage.Preconditions{},
+		validateDeletion,
+		nil,
+		storage.DeleteOptions{},
+	)
 	suite.Require().NoError(err)
 
 	suite.broadcaster.Shutdown()
@@ -200,7 +219,15 @@ func (suite *storeTestSuite) TestWatchSpecificResourceVersion() {
 		return input, ptr.To(uint64(0)), nil
 	}
 	updatedSBOM := &v1alpha1.SBOM{}
-	err = suite.store.GuaranteedUpdate(context.Background(), key+"/test", updatedSBOM, false, &storage.Preconditions{}, tryUpdate, nil)
+	err = suite.store.GuaranteedUpdate(
+		context.Background(),
+		key+"/test",
+		updatedSBOM,
+		false,
+		&storage.Preconditions{},
+		tryUpdate,
+		nil,
+	)
 	suite.Require().NoError(err)
 
 	suite.broadcaster.Shutdown()
@@ -445,7 +472,15 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 			}
 
 			destinationSBOM := &v1alpha1.SBOM{}
-			err := suite.store.GuaranteedUpdate(context.Background(), test.key, destinationSBOM, test.ignoreNotFound, test.preconditions, test.tryUpdate, nil)
+			err := suite.store.GuaranteedUpdate(
+				context.Background(),
+				test.key,
+				destinationSBOM,
+				test.ignoreNotFound,
+				test.preconditions,
+				test.tryUpdate,
+				nil,
+			)
 
 			currentSBOM := &v1alpha1.SBOM{}
 			if test.expectedError != nil {

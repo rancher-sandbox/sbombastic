@@ -27,7 +27,12 @@ type GenerateSBOMHandler struct {
 	logger    *slog.Logger
 }
 
-func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *GenerateSBOMHandler {
+func NewGenerateSBOMHandler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	workDir string,
+	logger *slog.Logger,
+) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,
@@ -55,7 +60,12 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		Namespace: generateSBOMMessage.ImageNamespace,
 	}, image)
 	if err != nil {
-		return fmt.Errorf("cannot get image %s/%s: %w", generateSBOMMessage.ImageNamespace, generateSBOMMessage.ImageName, err)
+		return fmt.Errorf(
+			"cannot get image %s/%s: %w",
+			generateSBOMMessage.ImageNamespace,
+			generateSBOMMessage.ImageName,
+			err,
+		)
 	}
 
 	h.logger.Debug("Image found",
@@ -84,7 +94,12 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
 		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
 		"--output", sbomFile.Name(),
-		fmt.Sprintf("%s/%s:%s", image.GetImageMetadata().RegistryURI, image.GetImageMetadata().Repository, image.GetImageMetadata().Tag),
+		fmt.Sprintf(
+			"%s/%s:%s",
+			image.GetImageMetadata().RegistryURI,
+			image.GetImageMetadata().Repository,
+			image.GetImageMetadata().Tag,
+		),
 	})
 
 	if err := app.ExecuteContext(ctx); err != nil {

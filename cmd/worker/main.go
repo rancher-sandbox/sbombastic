@@ -33,7 +33,11 @@ func main() {
 
 	slogLevel, err := parseLogLevel(logLevel)
 	if err != nil {
-		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error(
+			"unable to parse log level",
+			"error",
+			err,
+		) //nolint:sloglint // Use the global logger since the logger is not yet initialized
 		os.Exit(1)
 	}
 	opts := slog.HandlerOptions{
