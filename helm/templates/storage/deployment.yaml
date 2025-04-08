@@ -29,4 +29,4 @@ spec:
       volumes:
         - name: sqlite-pvc
           persistentVolumeClaim:
-            claimName: {{ .Values.storage.pvc.name }}
+            claimName: {{ if .Values.persistence.storageData.existingClaim }}{{ .Values.persistence.storageData.existingClaim }}{{- else }}{{ template "sbombastic.fullname" . }}-storage-data{{- end }}

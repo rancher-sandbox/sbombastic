@@ -1,11 +1,28 @@
-apiVersion: v1
+{{- if and .Values.persistence.enabled .Values.persistence.storageData.enabled (not .Values.persistence.storageData.existingClaim) }}
+---
 kind: PersistentVolumeClaim
+apiVersion: v1
 metadata:
-  name: {{.Values.storage.pvc.name}}
+  name: {{ template "sbombastic.fullname" . }}-storage-data
+  labels:
+  {{- with .Values.persistence.storageData.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with .Values.persistence.storageData.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  storageClassName: {{ .Values.storage.storageClass.name }}
   accessModes:
-    {{ .Values.storage.pvc.accessModes | toYaml | nindent 2 }}
+    - {{ .Values.persistence.storageData.accessMode | quote }}
   resources:
     requests:
-      storage: {{ .Values.storage.pvc.requestStorage }}
+      storage: {{ .Values.persistence.storageData.size | quote }}
+  {{- with .Values.persistence.storageData.storageClass }}
+  {{- if (eq "-" .) }}
+  storageClassName: standard
+  {{- else }}
+  storageClassName: "{{ . }}"
+  {{- end }}
+  {{- end }}
+{{- end }}
