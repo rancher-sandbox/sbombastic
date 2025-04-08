@@ -47,7 +47,7 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-// Adds the list of known types to the given scheme.
+// AddKnownTypes adds the list of known types to the given scheme.
 func AddKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Image{},
