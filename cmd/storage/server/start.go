@@ -161,7 +161,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 }
 
 // Validate validates WardleServerOptions
-func (o WardleServerOptions) Validate(_ []string) error {
+func (o *WardleServerOptions) Validate(_ []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	errors = append(errors, featuregate.DefaultComponentGlobalsRegistry.Validate()...)
@@ -220,7 +220,7 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 }
 
 // RunWardleServer starts a new WardleServer given WardleServerOptions
-func (o WardleServerOptions) RunWardleServer(ctx context.Context) error {
+func (o *WardleServerOptions) RunWardleServer(ctx context.Context) error {
 	config, err := o.Config()
 	if err != nil {
 		return err
