@@ -37,7 +37,7 @@ tests:
     asserts:
       - equal:
           path: "spec.storageClassName"
-          value: "standard"
+          value: "-"
   - it: "should not render PVC when persistence.enabled is false"
     set:
       persistence:
@@ -60,7 +60,7 @@ tests:
           existingClaim: "existing-claim"
     asserts:
       - hasDocuments:
-          count: 0 
+          count: 0
   - it: "should not render PVC when both persistence is enabled and existingClaim is specified"
     set:
       persistence:
@@ -70,4 +70,4 @@ tests:
           existingClaim: "existing-claim"
     asserts:
       - hasDocuments:
-          count: 0           
+          count: 0

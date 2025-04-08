@@ -32,7 +32,7 @@ persistence:
     subPath:
     annotations: {}
     labels: {}
-    storageClass: standard
+    # storageClass: ""
     ## If defined, PVC must be created manually before volume will be bound
     # existingClaim:
     accessMode: ReadWriteOnce
