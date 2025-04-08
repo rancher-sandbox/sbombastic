@@ -177,7 +177,16 @@ func (s *store) Delete(
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions) (watch.Interface, error) {
-	s.logger.DebugContext(ctx, "Watching object", "key", key, "resourceVersion", opts.ResourceVersion, "progressNotify", opts.ProgressNotify)
+	s.logger.DebugContext(
+		ctx,
+		"Watching object",
+		"key",
+		key,
+		"resourceVersion",
+		opts.ResourceVersion,
+		"progressNotify",
+		opts.ProgressNotify,
+	)
 
 	if opts.ResourceVersion == "" {
 		return s.broadcaster.Watch()
@@ -207,7 +216,9 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 		// Cast the item address to a runtime.Object
 		item, ok := itemsValue.Index(i).Addr().Interface().(runtime.Object)
 		if !ok {
-			return nil, storage.NewInternalError(fmt.Errorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface()))
+			return nil, storage.NewInternalError(
+				fmt.Errorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface()),
+			)
 		}
 
 		events = append(events, watch.Event{
@@ -225,7 +236,16 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, objPtr runtime.Object) error {
-	s.logger.DebugContext(ctx, "Getting object", "key", key, "ignoreNotFound", opts.IgnoreNotFound, "resourceVersion", opts.ResourceVersion)
+	s.logger.DebugContext(
+		ctx,
+		"Getting object",
+		"key",
+		key,
+		"ignoreNotFound",
+		opts.IgnoreNotFound,
+		"resourceVersion",
+		opts.ResourceVersion,
+	)
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {

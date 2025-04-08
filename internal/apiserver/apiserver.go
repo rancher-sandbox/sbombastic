@@ -118,7 +118,12 @@ func (c completedConfig) New(db *sqlx.DB, logger *slog.Logger) (*WardleServer, e
 	if err != nil {
 		return nil, fmt.Errorf("error creating SBOM store: %w", err)
 	}
-	vulnerabilityReportStore, err := storage.NewVulnerabilityReport(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
+	vulnerabilityReportStore, err := storage.NewVulnerabilityReport(
+		Scheme,
+		c.GenericConfig.RESTOptionsGetter,
+		db,
+		logger,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating VulnerabilityReport store: %w", err)
 	}

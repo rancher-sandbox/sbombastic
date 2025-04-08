@@ -27,7 +27,12 @@ type ScanSBOMHandler struct {
 	logger    *slog.Logger
 }
 
-func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *ScanSBOMHandler {
+func NewScanSBOMHandler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	workDir string,
+	logger *slog.Logger,
+) *ScanSBOMHandler {
 	return &ScanSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,

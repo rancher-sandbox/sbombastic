@@ -24,7 +24,12 @@ CREATE TABLE IF NOT EXISTS sboms (
 `
 
 // NewSBOMStore returns a store registry that will work against API services.
-func NewSBOMStore(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter, db *sqlx.DB, logger *slog.Logger) (*registry.Store, error) {
+func NewSBOMStore(
+	scheme *runtime.Scheme,
+	optsGetter generic.RESTOptionsGetter,
+	db *sqlx.DB,
+	logger *slog.Logger,
+) (*registry.Store, error) {
 	strategy := newSBOMStrategy(scheme)
 
 	newFunc := func() runtime.Object { return &v1alpha1.SBOM{} }
