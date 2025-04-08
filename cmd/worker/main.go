@@ -54,11 +54,11 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	if err = v1alpha1.AddToScheme(scheme); err != nil {
 		logger.Error("Error adding v1alpha1 to scheme", "error", err)
 		os.Exit(1)
 	}
-	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
+	if err = storagev1alpha1.AddToScheme(scheme); err != nil {
 		logger.Error("Error adding storagev1alpha1 to scheme", "error", err)
 		os.Exit(1)
 	}

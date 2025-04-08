@@ -97,7 +97,7 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		)
 
 		var registry v1alpha1.Registry
-		err := r.Get(ctx, client.ObjectKey{
+		err = r.Get(ctx, client.ObjectKey{
 			Name:      sbom.GetImageMetadata().Registry,
 			Namespace: req.Namespace,
 		}, &registry)
@@ -121,7 +121,7 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			Info("Updating Registry last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
 
 		registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] = time.Now().Format(time.RFC3339)
-		if err := r.Update(ctx, &registry); err != nil {
+		if err = r.Update(ctx, &registry); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to update Registry LastScannedAt: %w", err)
 		}
 	}
