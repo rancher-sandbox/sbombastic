@@ -12,7 +12,7 @@ tests:
           repository: ghcr.io/rancher-sandbox/sbombastic/storage
           tag: v0.1.0
           pullPolicy: Always
-        pvc:
+        persistence:
           name: sqlite-pvc-test
     asserts:
       - equal:
@@ -26,4 +26,14 @@ tests:
           value: "Always"
       - equal:
           path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
-          value: "sqlite-pvc-test"
+          value: "RELEASE-NAME-sbombastic-storage-data"
+  - it: "should use existing PVC claim name when persistence.storageData.existingClaim is specified"
+    set:
+      persistence:
+        enabled: true
+        storageData:
+          existingClaim: "existing-claim"
+    asserts:
+      - equal:
+          path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
+          value: "existing-claim"

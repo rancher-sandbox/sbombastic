@@ -4,29 +4,70 @@ templates:
   - "templates/storage/pvc.yaml"
 
 tests:
-  - it: "should render a PVC with the correct name, storage class, access modes and storage request"
+  - it: "should render a PVC with custom size, access mode and storage class"
     set:
-      storage:
-        pvc:
-          name: sqlite-pvc-test
-          requestStorage: 10Gi
-          accessModes:
-            - ReadWriteMany
-            - ReadWriteOnce
-        storageClass:
-          name: sqlite-storageclass-test
+      persistence:
+        enabled: true
+        storageData:
+          enabled: true
+          size: 10Gi
+          accessMode: ReadWriteMany
+          storageClass: sqlite-storageclass-test
     asserts:
       - equal:
           path: "metadata.name"
-          value: "sqlite-pvc-test"
+          value: "RELEASE-NAME-sbombastic-storage-data"
       - equal:
           path: "spec.storageClassName"
           value: "sqlite-storageclass-test"
       - equal:
           path: "spec.accessModes"
           value:
-            - ReadWriteMany
-            - ReadWriteOnce
+          - ReadWriteMany
       - equal:
           path: "spec.resources.requests.storage"
           value: "10Gi"
+  - it: "should use standard storage class when storageClass is set to '-'"
+    set:
+      persistence:
+        enabled: true
+        storageData:
+          enabled: true
+          storageClass: "-"
+    asserts:
+      - equal:
+          path: "spec.storageClassName"
+          value: "standard"
+  - it: "should not render PVC when persistence.enabled is false"
+    set:
+      persistence:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: "should not render PVC when storageData.enabled is false"
+    set:
+      persistence:
+        storageData:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: "should not render PVC when existingClaim is specified"
+    set:
+      persistence:
+        storageData:
+          existingClaim: "existing-claim"
+    asserts:
+      - hasDocuments:
+          count: 0 
+  - it: "should not render PVC when both persistence is enabled and existingClaim is specified"
+    set:
+      persistence:
+        enabled: true
+        storageData:
+          enabled: true
+          existingClaim: "existing-claim"
+    asserts:
+      - hasDocuments:
+          count: 0           

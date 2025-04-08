@@ -15,16 +15,6 @@ storage:
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
-  pvc:
-    name: sqlite-pvc
-    requestStorage: 1Gi
-    accessModes:
-      - ReadWriteMany
-  storageClass:
-    name: sqlite-storageclass
-    provisioner: kubernetes.io/no-provisioner
-    allowVolumeExpansion: true
-    volumeBindingMode: WaitForFirstConsumer
 
 worker:
   image:
@@ -32,3 +22,18 @@ worker:
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
+
+persistence:
+  enabled: true
+
+  ## Specify a PVC for the storage data
+  storageData:
+    enabled: true
+    subPath:
+    annotations: {}
+    labels: {}
+    storageClass: standard
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+    accessMode: ReadWriteOnce
+    size: 1Gi
