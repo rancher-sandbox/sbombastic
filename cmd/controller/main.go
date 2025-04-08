@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/tls"
 	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -75,7 +74,7 @@ func parseFlags() Config {
 func setupLogger(cfg Config) (logr.Logger, error) {
 	slogLevel, err := cmdutil.ParseLogLevel(cfg.LogLevel)
 	if err != nil {
-		return logr.Logger{}, fmt.Errorf("parsing log level %q: %w", cfg.LogLevel, err)
+		return logr.Logger{}, err //nolint:wrapcheck // Original error preserved for logging
 	}
 	opts := slog.HandlerOptions{
 		Level: slogLevel,
@@ -89,7 +88,7 @@ func main() {
 	cfg := parseFlags()
 	logger, err := setupLogger(cfg)
 	if err != nil {
-		slog.Error("unable to setup logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error("error initializing the logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
 		os.Exit(1)
 	}
 

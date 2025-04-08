@@ -19,8 +19,8 @@ require (
 	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	gotest.tools/v3 v3.4.0
 	k8s.io/apimachinery v0.32.3
 	k8s.io/apiserver v0.32.3
 	k8s.io/client-go v0.32.3
