@@ -27,7 +27,7 @@ tests:
           value: "Always"
       - contains:
           path: "spec.template.spec.containers[0].args"
-          content: "--log-level=debug"          
+          content: "-log-level=debug"
       - equal:
           path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
           value: "RELEASE-NAME-sbombastic-storage-data"

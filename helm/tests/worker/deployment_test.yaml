@@ -25,4 +25,4 @@ tests:
           value: "Always"
       - contains:
           path: "spec.template.spec.containers[0].args"
-          content: "--log-level=debug"     
+          content: "-log-level=debug"
