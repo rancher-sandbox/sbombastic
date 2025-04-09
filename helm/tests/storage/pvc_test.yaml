@@ -27,17 +27,28 @@ tests:
       - equal:
           path: "spec.resources.requests.storage"
           value: "10Gi"
-  - it: "should use standard storage class when storageClass is set to '-'"
+  - it: "should use the storage class defined by the user"
     set:
       persistence:
         enabled: true
         storageData:
           enabled: true
-          storageClass: "-"
+          storageClass: "fast-storageclass-test"
     asserts:
       - equal:
           path: "spec.storageClassName"
-          value: "-"
+          value: "fast-storageclass-test"
+  - it: "should allow the usage of an empty string storage class to allow cluster's default one to be used"
+    set:
+      persistence:
+        enabled: true
+        storageData:
+          enabled: true
+          storageClass: ""
+    asserts:
+      - equal:
+          path: "spec.storageClassName"
+          value: ""
   - it: "should not render PVC when persistence.enabled is false"
     set:
       persistence:

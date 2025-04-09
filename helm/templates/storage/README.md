@@ -4,11 +4,9 @@ The `storage` Helm chart installs the SBOMbastic storage deployment, which shoul
 
 The storage component uses SQLite as its database backend. **Note that SQLite is intended for development and testing purposes only, and should not be used in production environments.**
 
-To ensure data persistence, the storage component requires a PersistentVolumeClaim (PVC). You can provide your own PVC to control how and where data is stored. This is the recommended approach and aligns with common Helm chart practices.
+To ensure data persistence, the storage component requires a PersistentVolumeClaim (PVC). You can provide your own PVC to control how and where data is stored.
 
 There are two ways to satisfy this requirement:
 
-1. **Recommended:** Provide a pre-created PVC and reference it in your Helm values using `persistence.storageData.existingClaim`.
-2. If no PVC is provided, and your cluster supports dynamic provisioning via a StorageClass, a new PVC and corresponding PV will be created automatically.
-
-If dynamic provisioning is not available and you don't provide a PVC, you will need to manually create a PersistentVolume that matches the chart's default PVC spec.
+1. Provide a pre-created PVC and reference it in your Helm values using `persistence.storageData.existingClaim`.
+2. If no PVC is provided, and your cluster supports dynamic provisioning via a `StorageClass`, a new PVC and corresponding PV will be created automatically.

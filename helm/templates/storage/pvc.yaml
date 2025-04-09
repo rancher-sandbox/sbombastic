@@ -18,7 +18,7 @@ spec:
   resources:
     requests:
       storage: {{ .Values.persistence.storageData.size | quote }}
-  {{- with .Values.persistence.storageData.storageClass }}
-  storageClassName: "{{ . }}"
+  {{- if hasKey .Values.persistence.storageData "storageClass" }}
+  storageClassName: "{{ .Values.persistence.storageData.storageClass }}"
   {{- end }}
 {{- end }}
