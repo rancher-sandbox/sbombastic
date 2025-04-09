@@ -65,7 +65,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				ImageNamespace: image.Namespace,
 			}
 
-			if err := r.Publisher.Publish(&msg); err != nil {
+			if err = r.Publisher.Publish(&msg); err != nil {
 				return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
 			}
 		} else {
@@ -84,7 +84,7 @@ func (r *ImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		if !ok {
 			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
 		}
-		return []string{sbom.Spec.ImageMetadata.Registry}
+		return []string{sbom.Spec.Registry}
 	}); err != nil {
 		return fmt.Errorf("unable to create field indexer: %w", err)
 	}

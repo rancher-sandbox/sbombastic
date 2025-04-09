@@ -80,8 +80,8 @@ type Registry struct {
 
 // RegistryList contains a list of Registry
 type RegistryList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `           json:",inline"`
+	metav1.ListMeta `           json:"metadata,omitempty"`
 	Items           []Registry `json:"items"`
 }
 

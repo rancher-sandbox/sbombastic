@@ -55,7 +55,7 @@ func TestSubscriber_Run(t *testing.T) {
 	}
 	subscriber := NewSubscriber(sub, handlers, slog.Default())
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	data, err := json.Marshal(message)

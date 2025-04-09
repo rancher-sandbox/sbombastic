@@ -61,7 +61,13 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" {
-		log.Info("Registry needs to be discovered, sending the request.", "name", registry.Name, "namespace", registry.Namespace)
+		log.Info(
+			"Registry needs to be discovered, sending the request.",
+			"name",
+			registry.Name,
+			"namespace",
+			registry.Namespace,
+		)
 
 		msg := messaging.CreateCatalog{
 			RegistryName:      registry.Name,
@@ -74,8 +80,8 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
 				Message: "Failed to communicate with the workers",
 			})
-			if err := r.Status().Update(ctx, &registry); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
+			if updateErr := r.Status().Update(ctx, &registry); updateErr != nil {
+				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", updateErr)
 			}
 
 			return ctrl.Result{}, fmt.Errorf("failed to publish CreateCatalog message: %w", err)
@@ -94,7 +100,8 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if len(registry.Spec.Repositories) > 0 {
-		log.V(1).Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
+		log.V(1).
+			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
 
 		fieldSelector := client.MatchingFields{
 			"spec.imageMetadata.registry": registry.Name,
