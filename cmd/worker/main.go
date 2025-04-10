@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/cmdutil"
 	"github.com/rancher/sbombastic/internal/handlers"
 	"github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
@@ -28,12 +28,12 @@ func main() {
 
 	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
 	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
-	flag.StringVar(&logLevel, "log-level", "info", "Log level")
+	flag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
 	flag.Parse()
 
-	slogLevel, err := parseLogLevel(logLevel)
+	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
 	if err != nil {
-		slog.Error("unable to parse log level", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error("error initializing the logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
 		os.Exit(1)
 	}
 	opts := slog.HandlerOptions{
@@ -88,14 +88,4 @@ func main() {
 		logger.Error("Error running worker subscriber", "error", err)
 		os.Exit(1)
 	}
-}
-
-// TODO: move to a shared package
-func parseLogLevel(s string) (slog.Level, error) {
-	var level slog.Level
-	if err := level.UnmarshalText([]byte(s)); err != nil {
-		return level, fmt.Errorf("unable to parse log level: %w", err)
-	}
-
-	return level, nil
 }

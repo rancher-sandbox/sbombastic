@@ -22,6 +22,10 @@ spec:
       containers:
         - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
+          {{- if .Values.storage.logLevel }}
+          args:
+            - -log-level={{ .Values.storage.logLevel }}
+          {{- end }}
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}
           volumeMounts:
             - name: sqlite-pvc

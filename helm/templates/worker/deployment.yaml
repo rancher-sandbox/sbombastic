@@ -26,6 +26,9 @@ spec:
           args:
             - -nats-url
             - {{ .Release.Name }}-controller-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
+            {{- if .Values.worker.logLevel }}
+            - -log-level={{ .Values.worker.logLevel }}
+            {{- end }}
           volumeMounts:
             - mountPath: /var/run/worker
               name: run-volume
