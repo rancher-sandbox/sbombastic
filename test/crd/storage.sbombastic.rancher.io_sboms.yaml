@@ -72,6 +72,10 @@ spec:
                 - repository
                 - tag
                 type: object
+              labels:
+                additionalProperties:
+                  type: string
+                type: object
               spdx:
                 description: SPDX contains the SPDX document of the SBOM in JSON format
                 type: object

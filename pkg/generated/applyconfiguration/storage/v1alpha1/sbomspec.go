@@ -26,6 +26,7 @@ import (
 type SBOMSpecApplyConfiguration struct {
 	ImageMetadata *ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
 	SPDX          *runtime.RawExtension            `json:"spdx,omitempty"`
+	Labels        map[string]string                `json:"labels,omitempty"`
 }
 
 // SBOMSpecApplyConfiguration constructs a declarative configuration of the SBOMSpec type for use with
@@ -47,5 +48,19 @@ func (b *SBOMSpecApplyConfiguration) WithImageMetadata(value *ImageMetadataApply
 // If called multiple times, the SPDX field is set to the value of the last call.
 func (b *SBOMSpecApplyConfiguration) WithSPDX(value runtime.RawExtension) *SBOMSpecApplyConfiguration {
 	b.SPDX = &value
+	return b
+}
+
+// WithLabels puts the entries into the Labels field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, the entries provided by each call will be put on the Labels field,
+// overwriting an existing map entries in Labels field with the same key.
+func (b *SBOMSpecApplyConfiguration) WithLabels(entries map[string]string) *SBOMSpecApplyConfiguration {
+	if b.Labels == nil && len(entries) > 0 {
+		b.Labels = make(map[string]string, len(entries))
+	}
+	for k, v := range entries {
+		b.Labels[k] = v
+	}
 	return b
 }

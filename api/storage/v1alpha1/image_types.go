@@ -52,7 +52,8 @@ type ImageSpec struct {
 	// Metadata of the image
 	ImageMetadata `json:"imageMetadata"`
 	// List of the layers that make the image
-	Layers []ImageLayer `json:"layers,omitempty"`
+	Layers []ImageLayer      `json:"layers,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // ImageLayer define a layer part of an OCI Image

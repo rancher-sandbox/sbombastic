@@ -300,6 +300,12 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existin
 	return nil
 }
 
+func prepareImageLabels(registry *v1alpha1.Registry) map[string]string {
+	labels := map[string]string{}
+	labels["app.kubernetes.io/managed-by"] = "sbombastic"
+	return labels
+}
+
 func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registry *v1alpha1.Registry) (storagev1alpha1.Image, error) {
 	imageLayers := []storagev1alpha1.ImageLayer{}
 
@@ -348,6 +354,7 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 				Digest:      details.Digest.String(),
 			},
 			Layers: imageLayers,
+			Labels: prepareImageLabels(registry),
 		},
 	}
 

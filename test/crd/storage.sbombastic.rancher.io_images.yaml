@@ -72,6 +72,10 @@ spec:
                 - repository
                 - tag
                 type: object
+              labels:
+                additionalProperties:
+                  type: string
+                type: object
               layers:
                 description: List of the layers that make the image
                 items:

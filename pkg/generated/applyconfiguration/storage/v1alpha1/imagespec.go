@@ -22,6 +22,7 @@ package v1alpha1
 type ImageSpecApplyConfiguration struct {
 	*ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
 	Layers                           []ImageLayerApplyConfiguration `json:"layers,omitempty"`
+	Labels                           map[string]string              `json:"labels,omitempty"`
 }
 
 // ImageSpecApplyConfiguration constructs a declarative configuration of the ImageSpec type for use with
@@ -99,6 +100,20 @@ func (b *ImageSpecApplyConfiguration) WithLayers(values ...*ImageLayerApplyConfi
 			panic("nil value passed to WithLayers")
 		}
 		b.Layers = append(b.Layers, *values[i])
+	}
+	return b
+}
+
+// WithLabels puts the entries into the Labels field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, the entries provided by each call will be put on the Labels field,
+// overwriting an existing map entries in Labels field with the same key.
+func (b *ImageSpecApplyConfiguration) WithLabels(entries map[string]string) *ImageSpecApplyConfiguration {
+	if b.Labels == nil && len(entries) > 0 {
+		b.Labels = make(map[string]string, len(entries))
+	}
+	for k, v := range entries {
+		b.Labels[k] = v
 	}
 	return b
 }

@@ -36,6 +36,12 @@ func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir
 	}
 }
 
+func prepareVulnerabilityReportLabels(sbom *storagev1alpha1.SBOM) map[string]string {
+	labels := map[string]string{}
+	labels["app.kubernetes.io/managed-by"] = "sbombastic"
+	return labels
+}
+
 //nolint:funlen //right now this is 2 lines too long because of error handling, if it grows more we should refactor
 func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	scanSBOMMessage, ok := message.(*messaging.ScanSBOM)
@@ -132,6 +138,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
 			ImageMetadata: sbom.GetImageMetadata(),
 			SARIF:         runtime.RawExtension{Raw: reportBytes},
+			Labels:        prepareVulnerabilityReportLabels(sbom),
 		}
 		return nil
 	})
