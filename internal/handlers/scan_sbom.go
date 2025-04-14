@@ -36,9 +36,11 @@ func NewScanSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir
 	}
 }
 
-func prepareVulnerabilityReportLabels(sbom *storagev1alpha1.SBOM) map[string]string {
+func prepareVulnerabilityReportLabels() map[string]string {
 	labels := map[string]string{}
-	labels["app.kubernetes.io/managed-by"] = "sbombastic"
+	labels["app.kubernetes.io/managed-by"] = LabelValueManagedBy
+	labels["app.kubernetes.io/component"] = LabelValueComponent
+	labels["app.kubernetes.io/part-of"] = LabelValuePartOf
 	return labels
 }
 
@@ -138,7 +140,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
 			ImageMetadata: sbom.GetImageMetadata(),
 			SARIF:         runtime.RawExtension{Raw: reportBytes},
-			Labels:        prepareVulnerabilityReportLabels(sbom),
+			Labels:        prepareVulnerabilityReportLabels(),
 		}
 		return nil
 	})
