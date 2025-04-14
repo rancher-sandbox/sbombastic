@@ -120,6 +120,10 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateSBOMMessage.ImageName,
 			Namespace: generateSBOMMessage.ImageNamespace,
+			Labels: map[string]string{
+				LabelManagedByKey: LabelManagedByValue,
+				LabelPartOfKey:    LabelPartOfValue,
+			},
 		},
 		Spec: storagev1alpha1.SBOMSpec{
 			ImageMetadata: image.GetImageMetadata(),
