@@ -328,7 +328,7 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 
 		ok, matchErr := opts.Predicate.Matches(obj)
 		if matchErr != nil {
-			return storage.NewInternalError(err)
+			return storage.NewInternalError(matchErr)
 		}
 		if !ok {
 			continue
