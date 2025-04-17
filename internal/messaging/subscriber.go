@@ -46,17 +46,17 @@ func (s *Subscriber) Run(ctx context.Context) error {
 
 			for _, msg := range msgs {
 				s.logger.DebugContext(ctx, "Processing message", "message", msg)
-				if err := s.processMessage(msg); err != nil {
+				if processMsgErr := s.processMessage(msg); processMsgErr != nil {
 					s.logger.ErrorContext(ctx, "Failed to process message",
 						"subject", msg.Subject,
 						"header", msg.Header,
 						"data", msg.Data,
-						"error", err,
+						"error", processMsgErr,
 					)
 				}
 
-				if err := msg.Ack(); err != nil {
-					return fmt.Errorf("failed to ack message: %w", err)
+				if ackErr := msg.Ack(); ackErr != nil {
+					return fmt.Errorf("failed to ack message: %w", ackErr)
 				}
 			}
 		}

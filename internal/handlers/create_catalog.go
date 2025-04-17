@@ -37,7 +37,12 @@ type CreateCatalogHandler struct {
 	logger                *slog.Logger
 }
 
-func NewCreateCatalogHandler(registryClientFactory registryclient.ClientFactory, k8sClient client.Client, scheme *runtime.Scheme, logger *slog.Logger) *CreateCatalogHandler {
+func NewCreateCatalogHandler(
+	registryClientFactory registryclient.ClientFactory,
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	logger *slog.Logger,
+) *CreateCatalogHandler {
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
@@ -65,7 +70,12 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		Namespace: createCatalogMessage.RegistryNamespace,
 	}, registry)
 	if err != nil {
-		return fmt.Errorf("cannot get registry %s/%s: %w", createCatalogMessage.RegistryNamespace, createCatalogMessage.RegistryName, err)
+		return fmt.Errorf(
+			"cannot get registry %s/%s: %w",
+			createCatalogMessage.RegistryNamespace,
+			createCatalogMessage.RegistryName,
+			err,
+		)
 	}
 
 	h.logger.Debug("Registry found", "registry", registry)
@@ -83,15 +93,15 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 
 	discoveredImageNames := sets.Set[string]{}
 	for _, repository := range repositories {
-		repoImages, err := h.discoverImages(ctx, registryClient, repository)
-		if err != nil {
-			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, err)
+		repoImages, discoverImagesErr := h.discoverImages(ctx, registryClient, repository)
+		if discoverImagesErr != nil {
+			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, discoverImagesErr)
 		}
 		discoveredImageNames.Insert(repoImages...)
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
-	if err := h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
+	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
 		return fmt.Errorf("cannot list existing images in registry %s: %w", registry.Name, err)
 	}
 	existingImageNames := sets.Set[string]{}
@@ -100,14 +110,14 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	for newImageName := range discoveredImageNames {
-		ref, err := name.ParseReference(newImageName)
-		if err != nil {
-			return fmt.Errorf("cannot parse reference %s: %w", newImageName, err)
+		ref, parseErr := name.ParseReference(newImageName)
+		if parseErr != nil {
+			return fmt.Errorf("cannot parse reference %s: %w", newImageName, parseErr)
 		}
 
-		images, err := h.refToImages(registryClient, ref, registry)
-		if err != nil {
-			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
+		images, refToImagesErr := h.refToImages(registryClient, ref, registry)
+		if refToImagesErr != nil {
+			h.logger.Info("cannot get images", "reference", ref.String(), "error", refToImagesErr)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -117,13 +127,13 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 				continue
 			}
 
-			if err := h.k8sClient.Create(ctx, &image); err != nil {
-				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
+			if createErr := h.k8sClient.Create(ctx, &image); createErr != nil {
+				return fmt.Errorf("cannot create image %s: %w", image.Name, createErr)
 			}
 		}
 	}
 
-	if err := h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
+	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
 		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
 	}
 
@@ -136,7 +146,11 @@ func (h *CreateCatalogHandler) NewMessage() messaging.Message {
 
 // discoverRepositories discovers all the repositories in a registry.
 // Returns the list of fully qualified repository names (e.g. registryclientexample.com/repo)
-func (h *CreateCatalogHandler) discoverRepositories(ctx context.Context, registryClient registryclient.Client, registry *v1alpha1.Registry) ([]string, error) {
+func (h *CreateCatalogHandler) discoverRepositories(
+	ctx context.Context,
+	registryClient registryclient.Client,
+	registry *v1alpha1.Registry,
+) ([]string, error) {
 	reg, err := name.NewRegistry(registry.Spec.URI)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse registry %s %s: %w", registry.Name, registry.Namespace, err)
@@ -145,9 +159,9 @@ func (h *CreateCatalogHandler) discoverRepositories(ctx context.Context, registr
 	// If the registry doesn't have any repositories defined, it means we need to catalog all of them.
 	// In this case, we need to discover all the repositories in the registry.
 	if len(registry.Spec.Repositories) == 0 {
-		allRepositories, err := registryClient.Catalog(ctx, reg)
-		if err != nil {
-			return []string{}, fmt.Errorf("cannot discover repositories: %w", err)
+		allRepositories, catalogErr := registryClient.Catalog(ctx, reg)
+		if catalogErr != nil {
+			return []string{}, fmt.Errorf("cannot discover repositories: %w", catalogErr)
 		}
 
 		return allRepositories, nil
@@ -163,7 +177,11 @@ func (h *CreateCatalogHandler) discoverRepositories(ctx context.Context, registr
 
 // discoverImages discovers all the images defined inside of a repository.
 // Returns the list of fully qualified image names (e.g. registryclientexample.com/repo:tag)
-func (h *CreateCatalogHandler) discoverImages(ctx context.Context, registryClient registryclient.Client, repository string) ([]string, error) {
+func (h *CreateCatalogHandler) discoverImages(
+	ctx context.Context,
+	registryClient registryclient.Client,
+	repository string,
+) ([]string, error) {
 	repo, err := name.NewRepository(repository)
 	if err != nil {
 		return []string{}, fmt.Errorf("cannot parse repository name %q: %w", repository, err)
@@ -177,7 +195,11 @@ func (h *CreateCatalogHandler) discoverImages(ctx context.Context, registryClien
 	return contents, nil
 }
 
-func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client, ref name.Reference, registry *v1alpha1.Registry) ([]storagev1alpha1.Image, error) {
+func (h *CreateCatalogHandler) refToImages(
+	registryClient registryclient.Client,
+	ref name.Reference,
+	registry *v1alpha1.Registry,
+) ([]storagev1alpha1.Image, error) {
 	platforms, err := h.refToPlatforms(registryClient, ref)
 	if err != nil {
 		return []storagev1alpha1.Image{}, fmt.Errorf("cannot get platforms for %s: %w", ref, err)
@@ -190,25 +212,39 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 	images := []storagev1alpha1.Image{}
 
 	for _, platform := range platforms {
-		imageDetails, err := registryClient.GetImageDetails(ref, platform)
-		if err != nil {
+		imageDetails, getImageDetailsErr := registryClient.GetImageDetails(ref, platform)
+		if getImageDetailsErr != nil {
 			platformStr := "default"
 			if platform != nil {
 				platformStr = platform.String()
 			}
-			h.logger.Info("cannot get image details", "reference", ref.Name(), "platform", platformStr, "error", err)
+			h.logger.Info(
+				"cannot get image details",
+				"reference",
+				ref.Name(),
+				"platform",
+				platformStr,
+				"error",
+				getImageDetailsErr,
+			)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
-		image, err := imageDetailsToImage(ref, imageDetails, registry)
-		if err != nil {
-			h.logger.Info("cannot convert image details to image", "reference", ref.Name(), "error", err)
+		image, imageDetailsToImageErr := imageDetailsToImage(ref, imageDetails, registry)
+		if imageDetailsToImageErr != nil {
+			h.logger.Info(
+				"cannot convert image details to image",
+				"reference",
+				ref.Name(),
+				"error",
+				imageDetailsToImageErr,
+			)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
-		if err := controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
+		if err = controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
 			h.logger.Info("cannot set owner reference", "reference", ref.Name(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
@@ -222,7 +258,10 @@ func (h *CreateCatalogHandler) refToImages(registryClient registryclient.Client,
 
 // refToPlatforms returns the list of platforms for the given image reference.
 // If the image is not multi-architecture, it returns an empty list.
-func (h *CreateCatalogHandler) refToPlatforms(registryClient registryclient.Client, ref name.Reference) ([]*cranev1.Platform, error) {
+func (h *CreateCatalogHandler) refToPlatforms(
+	registryClient registryclient.Client,
+	ref name.Reference,
+) ([]*cranev1.Platform, error) {
 	imgIndex, err := registryClient.GetImageIndex(ref)
 	if err != nil {
 		h.logger.Debug(
@@ -265,8 +304,8 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 			rootCAs = x509.NewCertPool()
 		}
 
-		ok := rootCAs.AppendCertsFromPEM([]byte(registry.Spec.CABundle))
-		if ok {
+		certsAppended := rootCAs.AppendCertsFromPEM([]byte(registry.Spec.CABundle))
+		if certsAppended {
 			transport.TLSClientConfig.RootCAs = rootCAs
 		} else {
 			h.logger.Info("cannot load the given CA bundle",
@@ -279,7 +318,12 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 }
 
 // deleteObsoleteImages deletes images that are not present in the discovered registry anymore.
-func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existingImageNames sets.Set[string], discoveredImageNames sets.Set[string], namespace string) error {
+func (h *CreateCatalogHandler) deleteObsoleteImages(
+	ctx context.Context,
+	existingImageNames sets.Set[string],
+	discoveredImageNames sets.Set[string],
+	namespace string,
+) error {
 	for existingImageName := range existingImageNames {
 		if discoveredImageNames.Has(existingImageName) {
 			continue
@@ -300,7 +344,11 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existin
 	return nil
 }
 
-func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registry *v1alpha1.Registry) (storagev1alpha1.Image, error) {
+func imageDetailsToImage(
+	ref name.Reference,
+	details registryclient.ImageDetails,
+	registry *v1alpha1.Registry,
+) (storagev1alpha1.Image, error) {
 	imageLayers := []storagev1alpha1.ImageLayer{}
 
 	// There can be more history entries than layers, as some history entries are empty layers
@@ -312,7 +360,11 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 		}
 
 		if len(details.Layers) < layerCounter {
-			return storagev1alpha1.Image{}, fmt.Errorf("layer %d not found - got only %d layers", layerCounter, len(details.Layers))
+			return storagev1alpha1.Image{}, fmt.Errorf(
+				"layer %d not found - got only %d layers",
+				layerCounter,
+				len(details.Layers),
+			)
 		}
 		layer := details.Layers[layerCounter]
 		digest, err := layer.Digest()
@@ -357,6 +409,6 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 // computeImageUID returns the sha256 of “<image-name>@sha256:<digest>`
 func computeImageUID(ref name.Reference, digest string) string {
 	sha := sha256.New()
-	sha.Write([]byte(fmt.Sprintf("%s:%s@%s", ref.Context().Name(), ref.Identifier(), digest)))
+	fmt.Fprintf(sha, "%s:%s@%s", ref.Context().Name(), ref.Identifier(), digest)
 	return hex.EncodeToString(sha.Sum(nil))
 }
