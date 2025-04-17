@@ -52,7 +52,8 @@ type SBOM struct {
 type SBOMSpec struct {
 	ImageMetadata ImageMetadata `json:"imageMetadata"`
 	// SPDX contains the SPDX document of the SBOM in JSON format
-	SPDX runtime.RawExtension `json:"spdx"`
+	SPDX   runtime.RawExtension `json:"spdx"`
+	Labels map[string]string    `json:"labels,omitempty"`
 }
 
 // SBOMStatus defines the observed state of a SBOM

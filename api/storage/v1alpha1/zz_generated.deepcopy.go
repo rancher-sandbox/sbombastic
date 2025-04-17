@@ -126,6 +126,13 @@ func (in *ImageSpec) DeepCopyInto(out *ImageSpec) {
 		*out = make([]ImageLayer, len(*in))
 		copy(*out, *in)
 	}
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
@@ -221,6 +228,13 @@ func (in *SBOMSpec) DeepCopyInto(out *SBOMSpec) {
 	*out = *in
 	out.ImageMetadata = in.ImageMetadata
 	in.SPDX.DeepCopyInto(&out.SPDX)
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
@@ -316,6 +330,13 @@ func (in *VulnerabilityReportSpec) DeepCopyInto(out *VulnerabilityReportSpec) {
 	*out = *in
 	out.ImageMetadata = in.ImageMetadata
 	in.SARIF.DeepCopyInto(&out.SARIF)
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

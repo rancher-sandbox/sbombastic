@@ -36,6 +36,14 @@ func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, wor
 	}
 }
 
+func prepareSBOMLabels() map[string]string {
+	labels := map[string]string{}
+	labels["app.kubernetes.io/managed-by"] = LabelValueManagedBy
+	labels["app.kubernetes.io/component"] = LabelValueComponent
+	labels["app.kubernetes.io/part-of"] = LabelValuePartOf
+	return labels
+}
+
 func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	generateSBOMMessage, ok := message.(*messaging.GenerateSBOM)
 	if !ok {
@@ -109,6 +117,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		Spec: storagev1alpha1.SBOMSpec{
 			ImageMetadata: image.GetImageMetadata(),
 			SPDX:          runtime.RawExtension{Raw: spdxBytes},
+			Labels:        prepareSBOMLabels(),
 		},
 	}
 	if err := controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {

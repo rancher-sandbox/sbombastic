@@ -29,6 +29,12 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
+const (
+	LabelValueManagedBy = "sbombastic"
+	LabelValueComponent = "controller"
+	LabelValuePartOf    = "sbombastic"
+)
+
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
 type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
@@ -300,6 +306,14 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(ctx context.Context, existin
 	return nil
 }
 
+func prepareImageLabels() map[string]string {
+	labels := map[string]string{}
+	labels["app.kubernetes.io/managed-by"] = LabelValueManagedBy
+	labels["app.kubernetes.io/component"] = LabelValueComponent
+	labels["app.kubernetes.io/part-of"] = LabelValuePartOf
+	return labels
+}
+
 func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails, registry *v1alpha1.Registry) (storagev1alpha1.Image, error) {
 	imageLayers := []storagev1alpha1.ImageLayer{}
 
@@ -348,6 +362,7 @@ func imageDetailsToImage(ref name.Reference, details registryclient.ImageDetails
 				Digest:      details.Digest.String(),
 			},
 			Layers: imageLayers,
+			Labels: prepareImageLabels(),
 		},
 	}
 

@@ -20,10 +20,10 @@ type ImageDetails struct {
 	Platform cranev1.Platform
 }
 
-//go:generate go run github.com/vektra/mockery/v2@v2.46.2 --name ImageIndex --srcpkg github.com/google/go-containerregistry/pkg/v1 --filename image_index.go
-//go:generate go run github.com/vektra/mockery/v2@v2.46.2 --name Layer --srcpkg github.com/google/go-containerregistry/pkg/v1 --filename layer.go
+//go:generate go run github.com/vektra/mockery/v2@v2.53.3 --name ImageIndex --srcpkg github.com/google/go-containerregistry/pkg/v1 --filename image_index.go
+//go:generate go run github.com/vektra/mockery/v2@v2.53.3 --name Layer --srcpkg github.com/google/go-containerregistry/pkg/v1 --filename layer.go
 
-//go:generate go run github.com/vektra/mockery/v2@v2.46.2 --name Client --filename client.go
+//go:generate go run github.com/vektra/mockery/v2@v2.53.3 --name Client --filename client.go
 type Client interface {
 	// Catalog returns a list of repositories in the registry.
 	// The registries are fully qualified (e.g. registry.example.com/repo)
