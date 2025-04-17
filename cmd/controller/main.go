@@ -88,7 +88,11 @@ func main() {
 	cfg := parseFlags()
 	logger, err := setupLogger(cfg)
 	if err != nil {
-		slog.Error("error initializing the logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error( //nolint:sloglint // Use the global logger since the logger is not yet initialized
+			"error initializing the logger",
+			"error",
+			err,
+		)
 		os.Exit(1)
 	}
 
