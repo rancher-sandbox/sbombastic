@@ -20,11 +20,11 @@ require (
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	k8s.io/apimachinery v0.32.3
-	k8s.io/apiserver v0.32.3
-	k8s.io/client-go v0.32.3
-	k8s.io/code-generator v0.32.3
-	k8s.io/component-base v0.32.3
+	k8s.io/apimachinery v0.32.4
+	k8s.io/apiserver v0.32.4
+	k8s.io/client-go v0.32.4
+	k8s.io/code-generator v0.32.4
+	k8s.io/component-base v0.32.4
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	modernc.org/sqlite v1.37.0
@@ -418,12 +418,12 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.17.3 // indirect
-	k8s.io/api v0.32.3 // indirect
+	k8s.io/api v0.32.4 // indirect
 	k8s.io/apiextensions-apiserver v0.32.2 // indirect
 	k8s.io/cli-runtime v0.32.3 // indirect
 	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kms v0.32.3 // indirect
+	k8s.io/kms v0.32.4 // indirect
 	k8s.io/kubectl v0.32.3 // indirect
 	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
