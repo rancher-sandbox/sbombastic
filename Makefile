@@ -5,7 +5,13 @@ ENVTEST_K8S_VERSION := 1.31.0
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
+GO_MOD_SRCS := go.mod go.sum
+
 ENVTEST_DIR ?= $(shell pwd)/.envtest
+
+REGISTRY ?= ghcr.io
+REPO ?= rancher-sandbox/sbombastic
+TAG ?= latest
 
 .PHONY: all
 all: controller storage worker
@@ -17,6 +23,10 @@ test: vet ## Run tests.
 .PHONY: helm-unittest
 helm-unittest:
 	helm unittest helm/ --file "tests/**/*_test.yaml"
+
+.PHONY: test-e2e
+test-e2e: controller-image storage-image worker-image
+	go test ./test/e2e/ -v
 
 .PHONY: fmt
 fmt:
@@ -34,17 +44,44 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 vet:
 	go vet ./...
 
-.PHONY: controller
-controller: vet
+CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
+CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
+CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
+.PHONY: controller 
+controller: $(CONTROLLER_SRCS) vet
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/controller ./cmd/controller
 
-.PHONY: storage
-storage: vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/storage ./cmd/storage 
+.PHONY: controller-image
+controller-image:
+	docker build -f ./Dockerfile.controller \
+		-t "$(REGISTRY)/$(REPO)/controller:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/controller:$(TAG)"
 
+STORAGE_SRC_DIRS := cmd/storage api internal/apiserver internal/storage pkg
+STORAGE_GO_SRCS := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
+STORAGE_SRCS := $(GO_MOD_SRCS) $(STORAGE_GO_SRCS)
+.PHONY: storage
+storage: $(STORAGE_SRCS) vet
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/storage ./cmd/storage
+
+.PHONY: storage-image
+storage-image:
+	docker build -f ./Dockerfile.storage \
+		-t "$(REGISTRY)/$(REPO)/storage:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/storage:$(TAG)"
+
+WORKER_SRC_DIRS := cmd/worker api internal/messaging internal/handlers
+WORKER_GO_SRCS := $(shell find $(WORKER_SRC_DIRS) -type f -name '*.go')
+WORKER_SRCS := $(GO_MOD_SRCS) $(WORKER_GO_SRCS)
 .PHONY: worker
-worker: vet
+worker: $(WORKER_SRCS) vet
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/worker ./cmd/worker
+
+.PHONY: worker-image
+worker-image:
+	docker build -f ./Dockerfile.worker \
+		-t "$(REGISTRY)/$(REPO)/worker:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/worker:$(TAG)"
 
 .PHONY: generate
 generate: generate-controller generate-storage generate-mocks
