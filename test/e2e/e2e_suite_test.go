@@ -48,6 +48,7 @@ func EqualReference(img storagev1alpha1.ImageMetadata, registryURI, registryRepo
 		img.Tag == tag
 }
 
+//nolint:gocognit // this is an integration-style test with many setup/assertions
 func TestRegistryCreation(t *testing.T) {
 	releaseName := "sbombastic"
 
@@ -72,10 +73,14 @@ func TestRegistryCreation(t *testing.T) {
 				helm.WithWait(),
 				helm.WithTimeout("3m"))
 
-			assert.NoError(t, err, "sbombastic helm chart is not installed correctly")
+			require.NoError(t, err, "sbombastic helm chart is not installed correctly")
 
-			storagev1alpha1.AddToScheme(cfg.Client().Resources(cfg.Namespace()).GetScheme())
-			v1alpha1.AddToScheme(cfg.Client().Resources(cfg.Namespace()).GetScheme())
+			err = storagev1alpha1.AddToScheme(cfg.Client().Resources(cfg.Namespace()).GetScheme())
+			require.NoError(t, err)
+
+			err = v1alpha1.AddToScheme(cfg.Client().Resources(cfg.Namespace()).GetScheme())
+			require.NoError(t, err)
+
 			return ctx
 		}).
 		Assess("Create Registry CR", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
