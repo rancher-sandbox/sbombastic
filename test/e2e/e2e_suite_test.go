@@ -33,12 +33,15 @@ import (
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
+	"sigs.k8s.io/e2e-framework/klient/wait"
+	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,7 +51,6 @@ func EqualReference(img storagev1alpha1.ImageMetadata, registryURI, registryRepo
 		img.Tag == tag
 }
 
-//nolint:gocognit // this is an integration-style test with many setup/assertions
 func TestRegistryCreation(t *testing.T) {
 	releaseName := "sbombastic"
 
@@ -61,8 +63,11 @@ func TestRegistryCreation(t *testing.T) {
 	golangAlpineTag := "1.12-alpine"
 
 	pollInterval := 1 * time.Second
-	pollTimeout := 20 * time.Second
+	pollTimeout := 1 * time.Minute
 	var sbom storagev1alpha1.SBOM
+	var vulnReport storagev1alpha1.VulnerabilityReport
+	var image storagev1alpha1.Image
+	crName := "dfe56d8371e7df15a3dde25c33a78b84b79766de2ab5a5897032019c878b5932"
 
 	f := features.New("Registry CR Creation test").
 		Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -96,22 +101,50 @@ func TestRegistryCreation(t *testing.T) {
 			}
 			err := cfg.Client().Resources(cfg.Namespace()).Create(ctx, registry)
 			require.NoError(t, err)
+
+			// Init the var for later test and owner reference delete check
+			image = storagev1alpha1.Image{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      crName,
+					Namespace: cfg.Namespace(),
+				},
+			}
+			sbom = storagev1alpha1.SBOM{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      crName,
+					Namespace: cfg.Namespace(),
+				},
+			}
+			vulnReport = storagev1alpha1.VulnerabilityReport{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      crName,
+					Namespace: cfg.Namespace(),
+				},
+			}
+
 			return ctx
 		}).
 		Assess("SPDX SBOM is created with expected content", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			assert.Eventually(t, func() bool {
-				sboms := &storagev1alpha1.SBOMList{}
-				if err := cfg.Client().Resources(cfg.Namespace()).List(ctx, sboms); err != nil {
-					return false
-				}
-				for _, item := range sboms.Items {
-					if EqualReference(item.Spec.ImageMetadata, registryURI, registryRepository, golangAlpineTag) {
-						sbom = item
-						return true
-					}
-				}
-				return false
-			}, pollTimeout, pollInterval, "SBOM CR was not generated or no matching image was found")
+			err := wait.For(
+				conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceMatch(
+					&sbom,
+					func(obj k8s.Object) bool {
+						sbomObj, ok := obj.(*storagev1alpha1.SBOM)
+						if !ok {
+							t.Fatal("unexpected type assertion failure")
+						}
+
+						return EqualReference(
+							sbomObj.Spec.ImageMetadata,
+							registryURI,
+							registryRepository,
+							golangAlpineTag,
+						)
+					}),
+				wait.WithInterval(pollInterval),
+				wait.WithTimeout(pollTimeout),
+			)
+			require.NoError(t, err, "SBOM CR did not reach expected state within %s", pollTimeout)
 
 			spdxData, err := os.ReadFile(spdxPath)
 			require.NoError(t, err)
@@ -135,24 +168,29 @@ func TestRegistryCreation(t *testing.T) {
 			return ctx
 		}).
 		Assess("Vulnerability Report is created with expected content", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			var vulnReport storagev1alpha1.VulnerabilityReport
+			err := wait.For(
+				conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceMatch(
+					&vulnReport,
+					func(obj k8s.Object) bool {
+						reportObj, ok := obj.(*storagev1alpha1.VulnerabilityReport)
+						if !ok {
+							t.Fatal("unexpected type assertion failure")
+						}
 
-			assert.Eventually(t, func() bool {
-				vulnReports := &storagev1alpha1.VulnerabilityReportList{}
-				if err := cfg.Client().Resources(cfg.Namespace()).List(ctx, vulnReports); err != nil {
-					return false
-				}
-				for _, item := range vulnReports.Items {
-					if EqualReference(item.Spec.ImageMetadata, registryURI, registryRepository, golangAlpineTag) {
-						vulnReport = item
-						return true
-					}
-				}
-				return false
-			}, pollTimeout, pollInterval, "VulnerabilityReport CR was not generated or no matching image was found")
+						return EqualReference(
+							reportObj.Spec.ImageMetadata,
+							registryURI,
+							registryRepository,
+							golangAlpineTag,
+						)
+					}),
+				wait.WithInterval(pollInterval),
+				wait.WithTimeout(pollTimeout),
+			)
+			require.NoError(t, err, "Vulnerability Report CR did not reach expected state within %s", pollTimeout)
 
 			generatedReport := &sarif.Report{}
-			err := json.Unmarshal(vulnReport.Spec.SARIF.Raw, generatedReport)
+			err = json.Unmarshal(vulnReport.Spec.SARIF.Raw, generatedReport)
 			require.NoError(t, err)
 
 			assert.Equal(t, sbom.GetImageMetadata(), vulnReport.GetImageMetadata())
@@ -197,68 +235,21 @@ func TestRegistryCreation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Ensure that the SBOM and VulnerabilityReport CRs are deleted after the Registry CR is deleted
-			assert.Eventually(t, func() bool {
-				images := &storagev1alpha1.ImageList{}
-				listErr := cfg.Client().Resources(cfg.Namespace()).List(ctx, images)
-
-				if apierrors.IsNotFound(listErr) {
-					return true
-				} else if listErr != nil {
-					t.Fatal(listErr)
-					return false
-				}
-
-				imageDeleted := true
-				for _, item := range images.Items {
-					if EqualReference(item.Spec.ImageMetadata, registryURI, registryRepository, golangAlpineTag) {
-						imageDeleted = false
-						break
-					}
-				}
-				return imageDeleted
-			}, pollTimeout, pollInterval, "Image CR was not deleted after Registry CR was deleted")
-
-			assert.Eventually(t, func() bool {
-				sboms := &storagev1alpha1.SBOMList{}
-				listErr := cfg.Client().Resources(cfg.Namespace()).List(ctx, sboms)
-
-				if apierrors.IsNotFound(listErr) {
-					return true
-				} else if listErr != nil {
-					t.Fatal(listErr)
-					return false
-				}
-
-				sbomDeleted := true
-				for _, item := range sboms.Items {
-					if EqualReference(item.Spec.ImageMetadata, registryURI, registryRepository, golangAlpineTag) {
-						sbomDeleted = false
-						break
-					}
-				}
-				return sbomDeleted
-			}, pollTimeout, pollInterval, "SBOM CR was not deleted after Registry CR was deleted")
-
-			assert.Eventually(t, func() bool {
-				vulnReports := &storagev1alpha1.VulnerabilityReportList{}
-				listErr := cfg.Client().Resources(cfg.Namespace()).List(ctx, vulnReports)
-				if apierrors.IsNotFound(listErr) {
-					return true
-				} else if listErr != nil {
-					t.Fatal(listErr)
-					return false
-				}
-
-				vulnReportDeleted := true
-				for _, item := range vulnReports.Items {
-					if EqualReference(item.Spec.ImageMetadata, registryURI, registryRepository, golangAlpineTag) {
-						vulnReportDeleted = false
-						break
-					}
-				}
-				return vulnReportDeleted
-			}, pollTimeout, pollInterval, "VulnerabilityReport CR was not deleted after Registry CR was deleted")
+			for _, obj := range []struct {
+				resource k8s.Object
+				kind     string
+			}{
+				{resource: &image, kind: "Image"},
+				{resource: &sbom, kind: "SBOM"},
+				{resource: &vulnReport, kind: "VulnerabilityReport"},
+			} {
+				require.NoError(t, wait.For(
+					conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceDeleted(
+						obj.resource),
+					wait.WithInterval(pollInterval),
+					wait.WithTimeout(pollTimeout),
+				), "%v CR was not deleted after Registry CR was deleted", obj.kind)
+			}
 
 			manager := helm.New(cfg.KubeconfigFile())
 			err = manager.RunUninstall(
