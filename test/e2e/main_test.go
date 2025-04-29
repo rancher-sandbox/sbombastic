@@ -30,9 +30,9 @@ var (
 	testenv         env.Environment
 	kindClusterName string
 	namespace       string
-	workerImage     = "ghcr.io/rancher-sandbox/sbombastic/worker:v0.1.0-alpha1"
-	controllerImage = "ghcr.io/rancher-sandbox/sbombastic/controller:v0.1.0-alpha1"
-	storageImage    = "ghcr.io/rancher-sandbox/sbombastic/storage:v0.1.0-alpha1"
+	workerImage     = "ghcr.io/rancher-sandbox/sbombastic/worker:e2e-test"
+	controllerImage = "ghcr.io/rancher-sandbox/sbombastic/controller:e2e-test"
+	storageImage    = "ghcr.io/rancher-sandbox/sbombastic/storage:e2e-test"
 )
 
 func TestMain(m *testing.M) {

@@ -76,6 +76,9 @@ func TestRegistryCreation(t *testing.T) {
 				helm.WithNamespace(cfg.Namespace()),
 				helm.WithChart("../../helm"),
 				helm.WithWait(),
+				helm.WithArgs("--set", "controller.image.tag=e2e-test",
+					"--set", "storage.image.tag=e2e-test",
+					"--set", "worker.image.tag=e2e-test"),
 				helm.WithTimeout("3m"))
 
 			require.NoError(t, err, "sbombastic helm chart is not installed correctly")
@@ -125,25 +128,28 @@ func TestRegistryCreation(t *testing.T) {
 			return ctx
 		}).
 		Assess("SPDX SBOM is created with expected content", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			var sbomObj *storagev1alpha1.SBOM
 			err := wait.For(
 				conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceMatch(
 					&sbom,
 					func(obj k8s.Object) bool {
-						sbomObj, ok := obj.(*storagev1alpha1.SBOM)
+						var ok bool
+						sbomObj, ok = obj.(*storagev1alpha1.SBOM)
 						if !ok {
 							t.Fatal("unexpected type assertion failure")
 						}
-
-						return EqualReference(
-							sbomObj.Spec.ImageMetadata,
-							registryURI,
-							registryRepository,
-							golangAlpineTag,
-						)
+						return true
 					}),
 				wait.WithInterval(pollInterval),
 				wait.WithTimeout(pollTimeout),
 			)
+			require.NoError(t, err)
+			assert.True(t, EqualReference(
+				sbomObj.Spec.ImageMetadata,
+				registryURI,
+				registryRepository,
+				golangAlpineTag,
+			))
 			require.NoError(t, err, "SBOM CR did not reach expected state within %s", pollTimeout)
 
 			spdxData, err := os.ReadFile(spdxPath)
@@ -168,25 +174,28 @@ func TestRegistryCreation(t *testing.T) {
 			return ctx
 		}).
 		Assess("Vulnerability Report is created with expected content", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			var vulnReportObj *storagev1alpha1.VulnerabilityReport
 			err := wait.For(
 				conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceMatch(
 					&vulnReport,
 					func(obj k8s.Object) bool {
-						reportObj, ok := obj.(*storagev1alpha1.VulnerabilityReport)
+						var ok bool
+						vulnReportObj, ok = obj.(*storagev1alpha1.VulnerabilityReport)
 						if !ok {
 							t.Fatal("unexpected type assertion failure")
 						}
-
-						return EqualReference(
-							reportObj.Spec.ImageMetadata,
-							registryURI,
-							registryRepository,
-							golangAlpineTag,
-						)
+						return true
 					}),
 				wait.WithInterval(pollInterval),
 				wait.WithTimeout(pollTimeout),
 			)
+			require.NoError(t, err)
+			assert.True(t, EqualReference(
+				vulnReportObj.Spec.ImageMetadata,
+				registryURI,
+				registryRepository,
+				golangAlpineTag,
+			))
 			require.NoError(t, err, "Vulnerability Report CR did not reach expected state within %s", pollTimeout)
 
 			generatedReport := &sarif.Report{}
