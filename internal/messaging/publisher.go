@@ -25,9 +25,9 @@ func NewPublisher(js nats.JetStreamContext) Publisher {
 }
 
 func (p *publisher) Publish(message Message) error {
-	data, marshalErr := json.Marshal(message)
-	if marshalErr != nil {
-		return fmt.Errorf("failed to marshal message to JSON: %w", marshalErr)
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message to JSON: %w", err)
 	}
 
 	header := make(nats.Header)
@@ -39,7 +39,7 @@ func (p *publisher) Publish(message Message) error {
 		Header:  header,
 	}
 
-	if _, err := p.js.PublishMsg(msg); err != nil {
+	if _, err = p.js.PublishMsg(msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 

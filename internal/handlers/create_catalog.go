@@ -92,10 +92,11 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	discoveredImageNames := sets.Set[string]{}
+	var repoImages []string
 	for _, repository := range repositories {
-		repoImages, discoverImagesErr := h.discoverImages(ctx, registryClient, repository)
-		if discoverImagesErr != nil {
-			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, discoverImagesErr)
+		repoImages, err = h.discoverImages(ctx, registryClient, repository)
+		if err != nil {
+			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, err)
 		}
 		discoveredImageNames.Insert(repoImages...)
 	}
@@ -109,15 +110,17 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		existingImageNames.Insert(existingImage.Name)
 	}
 
+	var ref name.Reference
+	var images []storagev1alpha1.Image
 	for newImageName := range discoveredImageNames {
-		ref, parseErr := name.ParseReference(newImageName)
-		if parseErr != nil {
-			return fmt.Errorf("cannot parse reference %s: %w", newImageName, parseErr)
+		ref, err = name.ParseReference(newImageName)
+		if err != nil {
+			return fmt.Errorf("cannot parse reference %s: %w", newImageName, err)
 		}
 
-		images, refToImagesErr := h.refToImages(registryClient, ref, registry)
-		if refToImagesErr != nil {
-			h.logger.Info("cannot get images", "reference", ref.String(), "error", refToImagesErr)
+		images, err = h.refToImages(registryClient, ref, registry)
+		if err != nil {
+			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -127,8 +130,8 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 				continue
 			}
 
-			if createErr := h.k8sClient.Create(ctx, &image); createErr != nil {
-				return fmt.Errorf("cannot create image %s: %w", image.Name, createErr)
+			if err = h.k8sClient.Create(ctx, &image); err != nil {
+				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
 			}
 		}
 	}
@@ -158,10 +161,11 @@ func (h *CreateCatalogHandler) discoverRepositories(
 
 	// If the registry doesn't have any repositories defined, it means we need to catalog all of them.
 	// In this case, we need to discover all the repositories in the registry.
+	var allRepositories []string
 	if len(registry.Spec.Repositories) == 0 {
-		allRepositories, catalogErr := registryClient.Catalog(ctx, reg)
-		if catalogErr != nil {
-			return []string{}, fmt.Errorf("cannot discover repositories: %w", catalogErr)
+		allRepositories, err = registryClient.Catalog(ctx, reg)
+		if err != nil {
+			return []string{}, fmt.Errorf("cannot discover repositories: %w", err)
 		}
 
 		return allRepositories, nil
@@ -211,35 +215,23 @@ func (h *CreateCatalogHandler) refToImages(
 
 	images := []storagev1alpha1.Image{}
 
+	var imageDetails registryclient.ImageDetails
+	var image storagev1alpha1.Image
 	for _, platform := range platforms {
-		imageDetails, getImageDetailsErr := registryClient.GetImageDetails(ref, platform)
-		if getImageDetailsErr != nil {
+		imageDetails, err = registryClient.GetImageDetails(ref, platform)
+		if err != nil {
 			platformStr := "default"
 			if platform != nil {
 				platformStr = platform.String()
 			}
-			h.logger.Info(
-				"cannot get image details",
-				"reference",
-				ref.Name(),
-				"platform",
-				platformStr,
-				"error",
-				getImageDetailsErr,
-			)
+			h.logger.Info("cannot get image details", "reference", ref.Name(), "platform", platformStr, "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
-		image, imageDetailsToImageErr := imageDetailsToImage(ref, imageDetails, registry)
-		if imageDetailsToImageErr != nil {
-			h.logger.Info(
-				"cannot convert image details to image",
-				"reference",
-				ref.Name(),
-				"error",
-				imageDetailsToImageErr,
-			)
+		image, err = imageDetailsToImage(ref, imageDetails, registry)
+		if err != nil {
+			h.logger.Info("cannot convert image details to image", "reference", ref.Name(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -304,8 +296,8 @@ func (h *CreateCatalogHandler) transportFromRegistry(registry *v1alpha1.Registry
 			rootCAs = x509.NewCertPool()
 		}
 
-		certsAppended := rootCAs.AppendCertsFromPEM([]byte(registry.Spec.CABundle))
-		if certsAppended {
+		ok = rootCAs.AppendCertsFromPEM([]byte(registry.Spec.CABundle))
+		if ok {
 			transport.TLSClientConfig.RootCAs = rootCAs
 		} else {
 			h.logger.Info("cannot load the given CA bundle",

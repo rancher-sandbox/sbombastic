@@ -120,26 +120,25 @@ func (s *store) Delete(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, beginTxErr := s.db.BeginTxx(ctx, nil)
-	if beginTxErr != nil {
-		return storage.NewInternalError(beginTxErr)
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return storage.NewInternalError(err)
 	}
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
-			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", rollbackErr)
+		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
-	query, args, deleteQueryErr := sq.Delete(s.table).
+	query, args, err := sq.Delete(s.table).
 		Where(sq.Eq{"name": name, "namespace": namespace}).
 		Suffix("RETURNING *").
 		ToSql()
-	if deleteQueryErr != nil {
-		return storage.NewInternalError(deleteQueryErr)
+	if err != nil {
+		return storage.NewInternalError(err)
 	}
 
 	objectRecord := &objectSchema{}
-	var err error
 	if err = tx.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.NewKeyNotFoundError(key, 0)
@@ -257,16 +256,15 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
-	query, args, selectQueryErr := sq.Select("*").
+	query, args, err := sq.Select("*").
 		From(s.table).
 		Where(sq.Eq{"name": name, "namespace": namespace}).
 		ToSql()
-	if selectQueryErr != nil {
-		return storage.NewInternalError(selectQueryErr)
+	if err != nil {
+		return storage.NewInternalError(err)
 	}
 
 	objectRecord := &objectSchema{}
-	var err error
 	if err = s.db.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if opts.IgnoreNotFound {
@@ -305,13 +303,13 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	if namespace != "" {
 		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
 	}
-	query, args, buildQueryErr := queryBuilder.ToSql()
-	if buildQueryErr != nil {
-		return storage.NewInternalError(buildQueryErr)
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		return storage.NewInternalError(err)
 	}
 
 	var objectRecords []objectSchema
-	if err := s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
+	if err = s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -320,15 +318,16 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		return err
 	}
 
+	var ok bool
 	for _, objectRecord := range objectRecords {
 		obj := s.newFunc()
-		if unmarshalErr := json.Unmarshal(objectRecord.Object, obj); unmarshalErr != nil {
-			return storage.NewInternalError(unmarshalErr)
+		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
+			return storage.NewInternalError(err)
 		}
 
-		ok, matchErr := opts.Predicate.Matches(obj)
-		if matchErr != nil {
-			return storage.NewInternalError(matchErr)
+		ok, err = opts.Predicate.Matches(obj)
+		if err != nil {
+			return storage.NewInternalError(err)
 		}
 		if !ok {
 			continue
@@ -398,25 +397,26 @@ func (s *store) GuaranteedUpdate(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, beginTxErr := s.db.BeginTxx(ctx, nil)
-	if beginTxErr != nil {
-		return beginTxErr
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
 	}
 
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
-			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", rollbackErr)
+		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
-	var err error
 	for {
-		query, args, selectQueryErr := sq.Select("*").
+		var query string
+		var args []interface{}
+		query, args, err = sq.Select("*").
 			From(s.table).
 			Where(sq.Eq{"name": name, "namespace": namespace}).
 			ToSql()
-		if selectQueryErr != nil {
-			return storage.NewInternalError(selectQueryErr)
+		if err != nil {
+			return storage.NewInternalError(err)
 		}
 
 		if err = runtime.SetZeroValue(destination); err != nil {
@@ -446,30 +446,32 @@ func (s *store) GuaranteedUpdate(
 		if err != nil {
 			return err
 		}
-
-		updatedObj, _, updateErr := tryUpdate(obj, storage.ResponseMeta{})
-		if updateErr != nil {
-			if apierrors.IsConflict(updateErr) && strings.Contains(updateErr.Error(), registry.OptimisticLockErrorMsg) {
-				s.logger.DebugContext(ctx, "Optimistic lock conflict", "key", key, "error", updateErr)
+		var updatedObj runtime.Object
+		updatedObj, _, err = tryUpdate(obj, storage.ResponseMeta{})
+		if err != nil {
+			if apierrors.IsConflict(err) && strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
+				s.logger.DebugContext(ctx, "Optimistic lock conflict", "key", key, "error", err)
 
 				// retry update on optimistic lock conflict
 				continue
 			}
 
-			return updateErr
+			return err
 		}
 
-		version, versionErr := s.Versioner().ObjectResourceVersion(obj)
-		if versionErr != nil {
-			return storage.NewInternalError(versionErr)
+		var version uint64
+		version, err = s.Versioner().ObjectResourceVersion(obj)
+		if err != nil {
+			return storage.NewInternalError(err)
 		}
 		if err = s.Versioner().UpdateObject(updatedObj, version+1); err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		bytes, marshalErr := json.Marshal(updatedObj)
-		if marshalErr != nil {
-			return storage.NewInternalError(marshalErr)
+		var bytes []byte
+		bytes, err = json.Marshal(updatedObj)
+		if err != nil {
+			return storage.NewInternalError(err)
 		}
 
 		query, args, err = sq.Update(s.table).

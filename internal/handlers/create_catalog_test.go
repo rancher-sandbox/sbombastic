@@ -311,16 +311,19 @@ func TestImageDetailsToImage(t *testing.T) {
 	assert.Equal(t, digest.String(), image.GetImageMetadata().Digest)
 
 	assert.Len(t, image.Spec.Layers, numberOfLayers)
+
+	var expectedDigest, expectedDiffID cranev1.Hash
+	var command []byte
 	for i := range numberOfLayers {
-		expectedDigest, expectedDiffID, digestErr := fakeDigestAndDiffID(i)
-		require.NoError(t, digestErr)
+		expectedDigest, expectedDiffID, err = fakeDigestAndDiffID(i)
+		require.NoError(t, err)
 
 		layer := image.Spec.Layers[i]
 		assert.Equal(t, expectedDigest.String(), layer.Digest)
 		assert.Equal(t, expectedDiffID.String(), layer.DiffID)
 
-		command, decodeErr := base64.StdEncoding.DecodeString(layer.Command)
-		require.NoError(t, decodeErr)
+		command, err = base64.StdEncoding.DecodeString(layer.Command)
+		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("command-%d", i), string(command))
 	}
 }

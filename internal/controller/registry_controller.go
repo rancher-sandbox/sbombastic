@@ -80,8 +80,8 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
 				Message: "Failed to communicate with the workers",
 			})
-			if updateErr := r.Status().Update(ctx, &registry); updateErr != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", updateErr)
+			if err = r.Status().Update(ctx, &registry); err != nil {
+				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
 			}
 
 			return ctrl.Result{}, fmt.Errorf("failed to publish CreateCatalog message: %w", err)

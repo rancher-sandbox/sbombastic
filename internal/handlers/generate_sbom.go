@@ -77,12 +77,12 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary SBOM file: %w", err)
 	}
 	defer func() {
-		if closeErr := sbomFile.Close(); closeErr != nil {
-			h.logger.Error("failed to close temporary SBOM file", "error", closeErr)
+		if err = sbomFile.Close(); err != nil {
+			h.logger.Error("failed to close temporary SBOM file", "error", err)
 		}
 
-		if removeErr := os.Remove(sbomFile.Name()); removeErr != nil {
-			h.logger.Error("failed to remove temporary SBOM file", "error", removeErr)
+		if err = os.Remove(sbomFile.Name()); err != nil {
+			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
 
@@ -102,8 +102,8 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		),
 	})
 
-	if executeErr := app.ExecuteContext(ctx); executeErr != nil {
-		return fmt.Errorf("failed to execute trivy: %w", executeErr)
+	if err = app.ExecuteContext(ctx); err != nil {
+		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
 	h.logger.Debug("SBOM generated",
