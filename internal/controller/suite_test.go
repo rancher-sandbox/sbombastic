@@ -40,8 +40,10 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
+	//nolint:gochecknoglobals // Required to be global for the tests in controller package
 	k8sClient client.Client
-	testEnv   *envtest.Environment
+	//nolint:gochecknoglobals // Required to be global for the tests in controller package
+	testEnv *envtest.Environment
 )
 
 func TestControllers(t *testing.T) {

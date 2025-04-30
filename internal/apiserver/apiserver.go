@@ -35,10 +35,14 @@ import (
 
 var (
 	// Scheme defines methods for serializing and deserializing API objects.
+	//nolint:gochecknoglobals // Required to be global by cmd/storage/main.go
 	Scheme = runtime.NewScheme()
 	// Codecs provides methods for retrieving codecs and serializers for specific
 	// versions and content types.
-	Codecs              = serializer.NewCodecFactory(Scheme)
+	//nolint:gochecknoglobals // Required to be global by cmd/storage/main.go
+	Codecs = serializer.NewCodecFactory(Scheme)
+
+	//nolint:gochecknoglobals // Required to be global by cmd/storage/main.go
 	WardleComponentName = "wardle"
 )
 
