@@ -12,15 +12,15 @@ IMAGE_BUILDER := $(RUNNER) buildx
 TARGET_PLATFORMS ?= linux/amd64
 REGISTRY ?= ghcr.io
 REPO ?= rancher-sandbox
-E2E_TAG ?= e2e-test
+TAG ?= v0.1.0-alpha1
 BUILD_ACTION = --load
 
 define BUILD_template =
 .PHONY: build-e2e-$(1)-image
 build-e2e-$(1)-image:
 	$(IMAGE_BUILDER) build -f ./Dockerfile.$(1) \
-	-t "$(REGISTRY)/$(REPO)/sbombastic/$(1):$(E2E_TAG)" $(BUILD_ACTION) .
-	@echo "Built $(REGISTRY)/$(REPO)/sbombastic/$(1):$(E2E_TAG)"
+	-t "$(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)" $(BUILD_ACTION) .
+	@echo "Built $(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)"
 
 E2E_DEPS += build-e2e-$(1)-image
 endef
@@ -126,7 +126,7 @@ endef
 .PHONY: test-e2e
 test-e2e:
 ifeq ($(E2E_NO_REBUILD),)
-	make $(E2E_DEPS)
+	make TAG=e2e-test $(E2E_DEPS)
 endif
 	go test ./test/e2e/ -v
 
