@@ -22,7 +22,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ImageList contains a list of Image
+// ImageList contains a list of Image.
 type ImageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -38,7 +38,7 @@ type ImageList struct {
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
 
-// Image is the Schema for the images API
+// Image is the Schema for the images API.
 type Image struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,15 +47,15 @@ type Image struct {
 	Status ImageStatus `json:"status,omitempty"`
 }
 
-// ImageSpec defines the desired state of Image
+// ImageSpec defines the desired state of Image.
 type ImageSpec struct {
-	// Metadata of the image
+	// Metadata of the image.
 	ImageMetadata `json:"imageMetadata"`
-	// List of the layers that make the image
+	// List of the layers that make the image.
 	Layers []ImageLayer `json:"layers,omitempty"`
 }
 
-// ImageLayer define a layer part of an OCI Image
+// ImageLayer defines a layer part of an OCI Image.
 type ImageLayer struct {
 	// command is the command that led to the creation
 	// of the layer. The contents are base64 encoded
@@ -66,7 +66,7 @@ type ImageLayer struct {
 	DiffID string `json:"diffID"`
 }
 
-// ImageStatus defines the observed state of Image
+// ImageStatus defines the observed state of Image.
 type ImageStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file

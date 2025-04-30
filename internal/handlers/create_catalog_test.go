@@ -35,7 +35,7 @@ import (
 )
 
 // TestCreateCatalogHandler_Handle tests the create catalog handler with a platform error
-// Ensures that the handler does not block other images from being cataloged
+// Ensures that the handler does not block other images from being cataloged.
 func TestCreateCatalogHandler_Handle(t *testing.T) {
 	registryURI := "registry.test"
 	repositoryName := "repo1"

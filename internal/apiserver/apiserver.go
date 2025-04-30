@@ -46,6 +46,7 @@ var (
 	WardleComponentName = "wardle"
 )
 
+//nolint:gochecknoinits // init() is required to register API types with the global Scheme used by the apiserver
 func init() {
 	install.Install(Scheme)
 
@@ -65,12 +66,12 @@ func init() {
 	)
 }
 
-// ExtraConfig holds custom apiserver config
+// ExtraConfig holds custom apiserver config.
 type ExtraConfig struct {
 	// Place you custom config here.
 }
 
-// Config defines the config for the apiserver
+// Config defines the config for the apiserver.
 type Config struct {
 	GenericConfig *genericapiserver.RecommendedConfig
 	ExtraConfig   ExtraConfig

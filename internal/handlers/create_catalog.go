@@ -148,7 +148,7 @@ func (h *CreateCatalogHandler) NewMessage() messaging.Message {
 }
 
 // discoverRepositories discovers all the repositories in a registry.
-// Returns the list of fully qualified repository names (e.g. registryclientexample.com/repo)
+// Returns the list of fully qualified repository names (e.g. registryclientexample.com/repo).
 func (h *CreateCatalogHandler) discoverRepositories(
 	ctx context.Context,
 	registryClient registryclient.Client,
@@ -179,8 +179,8 @@ func (h *CreateCatalogHandler) discoverRepositories(
 	return repositories, nil
 }
 
-// discoverImages discovers all the images defined inside of a repository.
-// Returns the list of fully qualified image names (e.g. registryclientexample.com/repo:tag)
+// discoverImages discovers all the images defined inside of a repository
+// Returns the list of fully qualified image names (e.g. registryclientexample.com/repo:tag).
 func (h *CreateCatalogHandler) discoverImages(
 	ctx context.Context,
 	registryClient registryclient.Client,
@@ -398,7 +398,7 @@ func imageDetailsToImage(
 	return image, nil
 }
 
-// computeImageUID returns the sha256 of “<image-name>@sha256:<digest>`
+// computeImageUID returns the sha256 of “<image-name>@sha256:<digest>`.
 func computeImageUID(ref name.Reference, digest string) string {
 	sha := sha256.New()
 	fmt.Fprintf(sha, "%s:%s@%s", ref.Context().Name(), ref.Identifier(), digest)

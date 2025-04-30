@@ -552,9 +552,9 @@ func (s *store) RequestWatchProgress(_ context.Context) error {
 	return nil
 }
 
-// extractNameAndNamespace extracts the name and namespace from the key.
-// Used for single object operations.
-// Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>/<name>
+// extractNameAndNamespace extracts the name and namespace from the key
+// Used for single object operations
+// Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>/<name>.
 func extractNameAndNamespace(key string) (string, string) {
 	key = strings.TrimPrefix(key, "/")
 	parts := strings.Split(key, "/")
@@ -565,9 +565,9 @@ func extractNameAndNamespace(key string) (string, string) {
 	return "", ""
 }
 
-// extractNamespace extracts the namespace from the key.
-// Used for list operations.
-// Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>
+// extractNamespace extracts the namespace from the key
+// Used for list operations
+// Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>.
 func extractNamespace(key string) string {
 	key = strings.TrimPrefix(key, "/")
 	parts := strings.Split(key, "/")

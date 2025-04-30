@@ -23,7 +23,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SBOMList contains a list of Software Bill of Materials
+// SBOMList contains a list of Software Bill of Materials.
 type SBOMList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -39,7 +39,7 @@ type SBOMList struct {
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
 // +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
 
-// SBOM represents a Software Bill of Materials of an OCI artifact
+// SBOM represents a Software Bill of Materials of an OCI artifact.
 type SBOM struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -48,14 +48,14 @@ type SBOM struct {
 	Status SBOMStatus `json:"status,omitempty"`
 }
 
-// SBOMSpec defines the desired state of a SBOM
+// SBOMSpec defines the desired state of a SBOM.
 type SBOMSpec struct {
 	ImageMetadata ImageMetadata `json:"imageMetadata"`
-	// SPDX contains the SPDX document of the SBOM in JSON format
+	// SPDX contains the SPDX document of the SBOM in JSON format.
 	SPDX runtime.RawExtension `json:"spdx"`
 }
 
-// SBOMStatus defines the observed state of a SBOM
+// SBOMStatus defines the observed state of a SBOM.
 type SBOMStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file

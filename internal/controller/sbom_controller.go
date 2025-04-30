@@ -33,7 +33,7 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
-// SBOMReconciler reconciles a SBOM object
+// SBOMReconciler reconciles a SBOM object.
 type SBOMReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme

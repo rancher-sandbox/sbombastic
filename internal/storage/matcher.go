@@ -13,7 +13,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 )
 
-// matcher returns a storage.SelectionPredicate that matches the given label and field selectors
+// matcher returns a storage.SelectionPredicate that matches the given label and field selectors.
 func matcher(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:    label,
@@ -22,7 +22,7 @@ func matcher(label labels.Selector, field fields.Selector) storage.SelectionPred
 	}
 }
 
-// getAttrs return labels and fields that can be used in a selection
+// getAttrs return labels and fields that can be used in a selection.
 func getAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	objMeta, err := meta.Accessor(obj)
 	if err != nil {

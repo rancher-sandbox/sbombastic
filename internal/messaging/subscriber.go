@@ -27,6 +27,26 @@ func NewSubscriber(sub *nats.Subscription, handlers HandlerRegistry, logger *slo
 	}
 }
 
+func (s *Subscriber) processMessages(ctx context.Context, msgs []*nats.Msg) error {
+	var err error
+	for _, msg := range msgs {
+		s.logger.DebugContext(ctx, "Processing message", "message", msg)
+		if err = s.processMessage(msg); err != nil {
+			s.logger.ErrorContext(ctx, "Failed to process message",
+				"subject", msg.Subject,
+				"header", msg.Header,
+				"data", msg.Data,
+				"error", err,
+			)
+		}
+
+		if err = msg.Ack(); err != nil {
+			return fmt.Errorf("failed to ack message: %w", err)
+		}
+	}
+	return nil
+}
+
 func (s *Subscriber) Run(ctx context.Context) error {
 	for {
 		select {
@@ -44,20 +64,8 @@ func (s *Subscriber) Run(ctx context.Context) error {
 				return fmt.Errorf("failed to fetch message: %w", err)
 			}
 
-			for _, msg := range msgs {
-				s.logger.DebugContext(ctx, "Processing message", "message", msg)
-				if err = s.processMessage(msg); err != nil {
-					s.logger.ErrorContext(ctx, "Failed to process message",
-						"subject", msg.Subject,
-						"header", msg.Header,
-						"data", msg.Data,
-						"error", err,
-					)
-				}
-
-				if err = msg.Ack(); err != nil {
-					return fmt.Errorf("failed to ack message: %w", err)
-				}
+			if err = s.processMessages(ctx, msgs); err != nil {
+				return fmt.Errorf("failed to process messages: %w", err)
 			}
 		}
 	}

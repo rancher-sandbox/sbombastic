@@ -43,7 +43,7 @@ import (
 	sampleopenapi "github.com/rancher/sbombastic/pkg/generated/openapi"
 )
 
-// WardleServerOptions contains state for master/api server
+// WardleServerOptions contains state for master/api server.
 type WardleServerOptions struct {
 	RecommendedOptions    *genericoptions.RecommendedOptions
 	SharedInformerFactory informers.SharedInformerFactory
@@ -73,7 +73,7 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 	return mappedVer
 }
 
-// NewWardleServerOptions returns a new WardleServerOptions
+// NewWardleServerOptions returns a new WardleServerOptions.
 func NewWardleServerOptions(db *sqlx.DB, logger *slog.Logger) *WardleServerOptions {
 	o := &WardleServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
@@ -160,7 +160,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 	return cmd
 }
 
-// Validate validates WardleServerOptions
+// Validate validates WardleServerOptions.
 func (o *WardleServerOptions) Validate(_ []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
@@ -168,12 +168,12 @@ func (o *WardleServerOptions) Validate(_ []string) error {
 	return utilerrors.NewAggregate(errors)
 }
 
-// Complete fills in fields required to have valid data
+// Complete fills in fields required to have valid data.
 func (o *WardleServerOptions) Complete() error {
 	return nil
 }
 
-// Config returns config for the api server given WardleServerOptions
+// Config returns config for the api server given WardleServerOptions.
 func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", o.AlternateDNS, []net.IP{netutils.ParseIPSloppy("127.0.0.1")}); err != nil {
@@ -219,7 +219,7 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	return config, nil
 }
 
-// RunWardleServer starts a new WardleServer given WardleServerOptions
+// RunWardleServer starts a new WardleServer given WardleServerOptions.
 func (o *WardleServerOptions) RunWardleServer(ctx context.Context) error {
 	config, err := o.Config()
 	if err != nil {

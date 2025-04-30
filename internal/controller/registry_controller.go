@@ -34,7 +34,7 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
-// RegistryReconciler reconciles a Registry object
+// RegistryReconciler reconciles a Registry object.
 type RegistryReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
@@ -49,8 +49,6 @@ type RegistryReconciler struct {
 // If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.
 // If the Registry has repositories specified, it deletes all images that are not in the current list of repositories.
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
 	var registry v1alpha1.Registry
 	if err := r.Get(ctx, req.NamespacedName, &registry); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -61,70 +59,86 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" {
-		log.Info(
-			"Registry needs to be discovered, sending the request.",
-			"name",
-			registry.Name,
-			"namespace",
-			registry.Namespace,
-		)
-
-		msg := messaging.CreateCatalog{
-			RegistryName:      registry.Name,
-			RegistryNamespace: registry.Namespace,
-		}
-		if err := r.Publisher.Publish(&msg); err != nil {
-			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
-				Message: "Failed to communicate with the workers",
-			})
-			if err = r.Status().Update(ctx, &registry); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
-			}
-
-			return ctrl.Result{}, fmt.Errorf("failed to publish CreateCatalog message: %w", err)
-		}
-
-		meta.SetStatusCondition(&registry.Status.Conditions,
-			metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
-				Message: "Registry discovery in progress",
-			})
-		if err := r.Status().Update(ctx, &registry); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
+		if err := r.discover(ctx, registry); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to discover registry: %w", err)
 		}
 	}
 
 	if len(registry.Spec.Repositories) > 0 {
-		log.V(1).
-			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
-
-		fieldSelector := client.MatchingFields{
-			"spec.imageMetadata.registry": registry.Name,
-		}
-
-		var images storagev1alpha1.ImageList
-		if err := r.List(ctx, &images, client.InNamespace(req.Namespace), fieldSelector); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
-		}
-
-		allowedRepositories := sets.NewString(registry.Spec.Repositories...)
-
-		for _, image := range images.Items {
-			if !allowedRepositories.Has(image.GetImageMetadata().Repository) {
-				if err := r.Delete(ctx, &image); err != nil {
-					return ctrl.Result{}, fmt.Errorf("unable to delete Image %s: %w", image.Name, err)
-				}
-				log.V(1).Info("Deleted Image", "name", image.Name, "repository", image.GetImageMetadata().Repository)
-			}
+		if err := r.pruneImages(ctx, registry, req); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to prune images: %w", err)
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *RegistryReconciler) discover(ctx context.Context, registry v1alpha1.Registry) error {
+	log := log.FromContext(ctx)
+	log.Info(
+		"Registry needs to be discovered, sending the request.",
+		"name",
+		registry.Name,
+		"namespace",
+		registry.Namespace,
+	)
+
+	msg := messaging.CreateCatalog{
+		RegistryName:      registry.Name,
+		RegistryNamespace: registry.Namespace,
+	}
+	if err := r.Publisher.Publish(&msg); err != nil {
+		meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
+			Type:    v1alpha1.RegistryDiscoveringCondition,
+			Status:  metav1.ConditionUnknown,
+			Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
+			Message: "Failed to communicate with the workers",
+		})
+		if err = r.Status().Update(ctx, &registry); err != nil {
+			return fmt.Errorf("unable to set status condition: %w", err)
+		}
+
+		return fmt.Errorf("failed to publish CreateCatalog message: %w", err)
+	}
+
+	meta.SetStatusCondition(&registry.Status.Conditions,
+		metav1.Condition{
+			Type:    v1alpha1.RegistryDiscoveringCondition,
+			Status:  metav1.ConditionTrue,
+			Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
+			Message: "Registry discovery in progress",
+		})
+	if err := r.Status().Update(ctx, &registry); err != nil {
+		return fmt.Errorf("unable to set status condition: %w", err)
+	}
+	return nil
+}
+
+func (r *RegistryReconciler) pruneImages(ctx context.Context, registry v1alpha1.Registry, req ctrl.Request) error {
+	log := log.FromContext(ctx)
+	log.V(1).
+		Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
+
+	fieldSelector := client.MatchingFields{
+		"spec.imageMetadata.registry": registry.Name,
+	}
+
+	var images storagev1alpha1.ImageList
+	if err := r.List(ctx, &images, client.InNamespace(req.Namespace), fieldSelector); err != nil {
+		return fmt.Errorf("unable to list Images: %w", err)
+	}
+
+	allowedRepositories := sets.NewString(registry.Spec.Repositories...)
+
+	for _, image := range images.Items {
+		if !allowedRepositories.Has(image.GetImageMetadata().Repository) {
+			if err := r.Delete(ctx, &image); err != nil {
+				return fmt.Errorf("unable to delete Image %s: %w", image.Name, err)
+			}
+			log.V(1).Info("Deleted Image", "name", image.Name, "repository", image.GetImageMetadata().Repository)
+		}
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

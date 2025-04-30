@@ -8,7 +8,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
-// newSBOMStrategy creates and returns a sbomStrategy instance
+// newSBOMStrategy creates and returns a sbomStrategy instance.
 func newSBOMStrategy(typer runtime.ObjectTyper) sbomStrategy {
 	return sbomStrategy{typer, names.SimpleNameGenerator}
 }

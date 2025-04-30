@@ -30,7 +30,7 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
-// ImageReconciler reconciles a Image object
+// ImageReconciler reconciles a Image object.
 type ImageReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
