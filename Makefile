@@ -16,13 +16,13 @@ TAG ?= v0.1.0-alpha1
 BUILD_ACTION = --load
 
 define BUILD_template =
-.PHONY: build-e2e-$(1)-image
-build-e2e-$(1)-image:
+.PHONY: build-$(1)-image
+build-$(1)-image:
 	$(IMAGE_BUILDER) build -f ./Dockerfile.$(1) \
 	-t "$(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)" $(BUILD_ACTION) .
 	@echo "Built $(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)"
 
-E2E_DEPS += build-e2e-$(1)-image
+E2E_DEPS += build-$(1)-image
 endef
 
 TARGETS=controller storage worker
