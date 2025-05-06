@@ -33,7 +33,12 @@ func main() {
 
 	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
 	if err != nil {
-		slog.Error("error initializing the logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		//nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error(
+			"error initializing the logger",
+			"error",
+			err,
+		)
 		os.Exit(1)
 	}
 	opts := slog.HandlerOptions{
@@ -50,11 +55,11 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	if err = v1alpha1.AddToScheme(scheme); err != nil {
 		logger.Error("Error adding v1alpha1 to scheme", "error", err)
 		os.Exit(1)
 	}
-	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
+	if err = storagev1alpha1.AddToScheme(scheme); err != nil {
 		logger.Error("Error adding storagev1alpha1 to scheme", "error", err)
 		os.Exit(1)
 	}

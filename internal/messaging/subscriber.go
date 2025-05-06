@@ -27,6 +27,7 @@ func NewSubscriber(sub *nats.Subscription, handlers HandlerRegistry, logger *slo
 	}
 }
 
+//nolint:gocognit // We are a bit more tolerant for the runner.
 func (s *Subscriber) Run(ctx context.Context) error {
 	for {
 		select {
@@ -46,7 +47,7 @@ func (s *Subscriber) Run(ctx context.Context) error {
 
 			for _, msg := range msgs {
 				s.logger.DebugContext(ctx, "Processing message", "message", msg)
-				if err := s.processMessage(msg); err != nil {
+				if err = s.processMessage(msg); err != nil {
 					s.logger.ErrorContext(ctx, "Failed to process message",
 						"subject", msg.Subject,
 						"header", msg.Header,
@@ -55,7 +56,7 @@ func (s *Subscriber) Run(ctx context.Context) error {
 					)
 				}
 
-				if err := msg.Ack(); err != nil {
+				if err = msg.Ack(); err != nil {
 					return fmt.Errorf("failed to ack message: %w", err)
 				}
 			}

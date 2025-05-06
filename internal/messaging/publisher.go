@@ -39,7 +39,7 @@ func (p *publisher) Publish(message Message) error {
 		Header:  header,
 	}
 
-	if _, err := p.js.PublishMsg(msg); err != nil {
+	if _, err = p.js.PublishMsg(msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 

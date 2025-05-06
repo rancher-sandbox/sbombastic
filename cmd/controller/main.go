@@ -88,7 +88,12 @@ func main() {
 	cfg := parseFlags()
 	logger, err := setupLogger(cfg)
 	if err != nil {
-		slog.Error("error initializing the logger", "error", err) //nolint:sloglint // Use the global logger since the logger is not yet initialized
+		//nolint:sloglint // Use the global logger since the logger is not yet initialized
+		slog.Error(
+			"error initializing the logger",
+			"error",
+			err,
+		)
 		os.Exit(1)
 	}
 
@@ -218,17 +223,17 @@ func main() {
 
 	// +kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

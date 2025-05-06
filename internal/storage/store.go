@@ -91,12 +91,12 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		return storage.NewKeyExistsError(key, 0)
 	}
 
-	if err := s.broadcaster.Action(watch.Added, obj); err != nil {
+	if err = s.broadcaster.Action(watch.Added, obj); err != nil {
 		return storage.NewInternalError(err)
 	}
 
 	if out != nil {
-		if err := setValue(obj, out); err != nil {
+		if err = setValue(obj, out); err != nil {
 			return err
 		}
 	}
@@ -125,7 +125,7 @@ func (s *store) Delete(
 		return storage.NewInternalError(err)
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
@@ -139,30 +139,30 @@ func (s *store) Delete(
 	}
 
 	objectRecord := &objectSchema{}
-	if err := tx.GetContext(ctx, objectRecord, query, args...); err != nil {
+	if err = tx.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.NewKeyNotFoundError(key, 0)
 		}
 		return storage.NewInternalError(err)
 	}
 
-	if err := json.Unmarshal(objectRecord.Object, out); err != nil {
+	if err = json.Unmarshal(objectRecord.Object, out); err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	if err := preconditions.Check(key, out); err != nil {
+	if err = preconditions.Check(key, out); err != nil {
 		return err
 	}
 
-	if err := validateDeletion(ctx, out); err != nil {
+	if err = validateDeletion(ctx, out); err != nil {
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	if err := s.broadcaster.Action(watch.Deleted, out); err != nil {
+	if err = s.broadcaster.Action(watch.Deleted, out); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -177,7 +177,16 @@ func (s *store) Delete(
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions) (watch.Interface, error) {
-	s.logger.DebugContext(ctx, "Watching object", "key", key, "resourceVersion", opts.ResourceVersion, "progressNotify", opts.ProgressNotify)
+	s.logger.DebugContext(
+		ctx,
+		"Watching object",
+		"key",
+		key,
+		"resourceVersion",
+		opts.ResourceVersion,
+		"progressNotify",
+		opts.ProgressNotify,
+	)
 
 	if opts.ResourceVersion == "" {
 		return s.broadcaster.Watch()
@@ -207,7 +216,9 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 		// Cast the item address to a runtime.Object
 		item, ok := itemsValue.Index(i).Addr().Interface().(runtime.Object)
 		if !ok {
-			return nil, storage.NewInternalError(fmt.Errorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface()))
+			return nil, storage.NewInternalError(
+				fmt.Errorf("unexpected item type: %T", itemsValue.Index(i).Addr().Interface()),
+			)
 		}
 
 		events = append(events, watch.Event{
@@ -225,7 +236,16 @@ func (s *store) Watch(ctx context.Context, key string, opts storage.ListOptions)
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, objPtr runtime.Object) error {
-	s.logger.DebugContext(ctx, "Getting object", "key", key, "ignoreNotFound", opts.IgnoreNotFound, "resourceVersion", opts.ResourceVersion)
+	s.logger.DebugContext(
+		ctx,
+		"Getting object",
+		"key",
+		key,
+		"ignoreNotFound",
+		opts.IgnoreNotFound,
+		"resourceVersion",
+		opts.ResourceVersion,
+	)
 
 	name, namespace := extractNameAndNamespace(key)
 	if name == "" || namespace == "" {
@@ -245,7 +265,7 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 	}
 
 	objectRecord := &objectSchema{}
-	if err := s.db.GetContext(ctx, objectRecord, query, args...); err != nil {
+	if err = s.db.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if opts.IgnoreNotFound {
 				return nil
@@ -289,7 +309,7 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	}
 
 	var objectRecords []objectSchema
-	if err := s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
+	if err = s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -300,11 +320,12 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 
 	for _, objectRecord := range objectRecords {
 		obj := s.newFunc()
-		if err := json.Unmarshal(objectRecord.Object, obj); err != nil {
+		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		ok, err := opts.Predicate.Matches(obj)
+		var ok bool
+		ok, err = opts.Predicate.Matches(obj)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -317,7 +338,7 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	}
 
 	// TODO: Implement pagination and use a proper resourceVersion
-	if err := s.Versioner().UpdateList(listObj, 1, "", nil); err != nil {
+	if err = s.Versioner().UpdateList(listObj, 1, "", nil); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -382,13 +403,15 @@ func (s *store) GuaranteedUpdate(
 	}
 
 	defer func() {
-		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
 	for {
-		query, args, err := sq.Select("*").
+		var query string
+		var args []interface{}
+		query, args, err = sq.Select("*").
 			From(s.table).
 			Where(sq.Eq{"name": name, "namespace": namespace}).
 			ToSql()
@@ -396,7 +419,7 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		if err := runtime.SetZeroValue(destination); err != nil {
+		if err = runtime.SetZeroValue(destination); err != nil {
 			return storage.NewInternalError(fmt.Errorf("unable to set destination to zero value: %w", err))
 		}
 
@@ -424,7 +447,8 @@ func (s *store) GuaranteedUpdate(
 			return err
 		}
 
-		updatedObj, _, err := tryUpdate(obj, storage.ResponseMeta{})
+		var updatedObj runtime.Object
+		updatedObj, _, err = tryUpdate(obj, storage.ResponseMeta{})
 		if err != nil {
 			if apierrors.IsConflict(err) && strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
 				s.logger.DebugContext(ctx, "Optimistic lock conflict", "key", key, "error", err)
@@ -436,15 +460,17 @@ func (s *store) GuaranteedUpdate(
 			return err
 		}
 
-		version, err := s.Versioner().ObjectResourceVersion(obj)
+		var version uint64
+		version, err = s.Versioner().ObjectResourceVersion(obj)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
-		if err := s.Versioner().UpdateObject(updatedObj, version+1); err != nil {
+		if err = s.Versioner().UpdateObject(updatedObj, version+1); err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		bytes, err := json.Marshal(updatedObj)
+		var bytes []byte
+		bytes, err = json.Marshal(updatedObj)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -462,15 +488,15 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		if err := tx.Commit(); err != nil {
+		if err = tx.Commit(); err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		if err := s.broadcaster.Action(watch.Modified, updatedObj); err != nil {
+		if err = s.broadcaster.Action(watch.Modified, updatedObj); err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		if err := setValue(updatedObj, destination); err != nil {
+		if err = setValue(updatedObj, destination); err != nil {
 			return err
 		}
 
@@ -497,7 +523,7 @@ func (s *store) Count(key string) (int64, error) {
 	}
 
 	var count int64
-	if err := s.db.Get(&count, query, args...); err != nil {
+	if err = s.db.Get(&count, query, args...); err != nil {
 		return 0, storage.NewInternalError(err)
 	}
 

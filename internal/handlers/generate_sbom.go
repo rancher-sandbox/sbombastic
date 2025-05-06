@@ -27,7 +27,12 @@ type GenerateSBOMHandler struct {
 	logger    *slog.Logger
 }
 
-func NewGenerateSBOMHandler(k8sClient client.Client, scheme *runtime.Scheme, workDir string, logger *slog.Logger) *GenerateSBOMHandler {
+func NewGenerateSBOMHandler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	workDir string,
+	logger *slog.Logger,
+) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
 		k8sClient: k8sClient,
 		scheme:    scheme,
@@ -55,7 +60,12 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		Namespace: generateSBOMMessage.ImageNamespace,
 	}, image)
 	if err != nil {
-		return fmt.Errorf("cannot get image %s/%s: %w", generateSBOMMessage.ImageNamespace, generateSBOMMessage.ImageName, err)
+		return fmt.Errorf(
+			"cannot get image %s/%s: %w",
+			generateSBOMMessage.ImageNamespace,
+			generateSBOMMessage.ImageName,
+			err,
+		)
 	}
 
 	h.logger.Debug("Image found",
@@ -67,11 +77,11 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to create temporary SBOM file: %w", err)
 	}
 	defer func() {
-		if err := sbomFile.Close(); err != nil {
+		if err = sbomFile.Close(); err != nil {
 			h.logger.Error("failed to close temporary SBOM file", "error", err)
 		}
 
-		if err := os.Remove(sbomFile.Name()); err != nil {
+		if err = os.Remove(sbomFile.Name()); err != nil {
 			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
@@ -84,10 +94,15 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
 		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
 		"--output", sbomFile.Name(),
-		fmt.Sprintf("%s/%s:%s", image.GetImageMetadata().RegistryURI, image.GetImageMetadata().Repository, image.GetImageMetadata().Tag),
+		fmt.Sprintf(
+			"%s/%s:%s",
+			image.GetImageMetadata().RegistryURI,
+			image.GetImageMetadata().Repository,
+			image.GetImageMetadata().Tag,
+		),
 	})
 
-	if err := app.ExecuteContext(ctx); err != nil {
+	if err = app.ExecuteContext(ctx); err != nil {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
@@ -111,11 +126,11 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 			SPDX:          runtime.RawExtension{Raw: spdxBytes},
 		},
 	}
-	if err := controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {
+	if err = controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {
 		return fmt.Errorf("failed to set owner reference: %w", err)
 	}
 
-	if err := h.k8sClient.Create(ctx, sbom); err != nil {
+	if err = h.k8sClient.Create(ctx, sbom); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create SBOM: %w", err)
 		}
