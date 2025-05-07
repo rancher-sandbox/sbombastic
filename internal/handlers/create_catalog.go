@@ -382,6 +382,10 @@ func imageDetailsToImage(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      computeImageUID(ref, details.Digest.String()),
 			Namespace: registry.Namespace,
+			Labels: map[string]string{
+				LabelManagedByKey: LabelManagedByValue,
+				LabelPartOfKey:    LabelPartOfValue,
+			},
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{

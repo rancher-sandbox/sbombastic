@@ -41,6 +41,7 @@ func NewScanSBOMHandler(
 	}
 }
 
+//nolint:funlen
 func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	scanSBOMMessage, ok := message.(*messaging.ScanSBOM)
 	if !ok {
@@ -133,6 +134,11 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
+		vulnerabilityReport.Labels = map[string]string{
+			LabelManagedByKey: LabelManagedByValue,
+			LabelPartOfKey:    LabelPartOfValue,
+		}
+
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
 			ImageMetadata: sbom.GetImageMetadata(),
 			SARIF:         runtime.RawExtension{Raw: reportBytes},
