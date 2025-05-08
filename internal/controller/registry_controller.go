@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright (c) 2025 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -37,8 +38,13 @@ import (
 // RegistryReconciler reconciles a Registry object
 type RegistryReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Publisher messaging.Publisher
+	Scheme          *runtime.Scheme
+	DeployNamespace string
+	Publisher       messaging.Publisher
+}
+
+func getRegistryLeaseName(registry v1alpha1.Registry) string {
+	return fmt.Sprintf("%s--%s", registry.Namespace, registry.Name)
 }
 
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -46,10 +52,7 @@ type RegistryReconciler struct {
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries/finalizers,verbs=update
 
 // Reconcile reconciles a Registry.
-// If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.
 // If the Registry has repositories specified, it deletes all images that are not in the current list of repositories.
-//
-//nolint:gocognit // We are a bit more tolerant of cyclomatic complexity in controllers.
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -58,52 +61,25 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, fmt.Errorf("unable to fetch Registry: %w", err)
 		}
+		regCache.delete(req.NamespacedName)
+		lease := coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      getRegistryLeaseName(registry),
+				Namespace: r.DeployNamespace,
+			},
+		}
+		if err = r.Delete(ctx, &lease); err != nil {
+			log.V(1).Info("Deleted Lease", "name", lease.Name)
+		}
 
 		return ctrl.Result{}, nil
 	}
 
-	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" {
-		log.Info(
-			"Registry needs to be discovered, sending the request.",
-			"name",
-			registry.Name,
-			"namespace",
-			registry.Namespace,
-		)
-
-		msg := messaging.CreateCatalog{
-			RegistryName:      registry.Name,
-			RegistryNamespace: registry.Namespace,
-		}
-		if err := r.Publisher.Publish(&msg); err != nil {
-			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
-				Message: "Failed to communicate with the workers",
-			})
-			if err = r.Status().Update(ctx, &registry); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
-			}
-
-			return ctrl.Result{}, fmt.Errorf("failed to publish CreateCatalog message: %w", err)
-		}
-
-		meta.SetStatusCondition(&registry.Status.Conditions,
-			metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
-				Message: "Registry discovery in progress",
-			})
-		if err := r.Status().Update(ctx, &registry); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
-		}
-	}
+	regCache.update(req.NamespacedName, registry.Spec)
 
 	if len(registry.Spec.Repositories) > 0 {
-		log.V(1).
-			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
+		log.V(1).Info("Deleting Images that are not in the current list of repositories",
+			"name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
 
 		fieldSelector := client.MatchingFields{
 			"spec.imageMetadata.registry": registry.Name,
@@ -133,6 +109,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Registry{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 	if err != nil {
 		return fmt.Errorf("failed to create Registry controller: %w", err)

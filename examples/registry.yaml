@@ -5,3 +5,9 @@ metadata:
   namespace: default
 spec:
   uri: dev-registry.default.svc.cluster.local:5000
+  discoveryJob:
+    cron:
+      hour: 1
+    suspend: false
+    failedJobsHistoryLimit: 1
+    successfulJobsHistoryLimit: 1
