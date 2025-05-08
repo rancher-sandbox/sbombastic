@@ -88,10 +88,16 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Check if all images have SBOMs
 	if len(sbomList.Items) == len(imageList.Items) {
-		log.Info("Registry discovery is completed.", "name", sbom.GetImageMetadata().Registry, "namespace", req.Namespace)
+		log.Info(
+			"Registry discovery is completed.",
+			"name",
+			sbom.GetImageMetadata().Registry,
+			"namespace",
+			req.Namespace,
+		)
 
 		var registry v1alpha1.Registry
-		err := r.Get(ctx, client.ObjectKey{
+		err = r.Get(ctx, client.ObjectKey{
 			Name:      sbom.GetImageMetadata().Registry,
 			Namespace: req.Namespace,
 		}, &registry)
@@ -101,7 +107,8 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation]
 		if found {
-			log.V(1).Info("Registry already has a last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
+			log.V(1).
+				Info("Registry already has a last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
 
 			return ctrl.Result{}, nil
 		}
@@ -110,10 +117,11 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			registry.Annotations = make(map[string]string)
 		}
 
-		log.V(1).Info("Updating Registry last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
+		log.V(1).
+			Info("Updating Registry last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
 
 		registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] = time.Now().Format(time.RFC3339)
-		if err := r.Update(ctx, &registry); err != nil {
+		if err = r.Update(ctx, &registry); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to update Registry LastScannedAt: %w", err)
 		}
 	}

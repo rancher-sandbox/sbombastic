@@ -34,6 +34,8 @@ import (
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
+// TestCreateCatalogHandler_Handle tests the create catalog handler with a platform error
+// Ensures that the handler does not block other images from being cataloged
 func TestCreateCatalogHandler_Handle(t *testing.T) {
 	registryURI := "registry.test"
 	repositoryName := "repo1"
@@ -45,7 +47,9 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	mockRegistryClient := registryMocks.NewClient(t)
-	mockRegistryClient.On("ListRepositoryContents", context.Background(), repository).
+	// Use mock.MatchedBy to match any non-nil context since the handler creates its own context.Background()
+	// which cannot be directly matched in tests
+	mockRegistryClient.On("ListRepositoryContents", mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil }), repository).
 		Return([]string{fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag)}, nil)
 
 	platformLinuxAmd64 := cranev1.Platform{
@@ -59,6 +63,8 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	digestLinuxAmd64, err := cranev1.NewHash("sha256:8ec69d882e7f29f0652d537557160e638168550f738d0d49f90a7ef96bf31787")
 	require.NoError(t, err)
 	digestLinuxArm64, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
+	require.NoError(t, err)
+	unknownDigest, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
 	require.NoError(t, err)
 
 	indexManifest := cranev1.IndexManifest{
@@ -78,6 +84,16 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			{
 				MediaType:    types.OCIManifestSchema1,
 				Size:         100,
+				Digest:       unknownDigest,
+				Data:         []byte(""),
+				URLs:         []string{},
+				Annotations:  map[string]string{},
+				Platform:     nil,
+				ArtifactType: "",
+			},
+			{
+				MediaType:    types.OCIManifestSchema1,
+				Size:         100,
 				Digest:       digestLinuxArm64,
 				Data:         []byte(""),
 				URLs:         []string{},
@@ -90,7 +106,6 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	imageIndex := registryMocks.NewImageIndex(t)
 	imageIndex.On("IndexManifest").Return(&indexManifest, nil)
-
 	mockRegistryClient.On("GetImageIndex", image).Return(imageIndex, nil)
 
 	imageDetailsLinuxAmd64, err := buildImageDetails(digestLinuxAmd64, platformLinuxAmd64)
@@ -101,7 +116,8 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-
+	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
+		Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
 
 	registry := &v1alpha1.Registry{
@@ -131,7 +147,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}
-	err = k8sClient.List(context.Background(), imageList)
+	err = k8sClient.List(t.Context(), imageList)
 
 	require.NoError(t, err)
 	require.Len(t, imageList.Items, 2)
@@ -202,7 +218,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 			test.setupMock(mockRegistryClient)
 			handler := &CreateCatalogHandler{}
 
-			actual, err := handler.discoverRepositories(context.Background(), mockRegistryClient, test.registry)
+			actual, err := handler.discoverRepositories(t.Context(), mockRegistryClient, test.registry)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, actual, test.expectedRepositories)
 		})
@@ -233,7 +249,7 @@ func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
 		logger:    slog.Default(),
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	existingImageNames := sets.New[string](
 		"image-1",
@@ -296,14 +312,16 @@ func TestImageDetailsToImage(t *testing.T) {
 
 	assert.Len(t, image.Spec.Layers, numberOfLayers)
 	for i := range numberOfLayers {
-		expectedDigest, expectedDiffID, err := fakeDigestAndDiffID(i)
+		var expectedDigest, expectedDiffID cranev1.Hash
+		expectedDigest, expectedDiffID, err = fakeDigestAndDiffID(i)
 		require.NoError(t, err)
 
 		layer := image.Spec.Layers[i]
 		assert.Equal(t, expectedDigest.String(), layer.Digest)
 		assert.Equal(t, expectedDiffID.String(), layer.DiffID)
 
-		command, err := base64.StdEncoding.DecodeString(layer.Command)
+		var command []byte
+		command, err = base64.StdEncoding.DecodeString(layer.Command)
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("command-%d", i), string(command))
 	}

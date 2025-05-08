@@ -1,9 +1,7 @@
-GOLANGCI_LINT_VERSION := v1.63.4
 CONTROLLER_TOOLS_VERSION := v0.16.5
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
 
-GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
@@ -14,18 +12,23 @@ all: controller storage worker
 
 .PHONY: test
 test: vet ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/test.txt -covermode=atomic
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
+
+.PHONY: helm-unittest
+helm-unittest:
+	helm unittest helm/ --file "tests/**/*_test.yaml"
 
 .PHONY: fmt
 fmt:
 	go fmt ./...
 
 .PHOHY: lint
-lint:
+lint: golangci-lint
 	$(GOLANGCI_LINT) run --verbose
 
-lint-clean:
-	$(GOLANGCI_LINT) cache clean
+.PHONY: lint-fix
+lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+	$(GOLANGCI_LINT) run --fix
 
 .PHOHY: vet
 vet:
@@ -67,3 +70,35 @@ generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/gen
 .PHONY: generate-mocks
 generate-mocks: ## Generate mocks for testing.
 	go generate ./...
+
+##@ Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+
+## Tool Versions
+GOLANGCI_LINT_VERSION ?= v2.1.6
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary (ideally with version)
+# $2 - package url which can be installed
+# $3 - specific version of package
+define go-install-tool
+@[ -f $(1) ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
+mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
+}
+endef

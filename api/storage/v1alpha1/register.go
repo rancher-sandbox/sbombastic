@@ -47,7 +47,7 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-// Adds the list of known types to the given scheme.
+// AddKnownTypes adds the list of known types to the given scheme.
 func AddKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Image{},
@@ -64,7 +64,10 @@ func AddKnownTypes(scheme *runtime.Scheme) error {
 		&metav1.ListOptions{},
 	)
 
-	err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Image"), imageMetadataFieldSelectorConversion)
+	err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("Image"),
+		imageMetadataFieldSelectorConversion,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to add field selector conversion function to Image: %w", err)
 	}
@@ -74,7 +77,10 @@ func AddKnownTypes(scheme *runtime.Scheme) error {
 		return fmt.Errorf("unable to add field selector conversion function to SBOM: %w", err)
 	}
 
-	err = scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("VulnerabilityReport"), imageMetadataFieldSelectorConversion)
+	err = scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("VulnerabilityReport"),
+		imageMetadataFieldSelectorConversion,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to add field selector conversion function to VulnerabilityReport: %w", err)
 	}
@@ -100,6 +106,12 @@ func imageMetadataFieldSelectorConversion(label, value string) (string, string, 
 	case "spec.imageMetadata.digest":
 		return label, value, nil
 	default:
-		return "", "", fmt.Errorf("%q is not a known field selector: only %q, %q, %q", label, "metadata.name", "metadata.namespace", "spec.imageMetadata.*")
+		return "", "", fmt.Errorf(
+			"%q is not a known field selector: only %q, %q, %q",
+			label,
+			"metadata.name",
+			"metadata.namespace",
+			"spec.imageMetadata.*",
+		)
 	}
 }

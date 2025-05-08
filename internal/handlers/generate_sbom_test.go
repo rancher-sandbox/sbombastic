@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -31,8 +30,8 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "docker",
-				RegistryURI: "docker.io",
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
 				Repository:  "golang",
 				Tag:         "1.12-alpine",
 				Platform:    "linux/amd64",
@@ -66,7 +65,7 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 
 	sbom := &storagev1alpha1.SBOM{}
-	err = k8sClient.Get(context.Background(), types.NamespacedName{
+	err = k8sClient.Get(t.Context(), types.NamespacedName{
 		Name:      image.Name,
 		Namespace: image.Namespace,
 	}, sbom)

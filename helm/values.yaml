@@ -8,13 +8,15 @@ controller:
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
+  logLevel: "info"  
 
 storage:
   image:
     repository: ghcr.io/rancher-sandbox/sbombastic/storage
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
-  replicas: 3
+  replicas: 1
+  logLevel: "debug"
 
 worker:
   image:
@@ -22,3 +24,19 @@ worker:
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
+  logLevel: "info"
+
+persistence:
+  enabled: true
+
+  ## Specify a PVC for the storage data
+  storageData:
+    enabled: true
+    subPath:
+    annotations: {}
+    labels: {}
+    # storageClass: ""
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+    accessMode: ReadWriteOnce
+    size: 1Gi

@@ -15,6 +15,7 @@ make test
 ## Run the development environment with Tilt
 
 Customize `tilt-settings.yaml` to your needs.
+A default StorageClass must be defined in your cluster for SQLite data persistence.
 
 Run tilt:
 
