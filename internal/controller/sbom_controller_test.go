@@ -123,8 +123,10 @@ var _ = Describe("SBOM Controller", func() {
 				Namespace: registry.Namespace,
 			}, &registry)).To(Succeed())
 
-			_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation]
+			_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveryCompleteAtAnnotation]
 			Expect(found).To(BeTrue())
+			completed := registry.Annotations[v1alpha1.RegistryLastDiscoveryCompletedAnnotation]
+			Expect(completed).To(Equal("true"))
 		})
 	})
 })

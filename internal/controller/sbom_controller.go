@@ -88,13 +88,9 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Check if all images have SBOMs
 	if len(sbomList.Items) == len(imageList.Items) {
-		log.Info(
-			"Registry discovery is completed.",
-			"name",
-			sbom.GetImageMetadata().Registry,
-			"namespace",
-			req.Namespace,
-		)
+		log.Info("Registry discovery is completed.",
+			"name", sbom.GetImageMetadata().Registry,
+			"namespace", req.Namespace)
 
 		var registry v1alpha1.Registry
 		err = r.Get(ctx, client.ObjectKey{
@@ -105,22 +101,26 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, fmt.Errorf("unable to fetch Registry: %w", err)
 		}
 
-		_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation]
-		if found {
-			log.V(1).
-				Info("Registry already has a last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
-
-			return ctrl.Result{}, nil
-		}
-
 		if registry.Annotations == nil {
 			registry.Annotations = make(map[string]string)
 		}
 
-		log.V(1).
-			Info("Updating Registry last discovered timestamp", "name", registry.Name, "namespace", registry.Namespace)
+		_, found := registry.Annotations[v1alpha1.RegistryLastDiscoveryCompleteAtAnnotation]
+		if found {
+			log.V(1).Info("Registry already has a last discovered timestamp",
+				"name", registry.Name,
+				"namespace", registry.Namespace)
 
-		registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] = time.Now().Format(time.RFC3339)
+			return ctrl.Result{}, nil
+		}
+
+		log.V(1).
+			Info("Updating Registry last discovered timestamp",
+				"name", registry.Name,
+				"namespace", registry.Namespace)
+
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryCompleteAtAnnotation] = time.Now().Format(time.RFC3339)
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryCompletedAnnotation] = "true"
 		if err = r.Update(ctx, &registry); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to update Registry LastScannedAt: %w", err)
 		}

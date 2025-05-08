@@ -100,6 +100,15 @@ func main() {
 	ctrl.SetLogger(logger)
 	setupLog := logger.WithName("setup")
 
+	var data []byte
+	var deployNamespace string
+	if data, err = os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		deployNamespace = string(data)
+	} else {
+		setupLog.Error(err, "failed to open namespace file")
+		os.Exit(1)
+	}
+
 	ns, err := messaging.NewServer()
 	if err != nil {
 		setupLog.Error(err, "unable to start NATS server")
@@ -195,9 +204,10 @@ func main() {
 	}
 
 	if err = (&controller.RegistryReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		DeployNamespace: deployNamespace,
+		Publisher:       publisher,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Registry")
 		os.Exit(1)
@@ -218,6 +228,25 @@ func main() {
 		Publisher: publisher,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SBOM")
+		os.Exit(1)
+	}
+
+	if err = (&controller.RegistryDiscoveryReconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Publisher: publisher,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "RegistryDiscovery")
+		os.Exit(1)
+	}
+
+	if err = (&controller.ScheduleReconciler{
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		DeployNamespace: deployNamespace,
+		Publisher:       publisher,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Schedule")
 		os.Exit(1)
 	}
 

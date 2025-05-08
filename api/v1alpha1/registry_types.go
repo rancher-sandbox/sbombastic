@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2025.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,14 +21,70 @@ import (
 )
 
 const (
-	RegistryLastDiscoveredAtAnnotation = "sbombastic.rancher.io/last-discovered-at"
-	RegistryLastScannedAtAnnotation    = "sbombastic.rancher.io/last-scanned-at"
+	RegistryJobDiscoveryType = "discovery"
+	RegistryJobScanType      = "scan"
 )
 
-// RegistrySpec defines the desired state of Registry
+const (
+	RegistryLastJobTypeAnnotation = "sbombastic.rancher.io/last-job-type"
+	RegistryLastJobNameAnnotation = "sbombastic.rancher.io/last-job-name"
+)
+const (
+	RegistryLastDiscoveryStartAtAnnotation    = "sbombastic.rancher.io/last-discovery-started-at"
+	RegistryLastDiscoveryCompleteAtAnnotation = "sbombastic.rancher.io/last-discovery-completed-at"
+	RegistryLastDiscoveryCompletedAnnotation  = "sbombastic.rancher.io/last-discovery-completed"
+	RegistryLastDiscoveredImageNameAnnotation = "sbombastic.rancher.io/last-discovered-image-name"
+
+	RegistryLastScannedAtAnnotation     = "sbombastic.rancher.io/last-scanned-at"
+	RegistryLastScanCompletedAnnotation = "sbombastic.rancher.io/registry-last-scan-completed"
+)
+
+type NumericCron struct {
+	// 0~6: Sunday to Saturday
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=6
+	DayOfWeek *int8 `json:"dayOfWeek,omitempty"`
+	// 1~12
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=12
+	Month *int8 `json:"month,omitempty"`
+	// 1~31
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=31
+	DayOfMonth *int8 `json:"dayOfMonth,omitempty"`
+	// 0~23
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=23
+	Hour *int8 `json:"hour,omitempty"`
+}
+
+type DiscoveryJob struct {
+	// cron in numeric format. see https://en.wikipedia.org/wiki/Cron
+	// +kubebuilder:validation:Required
+	Cron NumericCron `json:"cron"`
+	// Suspend scheduled discovery
+	Suspend bool `json:"suspend"`
+	// number of RegistryDiscovery objects with failed state to keep
+	// +default:value=1
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2
+	FailedJobsHistoryLimit uint8 `json:"failedJobsHistoryLimit"`
+	// number of RegistryDiscovery objects with successful state to keep
+	// +default:value=1
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2
+	SuccessfulJobsHistoryLimit uint8 `json:"successfulJobsHistoryLimit"`
+}
+
+// RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
 	// URI is the URI of the container registry
-	URI string `json:"uri,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	URI string `json:"uri"`
+	// DiscoveryJob is the configurations for scheduled discovery
+	// +kubebuilder:validation:Required
+	DiscoveryJob DiscoveryJob `json:"discoveryJob"`
 	// Repositories is the list of the repositories to be scanned
 	// An empty list means all the repositories found in the registry are going to be scanned
 	Repositories []string `json:"repositories,omitempty"`
@@ -40,34 +96,15 @@ type RegistrySpec struct {
 	Insecure bool `json:"insecure,omitempty"`
 }
 
-const (
-	RegistryDiscoveringCondition = "Discovering"
-	RegistryDiscoveredCondition  = "Discovered"
-)
-
-const (
-	RegistryDiscoveryRequestedReason       = "DiscoveryRequested"
-	RegistryFailedToRequestDiscoveryReason = "FailedToRequestDiscovery"
-)
-
-// RegistryStatus defines the observed state of Registry
+// RegistryStatus defines the observed state of Registry.
 type RegistryStatus struct {
-	// Represents the observations of a Registry's current state.
-	// Registry.status.conditions.type are: "Discovering", "Scanning", and "UpToDate"
-	// Registry.status.conditions.status are one of True, False, Unknown.
-	// Registry.status.conditions.reason the value should be a CamelCase string and producers of specific
-	// condition types may define expected values and meanings for this field, and whether the values
-	// are considered a guaranteed API.
-	// Registry.status.conditions.Message is a human readable message indicating details about the transition.
-	// For further information see: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// Registry is the Schema for the registries API
+// Registry is the Schema for the registries API.
 type Registry struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -78,7 +115,7 @@ type Registry struct {
 
 // +kubebuilder:object:root=true
 
-// RegistryList contains a list of Registry
+// RegistryList contains a list of Registry.
 type RegistryList struct {
 	metav1.TypeMeta `           json:",inline"`
 	metav1.ListMeta `           json:"metadata,omitempty"`

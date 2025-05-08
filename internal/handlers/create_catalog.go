@@ -12,14 +12,17 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -29,29 +32,40 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
+const (
+	labelImageRegistry = "registry"
+)
+
+type newResourceLockFunc func(leaseName, leaseNamespace, identity string /*, coordinationClient coordinationv1.CoordinationV1Interface*/) resourcelock.Interface
+
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
 type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
 	k8sClient             client.Client
+	newResourceLock       newResourceLockFunc
 	scheme                *runtime.Scheme
 	logger                *slog.Logger
+	deployNamespace       string
 }
 
 func NewCreateCatalogHandler(
 	registryClientFactory registryclient.ClientFactory,
 	k8sClient client.Client,
+	newResourceLock newResourceLockFunc,
 	scheme *runtime.Scheme,
 	logger *slog.Logger,
+	deployNamespace string,
 ) *CreateCatalogHandler {
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
+		newResourceLock:       newResourceLock,
 		scheme:                scheme,
 		logger:                logger.With("handler", "create_catalog_handler"),
+		deployNamespace:       deployNamespace,
 	}
 }
 
-//nolint:gocognit // We are a bit more tolerant for the handler.
 func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	createCatalogMessage, ok := message.(*messaging.CreateCatalog)
 	if !ok {
@@ -61,9 +75,17 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	h.logger.Debug("Catalog creation requested",
 		"registry", createCatalogMessage.RegistryName,
 		"namespace", createCatalogMessage.RegistryNamespace,
+		"leaseName", createCatalogMessage.RegistryLeaseName,
+		"registryDiscovery", createCatalogMessage.RegistryDiscoveryName,
 	)
 
 	ctx := context.Background()
+
+	discoveryObjKey := client.ObjectKey{
+		Name:      createCatalogMessage.RegistryDiscoveryName,
+		Namespace: createCatalogMessage.RegistryNamespace,
+	}
+	regNsName := fmt.Sprintf("%s/%s", createCatalogMessage.RegistryNamespace, createCatalogMessage.RegistryName)
 
 	registry := &v1alpha1.Registry{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
@@ -71,16 +93,169 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		Namespace: createCatalogMessage.RegistryNamespace,
 	}, registry)
 	if err != nil {
-		return fmt.Errorf(
-			"cannot get registry %s/%s: %w",
-			createCatalogMessage.RegistryNamespace,
-			createCatalogMessage.RegistryName,
-			err,
-		)
+		h.updateDiscoveryStatus(ctx, discoveryObjKey, v1alpha1.DiscoveryStatusFailStopped, false, false,
+			metav1.Condition{
+				Type:    v1alpha1.RegistryDiscoveringCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
+				Message: "Registry not found",
+			})
+		return fmt.Errorf("unable to get registry %s: %w", regNsName, err)
 	}
 
 	h.logger.Debug("Registry found", "registry", registry)
 
+	discoveryLock := DiscoveryLock{
+		Identity:       fmt.Sprintf("%s--%s", discoveryObjKey.Namespace, discoveryObjKey.Name),
+		leaseNamespace: h.deployNamespace,
+		leaseName:      createCatalogMessage.RegistryLeaseName,
+	}
+
+	if err = discoveryLock.acquireLock(ctx, discoveryObjKey, registry, h); err != nil {
+		return fmt.Errorf("CreateCatalog for %s failed: %w", regNsName, err)
+	}
+
+	return nil
+}
+
+func (h *CreateCatalogHandler) updateRegistryAnnotations(
+	ctx context.Context,
+	regObjKey client.ObjectKey,
+	lastJobName *string,
+	lastJobStartAt *string,
+	lastImageName *string,
+) error {
+	registry := &v1alpha1.Registry{}
+	err := h.k8sClient.Get(ctx, regObjKey, registry)
+	if err != nil {
+		return fmt.Errorf("unable to get registry(%s): %w", regObjKey, err)
+	}
+
+	if registry.Annotations == nil {
+		registry.Annotations = make(map[string]string)
+	}
+
+	if lastJobName != nil {
+		registry.Annotations[v1alpha1.RegistryLastJobNameAnnotation] = *lastJobName
+		registry.Annotations[v1alpha1.RegistryLastJobTypeAnnotation] = v1alpha1.RegistryJobDiscoveryType
+		registry.Annotations[v1alpha1.RegistryLastDiscoveredImageNameAnnotation] = ""
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryCompleteAtAnnotation] = ""
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryStartAtAnnotation] = ""
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryCompletedAnnotation] = "false"
+	}
+	if lastJobStartAt != nil {
+		registry.Annotations[v1alpha1.RegistryLastDiscoveryStartAtAnnotation] = *lastJobStartAt
+	}
+	if lastImageName != nil {
+		registry.Annotations[v1alpha1.RegistryLastDiscoveredImageNameAnnotation] = *lastImageName
+	}
+
+	if err = h.k8sClient.Update(ctx, registry); err != nil {
+		err = fmt.Errorf("unable to update registry annotations(%s): %w", regObjKey, err)
+		return err
+	}
+
+	return nil
+}
+
+// updateDiscoveryStatus handles the update of RegistryDiscovery.Status
+func (h *CreateCatalogHandler) updateDiscoveryStatus(
+	ctx context.Context,
+	discoveryObjKey client.ObjectKey,
+	currentStatus string,
+	updateStartedAt bool,
+	updateStoppedAt bool,
+	condition metav1.Condition,
+) {
+	regDiscovery := v1alpha1.RegistryDiscovery{}
+	err := h.k8sClient.Get(ctx, discoveryObjKey, &regDiscovery)
+	if err != nil {
+		err = fmt.Errorf("unable to get registryDiscovery %v: %w", discoveryObjKey, err)
+		h.logger.ErrorContext(ctx, err.Error())
+		return
+	}
+
+	t := time.Now().Format(time.RFC3339)
+	regDiscovery.Status.CurrentStatus = currentStatus
+	if updateStartedAt {
+		regDiscovery.Status.StartedAt = t
+	}
+	if updateStoppedAt {
+		regDiscovery.Status.StoppedAt = t
+	}
+	meta.SetStatusCondition(&regDiscovery.Status.Conditions, condition)
+
+	if regDiscovery.Status.Canceled {
+		regDiscovery.Status.CurrentStatus = v1alpha1.DiscoveryStatusCanceled
+		meta.SetStatusCondition(&regDiscovery.Status.Conditions, metav1.Condition{
+			Type:    v1alpha1.RegistryDiscoveringCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.RegistryDiscoveryFinishedReason,
+			Message: "Registry discovery canceled",
+		})
+	}
+
+	if err = h.k8sClient.Status().Update(ctx, &regDiscovery); err != nil {
+		err = fmt.Errorf("unable to update RegistryDiscovery status(%s): %w", condition.Message, err)
+		h.logger.ErrorContext(ctx, err.Error())
+	}
+}
+
+// discoverRegistry is basically a wrapper of createCatalog()
+// Its major function is to update RegistryDiscovery's status and Registry's annotations.
+func (h *CreateCatalogHandler) discoverRegistry(
+	ctx context.Context,
+	discoveryObjKey client.ObjectKey,
+	registry *v1alpha1.Registry,
+) error {
+	regObjKey := client.ObjectKey{
+		Name:      registry.Name,
+		Namespace: registry.Namespace,
+	}
+	h.updateDiscoveryStatus(ctx, discoveryObjKey, v1alpha1.DiscoveryStatusRunning, true, false,
+		metav1.Condition{
+			Type:    v1alpha1.RegistryDiscoveringCondition,
+			Status:  metav1.ConditionTrue,
+			Reason:  v1alpha1.RegistryDiscoveryRunningReason,
+			Message: "Registry discovery in progress",
+		})
+
+	t := time.Now().Format(time.RFC3339)
+	if err := h.updateRegistryAnnotations(ctx, regObjKey, &discoveryObjKey.Name, &t, nil); err != nil {
+		return err
+	}
+
+	var err error
+	if err = h.createCatalog(ctx, registry); err == nil {
+		h.updateDiscoveryStatus(ctx, discoveryObjKey, v1alpha1.DiscoveryStatusSucceeded, false, true,
+			metav1.Condition{
+				Type:    v1alpha1.RegistryDiscoveredCondition,
+				Status:  metav1.ConditionTrue,
+				Reason:  v1alpha1.RegistryDiscoveryFinishedReason,
+				Message: "Registry discovery finished",
+			})
+	} else {
+		h.logger.ErrorContext(ctx, err.Error())
+		h.updateDiscoveryStatus(ctx, discoveryObjKey, v1alpha1.DiscoveryStatusFailStopped, false, true,
+			metav1.Condition{
+				Type:    v1alpha1.RegistryDiscoveredCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.RegistryDiscoveryFailedReason,
+				Message: "Failed to discover registry",
+			})
+	}
+
+	if err = h.updateRegistryAnnotations(ctx, regObjKey, nil, nil, nil); err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (h *CreateCatalogHandler) createCatalog(
+	ctx context.Context,
+	registry *v1alpha1.Registry,
+) error {
 	transport, err := h.transportFromRegistry(registry)
 	if err != nil {
 		return fmt.Errorf("cannot create transport for registry %s: %w", registry.Name, err)
@@ -103,13 +278,37 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
-	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
+	opts := client.MatchingLabels{labelImageRegistry: registry.Name}
+	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), opts); err != nil {
 		return fmt.Errorf("cannot list existing images in registry %s: %w", registry.Name, err)
 	}
 	existingImageNames := sets.Set[string]{}
 	for _, existingImage := range existingImageList.Items {
 		existingImageNames.Insert(existingImage.Name)
 	}
+
+	if err = h.processImages(ctx, existingImageNames, discoveredImageNames, registryClient, registry); err != nil {
+		return err
+	}
+
+	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
+		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
+	}
+
+	return nil
+}
+
+// processImages processes all images discovered on registry server.
+// Those images whose CRs are found in local k8s are skipped.
+func (h *CreateCatalogHandler) processImages(
+	ctx context.Context,
+	existingImageNames sets.Set[string],
+	discoveredImageNames sets.Set[string],
+	registryClient registryclient.Client,
+	registry *v1alpha1.Registry,
+) error {
+	var err error
+	var lastImageName string
 
 	for newImageName := range discoveredImageNames {
 		var ref name.Reference
@@ -121,7 +320,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		var images []storagev1alpha1.Image
 		images, err = h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
+			h.logger.InfoContext(ctx, "cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -134,11 +333,17 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 			if err = h.k8sClient.Create(ctx, &image); err != nil {
 				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
 			}
+			lastImageName = image.Name
 		}
 	}
-
-	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
-		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
+	if lastImageName != "" {
+		regObjKey := client.ObjectKey{
+			Name:      registry.Name,
+			Namespace: registry.Namespace,
+		}
+		if err = h.updateRegistryAnnotations(ctx, regObjKey, nil, nil, &lastImageName); err != nil {
+			return err
+		}
 	}
 
 	return nil

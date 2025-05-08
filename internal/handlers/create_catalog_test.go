@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aquasecurity/trivy/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -23,8 +24,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/leaderelection"
+	leaderelectionfake "sigs.k8s.io/controller-runtime/pkg/leaderelection/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -116,8 +120,8 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
-		Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
+	mockRegistryClient.On("GetImageDetails", image,
+		(*cranev1.Platform)(nil)).Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
 
 	registry := &v1alpha1.Registry{
@@ -130,19 +134,36 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Repositories: []string{repositoryName},
 		},
 	}
+	regDiscovery := &v1alpha1.RegistryDiscovery{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.New().String(),
+			Namespace: registry.Namespace,
+		},
+		Spec: v1alpha1.RegistryDiscoverySpec{
+			Registry:     registry.Name,
+			RegistrySpec: registry.Spec,
+		},
+	}
 
 	scheme := scheme.Scheme
 	err = v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithRuntimeObjects(registry).
+		WithStatusSubresource(regDiscovery).
+		WithRuntimeObjects(registry, regDiscovery).
 		Build()
 
-	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, slog.Default())
+	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient,
+		func(string, string, string) resourcelock.Interface {
+			lock, _ := leaderelectionfake.NewResourceLock(nil, nil, leaderelection.Options{})
+			return lock
+		}, scheme, slog.Default(), "sbombastic")
 	err = handler.Handle(&messaging.CreateCatalog{
-		RegistryName:      registry.Name,
-		RegistryNamespace: registry.Namespace,
+		RegistryName:          registry.Name,
+		RegistryNamespace:     registry.Namespace,
+		RegistryLeaseName:     fmt.Sprintf("%s--%s", registry.Namespace, registry.Name),
+		RegistryDiscoveryName: regDiscovery.Name,
 	})
 	require.NoError(t, err)
 

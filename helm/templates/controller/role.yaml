@@ -11,6 +11,7 @@ rules:
   - sbombastic.rancher.io
   resources:
   - registries
+  - registrydiscoveries
   verbs:
   - create
   - delete
@@ -23,12 +24,14 @@ rules:
   - sbombastic.rancher.io
   resources:
   - registries/finalizers
+  - registrydiscoveries/finalizers
   verbs:
   - update
 - apiGroups:
   - sbombastic.rancher.io
   resources:
   - registries/status
+  - registrydiscoveries/status
   verbs:
   - get
   - patch

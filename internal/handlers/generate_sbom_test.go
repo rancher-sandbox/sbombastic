@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aquasecurity/trivy/pkg/uuid"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -18,21 +19,44 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
+	repositoryName := "golang"
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ghcr",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:          "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			Repositories: []string{repositoryName},
+		},
+	}
+	regDiscovery := &v1alpha1.RegistryDiscovery{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.New().String(),
+			Namespace: registry.Namespace,
+		},
+		Spec: v1alpha1.RegistryDiscoverySpec{
+			Registry:     registry.Name,
+			RegistrySpec: registry.Spec,
+		},
+	}
+
 	image := &storagev1alpha1.Image{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-image",
-			Namespace: "default",
+			Namespace: registry.Namespace,
 		},
 		Spec: storagev1alpha1.ImageSpec{
 			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "ghcr",
-				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
-				Repository:  "golang",
+				Registry:    registry.Name,
+				RegistryURI: registry.Spec.URI,
+				Repository:  repositoryName,
 				Tag:         "1.12-alpine",
 				Platform:    "linux/amd64",
 				Digest:      "sha256:123",
@@ -41,11 +65,14 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	}
 
 	scheme := scheme.Scheme
-	err := storagev1alpha1.AddToScheme(scheme)
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = storagev1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithRuntimeObjects(image).
+		WithStatusSubresource(regDiscovery).
+		WithRuntimeObjects(image, registry, regDiscovery).
 		Build()
 
 	spdxPath := filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine.spdx.json")

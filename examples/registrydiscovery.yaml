@@ -1,0 +1,15 @@
+apiVersion: sbombastic.rancher.io/v1alpha1
+kind: RegistryDiscovery
+metadata:
+  name: my-first-registry-discovery-795c63c4-11
+  namespace: default
+spec:
+  registry: my-first-registry
+  registrySpec:
+    uri: dev-registry.default.svc.cluster.local:5000
+    discoveryJob:
+      cron:
+        hour: 1
+      suspend: false
+      failedJobsHistoryLimit: 1
+      successfulJobsHistoryLimit: 1
