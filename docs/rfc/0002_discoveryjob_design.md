@@ -53,10 +53,21 @@ kind: Registry
 metadata:
   name: registry-example
   namespace: default
+  annotations:
+    sbombastic.rancher.io/last-discovered-image-name: b4af50c685838e4d4c31e6dff2ad24bd8429110b71886cfe5685759ac0712fa0
+    sbombastic.rancher.io/last-discovery-completed: "false"
+    sbombastic.rancher.io/last-discovery-completed-at: ""
+    sbombastic.rancher.io/last-discovery-started-at: "2025-05-08T15:52:20Z"
+    sbombastic.rancher.io/last-job-name: registry-example-discovery-795c63c4-11
+    sbombastic.rancher.io/last-job-type: discovery
 spec:
   uri: "https://registry-1.docker.io"
   discoveryJob:  ## for scheduled discovery
-    schedule: "0 1 * * *"
+    cron:
+      dayOfWeek: # optional, 0~6
+      month: # optional, 1~12
+      dayOfMonth: # optional, 1~31
+      hour: # optional, 0~23
     suspend: false # bool value, toggle the scheduled discovery
     failedJobsHistoryLimit: 2 # number of RegistryDiscovery objects with failed state to keep
     successfulJobsHistoryLimit: 1 # number of RegistryDiscovery objects with successful state to keep
@@ -70,33 +81,39 @@ status:
 
 ### RegistryDiscovery
 
-A RegistryDiscovery represents a discovery operation that can be triggered manually.
+A RegistryDiscovery represents a discovery operation that can be triggered manually or by schedule.
 It tracks the status condition of the discovery operation.
 
 ```yaml
 apiVersion: scanner.rancher.io/v1alpha1
 kind: RegistryDiscovery
 metadata:
-  name: registry-example-1742868000 # <Registry name>-<unix timestamp>
+  name: registry-example-1742868000
   namespace: default
-  labels:
-    sbombastic.rancher.io/completed: "true"
-    sbombastic.rancher.io/cron-registry-discovery: registry.local.lan
-    sbombastic.rancher.io/phase: Succeeded # Could be "Pending", "Running", "Succeeded", "Failed", "Error" # similar to https://github.com/argoproj/argo-workflows/blob/8098a14a2f5dc134a2e21e5a6e6b23b4b76e0e21/pkg/apis/workflow/v1alpha1/workflow_phase.go#L6-L13
 spec:
+  registry: registry-example
   registrySpec: <copy of registry.Spec>
 status:
-  - startedAt: "2025-03-24T01:30:00Z"
-  - finishedAt: "2025-03-24T01:32:00Z"
-  - conditions: # we can use conditions to provide feedback about the progress
-    - status: "False"
-      type: Running
-    - status: "True"
-      type: Completed
+  canceled: false
+  conditions:
+  - lastTransitionTime: "2025-05-08T15:52:20Z"
+    message: Registry discovery in progress
+    reason: DiscoveryRunning
+    status: "True"
+    type: Discovering
+  - lastTransitionTime: "2025-05-08T15:52:21Z"
+    message: Registry discovery finished
+    reason: DiscoveryFinished
+    status: "True"
+    type: Discovered
+  currentStatus: Succeeded
+  finishedAt: "2025-05-08T15:52:21Z"
+  startedAt: "2025-05-08T15:52:20Z"
 ```
 
 
-1. User creates a Registry object manually or thru Rancher UI. If the Registry doesn't have a discovery schedule specified, default schedule is applied by Registry CRD schema definition.
+1. User creates a Registry object manually or thru Rancher UI. If the Registry doesn't have a discovery schedule specified, default schedule 0:xx AM everyday is applied on the fly.
+   (scheduler checks every 15 minutes. So there could be 0~15 minutes delay)
 
 2. When a Registry CR is reconciled, the registry's configurations are updated in controller's cache.
 
@@ -111,29 +128,53 @@ status:
    The created RegistryDiscovery CR needs to be in the same namespace as the target registry.
    
 5. Each RegistryDiscovery CR is for a registry discovery occurrence.
-   When a RegistryDiscovery CR is reconciled, controller will add a DiscoverRegistry job to the NATs queue. 
-   The DiscoverRegistry job object can simply reference the RegistryDiscovery object instance. 
+   When a RegistryDiscovery CR is reconciled, controller will add a CreateCatalog message to the NATs queue and update the RegistryDiscovery CR's Status.CurrentStatus as "Pending". 
+   The CreateCatalog message contains namespace/name of the Registry and name of the RegistryDiscovery. 
 
    NATS options DiscardNewPerSubject/DiscardNew/MaxMsgsPerSubject do not fit our need well for preventing duplicate jobs post to NATS queue:
    - Number of Registry objects is variant
-   - It doesn't work well in our case when a new DiscoverRegistry job is published to an empty NATS queue while worker is still doing registry discovery (redundant discovery concurrently)
+   - It doesn't work well in our case when a new CreateCatalog message is published to an empty NATS queue while worker is still doing registry discovery (redundant discovery concurrently)
+   - It doesn't work well in our case when a new CreateCatalog message is published to an empty NATS queue while worker is still doing registry discovery (redundant discovery concurrently)
    
-6. Worker will pick up the DiscoverRegistry job and then get the RegistryDiscovery CR from the API server and start the create catalog job.
+6. Worker will pick up the CreateCatalog message and then get the Registry CR from the API server.
    
-7. Worker will keep the RegistryDiscovery object up-to-date to keep track of the progress of the catalog and its final outcome.
-
-8. It's worker to make sure that for each registry no other discovery operation could be triggered before the last discovery operation is completed.
+7. It's worker to make sure that for each registry no other discovery operation could be triggered before the last discovery operation is completed.
    Worker will leverage k8s lease to do this. The lease should be taken on a per-registry basis.
-   However, we need to consider about the namespace these lease resource instances are in.
-   - Do we want worker to have RBAC for k8s lease on all namespaces? (this might be a concern about this)
-   - Or we operate all such kind of leases in {sbombastic} namespace? (notice: by design Kubernetes does not support cross-namespace owner references)
-   
-9. After worker starts the create catalog job, it updates the RegistryDiscovery CR status when iterating thru the listed images.
-   
-10. When SBOMReconciler reconciles a SBOM CR & sees len(SBOMs) == len(Images), it means the registry discovery is completed.
-    Controller will update the RegistryDiscovery CR status accordingly & delete the k8s lease object for the registry.
-   
-11. May need to add more fields(like ObservedGeneration) to RegistryDiscovery.Status for internal handling
+   (The lease name is in the format "lease-{registry namespace}-{registry name}" )
+   All such k8s leases are created in {sbombastic| namespace.
+
+8. After the leaseLock is acquired, worker will add annotations like below to the Registry CR:
+    sbombastic.rancher.io/last-discovery-completed: "false"
+    sbombastic.rancher.io/last-discovery-completed-at: ""
+    sbombastic.rancher.io/last-discovery-started-at: "2025-05-08T15:52:20Z"
+    sbombastic.rancher.io/last-job-name: registry-example-discovery-795c63c4-11
+    sbombastic.rancher.io/last-job-type: discovery
+
+9. Controller and worker update RegistryDiscovery.Status.CurrentStatus and RegistryDiscovery.Status.Conditions to keep track of the progress of the registry discovery.
+   These are the possible Status.CurrentStatus values:
+    "Pending"
+	"Running"
+	"FailStopped"
+	"Cancel"
+	"Succeeded"
+
+   These are the possible Status.Condition.Type values:
+    "Discovering"
+    "Discovered"
+
+   These are the possible Status.Condition.Reason values:
+    "FailedToRequestDiscovery"
+	"DiscoveryPending"
+	"DiscoveryRunning"
+	"DiscoveryFailed"
+	"DiscoveryFinished"
+
+10. After the last Image CR is created, worker updates RegistryDiscovery.Status to "Succeeded".
+
+11. After the last SBOM CR is reconciled(i.e. when the # of selected Image CRs equal to the # of selected SBOM CRs), controller updates Registry's annotation:
+    sbombastic.rancher.io/last-discovery-completed: "true"
+    sbombastic.rancher.io/last-discovery-completed-at: "2025-05-08T15:52:20Z"
+
 
 ------
 
@@ -167,7 +208,7 @@ status:
 [unresolved]: #unresolved-questions
 
 Q: When do we say a discovery job is "completed"? Does it mean 
-1. After the SBOM CR of the last qualified image is created?
+1. After the SBOM CR of the last qualified image's SBOM is reconciled? (Currently this is the chosen one)
 2. After the VulnerabilityReport CR of the last qualified image is created? 
 
 
