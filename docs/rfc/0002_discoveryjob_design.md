@@ -144,36 +144,36 @@ status:
    All such k8s leases are created in {sbombastic| namespace.
 
 8. After the leaseLock is acquired, worker will add annotations like below to the Registry CR:
-    sbombastic.rancher.io/last-discovery-completed: "false"
-    sbombastic.rancher.io/last-discovery-completed-at: ""
-    sbombastic.rancher.io/last-discovery-started-at: "2025-05-08T15:52:20Z"
-    sbombastic.rancher.io/last-job-name: registry-example-discovery-795c63c4-11
-    sbombastic.rancher.io/last-job-type: discovery
+    - sbombastic.rancher.io/last-discovery-completed: "false"
+    - sbombastic.rancher.io/last-discovery-completed-at: ""
+    - sbombastic.rancher.io/last-discovery-started-at: "2025-05-08T15:52:20Z"
+    - sbombastic.rancher.io/last-job-name: registry-example-discovery-795c63c4-11
+    - sbombastic.rancher.io/last-job-type: discovery
 
 9. Controller and worker update RegistryDiscovery.Status.CurrentStatus and RegistryDiscovery.Status.Conditions to keep track of the progress of the registry discovery.
    These are the possible Status.CurrentStatus values:
-    "Pending"
-	"Running"
-	"FailStopped"
-	"Cancel"
-	"Succeeded"
+    - "Pending"
+	- "Running"
+	- "FailStopped"
+	- "Cancel"
+	- "Succeeded"
 
    These are the possible Status.Condition.Type values:
-    "Discovering"
-    "Discovered"
+    - "Discovering"
+    - "Discovered"
 
    These are the possible Status.Condition.Reason values:
-    "FailedToRequestDiscovery"
-	"DiscoveryPending"
-	"DiscoveryRunning"
-	"DiscoveryFailed"
-	"DiscoveryFinished"
+    - "FailedToRequestDiscovery"
+	- "DiscoveryPending"
+	- "DiscoveryRunning"
+	- "DiscoveryFailed"
+	- "DiscoveryFinished"
 
 10. After the last Image CR is created, worker updates RegistryDiscovery.Status to "Succeeded".
 
 11. After the last SBOM CR is reconciled(i.e. when the # of selected Image CRs equal to the # of selected SBOM CRs), controller updates Registry's annotation:
-    sbombastic.rancher.io/last-discovery-completed: "true"
-    sbombastic.rancher.io/last-discovery-completed-at: "2025-05-08T15:52:20Z"
+    - sbombastic.rancher.io/last-discovery-completed: "true"
+    - sbombastic.rancher.io/last-discovery-completed-at: "2025-05-08T15:52:20Z"
 
 
 ------
