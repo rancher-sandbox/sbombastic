@@ -23,7 +23,7 @@ spec:
         - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
           args:
-            - "--cert-dir=/tmp/apiserver.local.config/certificates/"
+            - "--cert-dir={{ .Values.storage.certDir | default "/tmp/apiserver.local.config/certificates/" }}"
           {{- if .Values.storage.logLevel }}
             - -log-level={{ .Values.storage.logLevel }}
           {{- end }}

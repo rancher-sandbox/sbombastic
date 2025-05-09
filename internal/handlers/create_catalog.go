@@ -385,6 +385,7 @@ func imageDetailsToImage(
 			Labels: map[string]string{
 				LabelManagedByKey: LabelManagedByValue,
 				LabelPartOfKey:    LabelPartOfValue,
+				LabelRegistryKey:  registry.Name,
 			},
 		},
 		Spec: storagev1alpha1.ImageSpec{

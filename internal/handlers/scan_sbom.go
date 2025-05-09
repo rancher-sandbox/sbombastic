@@ -137,6 +137,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		vulnerabilityReport.Labels = map[string]string{
 			LabelManagedByKey: LabelManagedByValue,
 			LabelPartOfKey:    LabelPartOfValue,
+			LabelRegistryKey:  sbom.Labels[LabelRegistryKey],
 		}
 
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{

@@ -5,4 +5,5 @@ const (
 	LabelManagedByValue = "sbombastic"
 	LabelPartOfKey      = "app.kubernetes.io/part-of"
 	LabelPartOfValue    = "sbombastic"
+	LabelRegistryKey    = "registry"
 )
