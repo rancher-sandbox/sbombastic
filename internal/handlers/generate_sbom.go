@@ -123,6 +123,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 			Labels: map[string]string{
 				LabelManagedByKey: LabelManagedByValue,
 				LabelPartOfKey:    LabelPartOfValue,
+				LabelRegistryKey:  image.Labels[LabelRegistryKey],
 			},
 		},
 		Spec: storagev1alpha1.SBOMSpec{

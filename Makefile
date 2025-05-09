@@ -7,6 +7,27 @@ ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_V
 
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
+RUNNER := docker
+IMAGE_BUILDER := $(RUNNER) buildx
+TARGET_PLATFORMS ?= linux/amd64
+REGISTRY ?= ghcr.io
+REPO ?= rancher-sandbox
+TAG ?= v0.1.0-alpha1
+BUILD_ACTION = --load
+
+define BUILD_template =
+.PHONY: build-$(1)-image
+build-$(1)-image:
+	$(IMAGE_BUILDER) build -f ./Dockerfile.$(1) \
+	-t "$(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)" $(BUILD_ACTION) .
+	@echo "Built $(REGISTRY)/$(REPO)/sbombastic/$(1):$(TAG)"
+
+E2E_DEPS += build-$(1)-image
+endef
+
+TARGETS=controller storage worker
+$(foreach target,$(TARGETS),$(eval $(call BUILD_template,$(target))))
+
 .PHONY: all
 all: controller storage worker
 
@@ -34,17 +55,36 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 vet:
 	go vet ./...
 
-.PHONY: controller
-controller: vet
+GO_SRCS := go.mod go.sum
+CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
+CONTROLLER_GO_SRCS  := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
+CONTROLLER_SRCS     := $(GO_SRCS) $(CONTROLLER_GO_SRCS)
+./bin/controller:  $(CONTROLLER_SRCS)
+	make vet
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/controller ./cmd/controller
 
+STORAGE_SRC_DIRS := cmd/storage api internal/apiserver internal/storage pkg
+STORAGE_GO_SRCS  := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
+STORAGE_SRCS     := $(GO_SRCS) $(STORAGE_GO_SRCS)
+./bin/storage:	$(STORAGE_SRCS)
+	make vet
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/storage ./cmd/storage
+
+WORKER_SRC_DIRS := cmd/worker api internal/messaging internal/handlers
+WORKER_GO_SRCS  := $(shell find $(WORKER_SRC_DIRS) -type f -name '*.go')
+WORKER_SRCS     := $(GO_SRCS) $(WORKER_GO_SRCS)
+./bin/worker: $(WORKER_SRCS)
+	make vet
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/worker ./cmd/worker
+
+.PHONY: controller
+controller: ./bin/controller
+
 .PHONY: storage
-storage: vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/storage ./cmd/storage 
+storage: ./bin/storage
 
 .PHONY: worker
-worker: vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/worker ./cmd/worker
+worker: ./bin/worker
 
 .PHONY: generate
 generate: generate-controller generate-storage generate-mocks
@@ -102,3 +142,9 @@ GOBIN=$(LOCALBIN) go install $${package} ;\
 mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
 }
 endef
+
+.PHONY: test-e2e
+test-e2e: controller storage worker
+	make TAG=e2e-test $(E2E_DEPS)
+	go test ./test/e2e/ -v
+
