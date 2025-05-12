@@ -1,0 +1,86 @@
+
+name: Build container image, sign it, and generate SBOMs
+
+on:
+  workflow_call:
+    outputs:
+      digest:
+        description: "Container image digest"
+        value: ${{jobs.build.outputs.digest}}
+
+  push:
+    branches:
+      - "main"
+      - "feat-**"
+
+
+jobs:
+  build:
+    name: Build container image
+    permissions:
+      packages: write
+      id-token: write # to mint the OIDC token for Sigstore signatures
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve tag name (main branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/main') }}
+        run: |
+          echo TAG_NAME=latest >> $GITHUB_ENV
+      - name: Retrieve tag name (feat branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
+        run: |
+          echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+      - name: Retrieve tag name (tag)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Build and push controller image
+        id: build-controller-image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        with:
+          context: .
+          file: ./Dockerfile.controller
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/sbombastic/controller:${{ env.TAG_NAME }}
+      - name: Build and push worker image
+        id: build-worker-image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        with:
+          context: .
+          file: ./Dockerfile.worker
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/sbombastic/worker:${{ env.TAG_NAME }}
+      - name: Build and push storage image
+        id: build-storage-image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        with:
+          context: .
+          file: ./Dockerfile.storage
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/sbombastic/storage:${{ env.TAG_NAME }}
