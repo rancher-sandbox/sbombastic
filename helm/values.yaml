@@ -16,7 +16,7 @@ storage:
     tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 1
-  logLevel: "debug"
+  # logLevel: "debug" //TODO: uncomment this, when the log parser in storage is implemented
 
 worker:
   image:
