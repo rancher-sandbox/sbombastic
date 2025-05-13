@@ -553,6 +553,14 @@ func (s *store) RequestWatchProgress(_ context.Context) error {
 	return nil
 }
 
+// GetCurrentResourceVersion gets the current resource version from etcd.
+// This method issues an empty list request and reads only the ResourceVersion from the object metadata
+//
+// TODO: this is a dummy implementation to satisfy the storage.Interface.
+func (s *store) GetCurrentResourceVersion(_ context.Context) (uint64, error) {
+	return 0, nil
+}
+
 // extractNameAndNamespace extracts the name and namespace from the key.
 // Used for single object operations.
 // Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>/<name>

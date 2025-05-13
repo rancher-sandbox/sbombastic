@@ -32,9 +32,12 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"k8s.io/apiserver/pkg/util/compatibility"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 	baseversion "k8s.io/component-base/version"
+
+	basecompatibility "k8s.io/component-base/compatibility"
 	netutils "k8s.io/utils/net"
 
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -45,10 +48,12 @@ import (
 
 // WardleServerOptions contains state for master/api server
 type WardleServerOptions struct {
-	RecommendedOptions    *genericoptions.RecommendedOptions
-	SharedInformerFactory informers.SharedInformerFactory
+	RecommendedOptions *genericoptions.RecommendedOptions
+	// ComponentGlobalsRegistry is the registry where the effective versions and feature gates for all components are stored.
+	ComponentGlobalsRegistry basecompatibility.ComponentGlobalsRegistry
 
-	AlternateDNS []string
+	SharedInformerFactory informers.SharedInformerFactory
+	AlternateDNS          []string
 
 	DB     *sqlx.DB
 	Logger *slog.Logger
@@ -58,7 +63,8 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 	if ver.Major() != 1 {
 		return nil
 	}
-	kubeVer := baseversion.DefaultKubeEffectiveVersion().BinaryVersion()
+	kubeVer := version.MustParse(baseversion.DefaultKubeBinaryVersion)
+
 	// "1.2" maps to kubeVer
 	minor := ver.Minor()
 	if minor > math.MaxInt32 {
@@ -80,8 +86,9 @@ func NewWardleServerOptions(db *sqlx.DB, logger *slog.Logger) *WardleServerOptio
 			"/registry/sbombastic.rancher.io",
 			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
 		),
-		DB:     db,
-		Logger: logger,
+		ComponentGlobalsRegistry: compatibility.DefaultComponentGlobalsRegistry,
+		DB:                       db,
+		Logger:                   logger,
 	}
 
 	// Disable etcd
@@ -101,7 +108,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 		Short: "Launch a wardle API server",
 		Long:  "Launch a wardle API server",
 		PersistentPreRunE: func(*cobra.Command, []string) error {
-			return featuregate.DefaultComponentGlobalsRegistry.Set()
+			return defaults.ComponentGlobalsRegistry.Set()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			if err := o.Complete(); err != nil {
@@ -137,25 +144,32 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 	// Register the "Wardle" component with the global component registry,
 	// associating it with its effective version and feature gate configuration.
 	// Will skip if the component has been registered, like in the integration test.
-	_, _ = featuregate.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
-		apiserver.WardleComponentName, baseversion.NewEffectiveVersion(defaultWardleVersion),
+	_, _ = defaults.ComponentGlobalsRegistry.ComponentGlobalsOrRegister(
+		apiserver.WardleComponentName, basecompatibility.NewEffectiveVersionFromString(defaultWardleVersion, "", ""),
 		featuregate.NewVersionedFeatureGate(version.MustParse(defaultWardleVersion)))
 
 	// Register the default kube component if not already present in the global registry.
-	_, _ = featuregate.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(featuregate.DefaultKubeComponent,
-		baseversion.NewEffectiveVersion(baseversion.DefaultKubeBinaryVersion), utilfeature.DefaultMutableFeatureGate)
+	_, _ = defaults.ComponentGlobalsRegistry.ComponentGlobalsOrRegister(
+		basecompatibility.DefaultKubeComponent,
+		basecompatibility.NewEffectiveVersionFromString(
+			baseversion.DefaultKubeBinaryVersion,
+			"",
+			"",
+		),
+		utilfeature.DefaultMutableFeatureGate,
+	)
 
 	// Set the emulation version mapping from the "Wardle" component to the kube component.
 	// This ensures that the emulation version of the latter is determined by the emulation version of the former.
 	utilruntime.Must(
-		featuregate.DefaultComponentGlobalsRegistry.SetEmulationVersionMapping(
+		defaults.ComponentGlobalsRegistry.SetEmulationVersionMapping(
 			apiserver.WardleComponentName,
-			featuregate.DefaultKubeComponent,
+			basecompatibility.DefaultKubeComponent,
 			WardleVersionToKubeVersion,
 		),
 	)
 
-	featuregate.DefaultComponentGlobalsRegistry.AddFlags(flags)
+	defaults.ComponentGlobalsRegistry.AddFlags(flags)
 
 	return cmd
 }
@@ -164,7 +178,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 func (o *WardleServerOptions) Validate(_ []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
-	errors = append(errors, featuregate.DefaultComponentGlobalsRegistry.Validate()...)
+	errors = append(errors, o.ComponentGlobalsRegistry.Validate()...)
 	return utilerrors.NewAggregate(errors)
 }
 
@@ -196,12 +210,8 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	serverConfig.OpenAPIV3Config.Info.Title = "Wardle"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
 
-	serverConfig.FeatureGate = featuregate.DefaultComponentGlobalsRegistry.FeatureGateFor(
-		featuregate.DefaultKubeComponent,
-	)
-	serverConfig.EffectiveVersion = featuregate.DefaultComponentGlobalsRegistry.EffectiveVersionFor(
-		apiserver.WardleComponentName,
-	)
+	serverConfig.FeatureGate = o.ComponentGlobalsRegistry.FeatureGateFor(basecompatibility.DefaultKubeComponent)
+	serverConfig.EffectiveVersion = o.ComponentGlobalsRegistry.EffectiveVersionFor(apiserver.WardleComponentName)
 
 	// As we don't have a real etcd, we need to set a dummy storage factory
 	serverConfig.RESTOptionsGetter = &genericoptions.StorageFactoryRestOptionsFactory{
