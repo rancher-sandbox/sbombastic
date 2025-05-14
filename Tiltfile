@@ -1,7 +1,7 @@
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
-# Setup a development registry so we can push images to it 
+# Setup a development registry so we can push images to it
 # and use them to test the scanner.
 k8s_yaml('./hack/registry.yaml')
 
@@ -75,7 +75,6 @@ local_resource(
         "go.sum",
         "cmd/storage",
         "api",
-        "internal/admission",
         "internal/apiserver",
         "internal/storage",
         "pkg"

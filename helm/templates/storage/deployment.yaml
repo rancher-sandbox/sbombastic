@@ -22,15 +22,20 @@ spec:
       containers:
         - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
-          {{- if .Values.storage.logLevel }}
           args:
+            - --cert-dir=/certs
+          {{- if .Values.storage.logLevel }}
             - -log-level={{ .Values.storage.logLevel }}
           {{- end }}
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}
           volumeMounts:
             - name: sqlite-pvc
               mountPath: /data/sqlite/
+            - name: cert-volume
+              mountPath: /certs
       volumes:
         - name: sqlite-pvc
           persistentVolumeClaim:
             claimName: {{ if .Values.persistence.storageData.existingClaim }}{{ .Values.persistence.storageData.existingClaim }}{{- else }}{{ template "sbombastic.fullname" . }}-storage-data{{- end }}
+        - name: cert-volume
+          emptyDir: {}

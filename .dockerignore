@@ -1,0 +1,6 @@
+bin/
+coverage/
+docs/
+examples/
+helm/
+test/
