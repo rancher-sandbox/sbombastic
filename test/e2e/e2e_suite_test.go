@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -15,14 +17,10 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	v1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
 )
 
-func EqualReference(img storagev1alpha1.ImageMetadata, registryURI, registryRepository, tag string) bool {
-	return img.RegistryURI == registryURI &&
-		img.Repository == registryRepository &&
-		img.Tag == tag
-}
-
+//nolint:gocognit // Test is complex due to multiple validation steps, acceptable for e2e
 func TestRegistryCreation(t *testing.T) {
 	releaseName := "sbombastic"
 	registryName := "test-registry"
@@ -105,6 +103,70 @@ func TestRegistryCreation(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+			return ctx
+		}).
+		Assess("Verify the OwnerReference deletion", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			// Get all the VulnerabilityReport/Image/SBOM associated with the Registry
+			labelSelector := labels.FormatLabels(
+				map[string]string{handlers.LabelManagedByKey: handlers.LabelManagedByValue},
+			)
+			images := storagev1alpha1.ImageList{}
+			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&images,
+				1,
+				resources.WithLabelSelector(labelSelector),
+			))
+			if err != nil {
+				t.Error(err)
+			}
+
+			sboms := storagev1alpha1.SBOMList{}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&sboms,
+				1,
+				resources.WithLabelSelector(labelSelector)),
+			)
+			if err != nil {
+				t.Error(err)
+			}
+
+			vulnReports := storagev1alpha1.VulnerabilityReportList{}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&vulnReports,
+				1,
+				resources.WithLabelSelector(labelSelector)),
+			)
+			if err != nil {
+				t.Error(err)
+			}
+
+			// Delete the Registry CR
+			registry := &v1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{Name: registryName, Namespace: cfg.Namespace()},
+			}
+			err = cfg.Client().Resources().Delete(ctx, registry)
+			if err != nil {
+				t.Error(err)
+			}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
+			if err != nil {
+				t.Error(err)
+			}
+
+			// Wait for the VulnerabilityReport/Image/SBOM to be deleted
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&images))
+			if err != nil {
+				t.Error(err)
+			}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&sboms))
+			if err != nil {
+				t.Error(err)
+			}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&vulnReports))
+			if err != nil {
+				t.Error(err)
+			}
+
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
