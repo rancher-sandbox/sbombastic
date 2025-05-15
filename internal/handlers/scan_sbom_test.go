@@ -21,9 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestScanSBOMHandler_Handle(t *testing.T) {
-	spdxPath := filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine.spdx.json")
-	spdxData, err := os.ReadFile(spdxPath)
+func scanSBOM(t *testing.T, sourceSBOMJSON, expectedReportJSON string) {
+	spdxData, err := os.ReadFile(sourceSBOMJSON)
 	require.NoError(t, err)
 
 	sbom := &storagev1alpha1.SBOM{
@@ -44,8 +43,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 		WithRuntimeObjects(sbom).
 		Build()
 
-	reportPath := filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine.sarif.json")
-	reportData, err := os.ReadFile(reportPath)
+	reportData, err := os.ReadFile(expectedReportJSON)
 	require.NoError(t, err)
 
 	expectedReport := &sarif.Report{}
@@ -88,4 +86,52 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 	diff := cmp.Diff(expectedReport, report, filter)
 
 	assert.Empty(t, diff)
+}
+
+func TestScanSBOMHandler_Handle(t *testing.T) {
+	for _, test := range []struct {
+		platform           string
+		sourceSBOMJSON     string
+		expectedReportJSON string
+	}{
+		{
+			platform:           "linux/amd64",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sarif.json"),
+		},
+		{
+			platform:           "linux/arm/v6",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v6.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v6.sarif.json"),
+		},
+		{
+			platform:           "linux/arm/v7",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v7.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v7.sarif.json"),
+		},
+		{
+			platform:           "linux/arm64/v8",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm64-v8.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm64-v8.sarif.json"),
+		},
+		{
+			platform:           "linux/386",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-386.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-386.sarif.json"),
+		},
+		{
+			platform:           "linux/ppc64le",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-ppc64le.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-ppc64le.sarif.json"),
+		},
+		{
+			platform:           "linux/s390x",
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.sarif.json"),
+		},
+	} {
+		t.Run(test.platform, func(t *testing.T) {
+			scanSBOM(t, test.sourceSBOMJSON, test.expectedReportJSON)
+		})
+	}
 }
