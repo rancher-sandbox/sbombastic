@@ -95,10 +95,10 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
 		"--output", sbomFile.Name(),
 		fmt.Sprintf(
-			"%s/%s:%s",
+			"%s/%s@%s",
 			image.GetImageMetadata().RegistryURI,
 			image.GetImageMetadata().Repository,
-			image.GetImageMetadata().Tag,
+			image.GetImageMetadata().Digest,
 		),
 	})
 
