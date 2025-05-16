@@ -20,12 +20,6 @@ import (
 	"github.com/rancher/sbombastic/internal/handlers"
 )
 
-func EqualReference(img storagev1alpha1.ImageMetadata, registryURI, registryRepository, tag string) bool {
-	return img.RegistryURI == registryURI &&
-		img.Repository == registryRepository &&
-		img.Tag == tag
-}
-
 func TestRegistryCreation(t *testing.T) {
 	releaseName := "sbombastic"
 	registryName := "test-registry"
@@ -81,9 +75,7 @@ func TestRegistryCreation(t *testing.T) {
 				totalImages,
 				resources.WithLabelSelector(labelSelector)),
 			)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			return ctx
 		}).
@@ -94,9 +86,7 @@ func TestRegistryCreation(t *testing.T) {
 				totalImages,
 				resources.WithLabelSelector(labelSelector)),
 			)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			return ctx
 		}).
@@ -107,9 +97,7 @@ func TestRegistryCreation(t *testing.T) {
 				totalImages,
 				resources.WithLabelSelector(labelSelector)),
 			)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			return ctx
 		}).
