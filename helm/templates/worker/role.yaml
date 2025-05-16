@@ -28,6 +28,7 @@ rules:
       - sbombastic.rancher.io
     resources:
       - registries/status
+      - registrydiscoveries/status
     verbs:
       - get
       - patch

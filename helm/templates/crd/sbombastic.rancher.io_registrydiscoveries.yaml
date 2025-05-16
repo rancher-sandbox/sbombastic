@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: registries.sbombastic.rancher.io
+  name: registrydiscoveries.sbombastic.rancher.io
 spec:
   group: sbombastic.rancher.io
   names:
-    kind: Registry
-    listKind: RegistryList
-    plural: registries
-    singular: registry
+    kind: RegistryDiscovery
+    listKind: RegistryDiscoveryList
+    plural: registrydiscoveries
+    singular: registrydiscovery
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Registry is the Schema for the registries API.
+        description: RegistryDiscovery is the Schema for the registrydiscoveries API.
         properties:
           apiVersion:
             description: |-
@@ -37,88 +37,102 @@ spec:
           metadata:
             type: object
           spec:
-            description: RegistrySpec defines the desired state of Registry.
+            description: RegistryDiscoverySpec defines the desired state of RegistryDiscovery.
             properties:
-              authSecret:
-                description: AuthSecret is the name of the secret in the same namespace
-                  that contains the credentials to access the registry.
+              registry:
+                description: registry name in the same namespace
                 type: string
-              caBundle:
-                description: CABundle is the CA bundle to use when connecting to the
-                  registry.
-                type: string
-              discoveryJob:
-                description: DiscoveryJob is the configurations for scheduled discovery
+              registrySpec:
+                description: registry spec
                 properties:
-                  cron:
-                    description: cron in numeric format. see https://en.wikipedia.org/wiki/Cron
+                  authSecret:
+                    description: AuthSecret is the name of the secret in the same
+                      namespace that contains the credentials to access the registry.
+                    type: string
+                  caBundle:
+                    description: CABundle is the CA bundle to use when connecting
+                      to the registry.
+                    type: string
+                  discoveryJob:
+                    description: DiscoveryJob is the configurations for scheduled
+                      discovery
                     properties:
-                      dayOfMonth:
-                        description: 1~31
-                        maximum: 31
-                        minimum: 1
-                        type: integer
-                      dayOfWeek:
-                        description: '0~6: Sunday to Saturday'
-                        maximum: 6
+                      cron:
+                        description: cron in numeric format. see https://en.wikipedia.org/wiki/Cron
+                        properties:
+                          dayOfMonth:
+                            description: 1~31
+                            maximum: 31
+                            minimum: 1
+                            type: integer
+                          dayOfWeek:
+                            description: '0~6: Sunday to Saturday'
+                            maximum: 6
+                            minimum: 0
+                            type: integer
+                          hour:
+                            description: 0~23
+                            maximum: 23
+                            minimum: 0
+                            type: integer
+                          month:
+                            description: 1~12
+                            maximum: 12
+                            minimum: 1
+                            type: integer
+                        type: object
+                      failedJobsHistoryLimit:
+                        default: 1
+                        description: number of RegistryDiscovery objects with failed
+                          state to keep
+                        maximum: 2
                         minimum: 0
                         type: integer
-                      hour:
-                        description: 0~23
-                        maximum: 23
+                      successfulJobsHistoryLimit:
+                        default: 1
+                        description: number of RegistryDiscovery objects with successful
+                          state to keep
+                        maximum: 2
                         minimum: 0
                         type: integer
-                      month:
-                        description: 1~12
-                        maximum: 12
-                        minimum: 1
-                        type: integer
+                      suspend:
+                        description: Suspend scheduled discovery
+                        type: boolean
+                    required:
+                    - cron
+                    - failedJobsHistoryLimit
+                    - successfulJobsHistoryLimit
+                    - suspend
                     type: object
-                  failedJobsHistoryLimit:
-                    default: 1
-                    description: number of RegistryDiscovery objects with failed state
-                      to keep
-                    maximum: 2
-                    minimum: 0
-                    type: integer
-                  successfulJobsHistoryLimit:
-                    default: 1
-                    description: number of RegistryDiscovery objects with successful
-                      state to keep
-                    maximum: 2
-                    minimum: 0
-                    type: integer
-                  suspend:
-                    description: Suspend scheduled discovery
+                  insecure:
+                    description: Insecure allows insecure connections to the registry
+                      when set to true.
                     type: boolean
+                  repositories:
+                    description: |-
+                      Repositories is the list of the repositories to be scanned
+                      An empty list means all the repositories found in the registry are going to be scanned
+                    items:
+                      type: string
+                    type: array
+                  uri:
+                    description: URI is the URI of the container registry
+                    minLength: 1
+                    type: string
                 required:
-                - cron
-                - failedJobsHistoryLimit
-                - successfulJobsHistoryLimit
-                - suspend
+                - discoveryJob
+                - uri
                 type: object
-              insecure:
-                description: Insecure allows insecure connections to the registry
-                  when set to true.
-                type: boolean
-              repositories:
-                description: |-
-                  Repositories is the list of the repositories to be scanned
-                  An empty list means all the repositories found in the registry are going to be scanned
-                items:
-                  type: string
-                type: array
-              uri:
-                description: URI is the URI of the container registry
-                minLength: 1
-                type: string
             required:
-            - discoveryJob
-            - uri
+            - registry
+            - registrySpec
             type: object
           status:
-            description: RegistryStatus defines the observed state of Registry.
+            description: RegistryDiscoveryStatus defines the observed state of RegistryDiscovery.
             properties:
+              canceled:
+                description: registry discovery is canceled
+                type: boolean
               conditions:
                 items:
                   description: Condition contains details for one aspect of the current
@@ -175,6 +189,15 @@ spec:
                   - type
                   type: object
                 type: array
+              currentStatus:
+                description: current status of the registry discovery
+                type: string
+              finishedAt:
+                description: timestamp of the stop handling time
+                type: string
+              startedAt:
+                description: timestamp of the start handling time
+                type: string
             type: object
         type: object
     served: true
