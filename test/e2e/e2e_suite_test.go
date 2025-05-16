@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -15,6 +17,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	v1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
 )
 
 func EqualReference(img storagev1alpha1.ImageMetadata, registryURI, registryRepository, tag string) bool {
@@ -28,8 +31,11 @@ func TestRegistryCreation(t *testing.T) {
 	registryName := "test-registry"
 	registryURI := "ghcr.io"
 	registryRepository := "rancher-sandbox/sbombastic/test-assets/golang"
+	totalImages := 7 // Current number of images in the test-assets/golang directory
 
-	crName := "dfe56d8371e7df15a3dde25c33a78b84b79766de2ab5a5897032019c878b5932"
+	labelSelector := labels.FormatLabels(
+		map[string]string{handlers.LabelManagedByKey: handlers.LabelManagedByValue},
+	)
 
 	f := features.New("Start Registry CR Creation test").
 		Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -69,42 +75,42 @@ func TestRegistryCreation(t *testing.T) {
 			return ctx
 		}).
 		Assess("Verify the Image is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			images := storagev1alpha1.ImageList{
-				Items: []storagev1alpha1.Image{
-					{ObjectMeta: metav1.ObjectMeta{Name: crName, Namespace: cfg.Namespace()}},
-				},
-			}
-
-			err := wait.For(conditions.New(cfg.Client().Resources()).ResourcesFound(&images))
+			images := storagev1alpha1.ImageList{}
+			err := wait.For(conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceListN(
+				&images,
+				totalImages,
+				resources.WithLabelSelector(labelSelector)),
+			)
 			if err != nil {
 				t.Error(err)
 			}
+
 			return ctx
 		}).
 		Assess("Verify the SPDX SBOM is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			sboms := storagev1alpha1.SBOMList{
-				Items: []storagev1alpha1.SBOM{
-					{ObjectMeta: metav1.ObjectMeta{Name: crName, Namespace: cfg.Namespace()}},
-				},
-			}
-
-			err := wait.For(conditions.New(cfg.Client().Resources()).ResourcesFound(&sboms))
+			sboms := storagev1alpha1.SBOMList{}
+			err := wait.For(conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceListN(
+				&sboms,
+				totalImages,
+				resources.WithLabelSelector(labelSelector)),
+			)
 			if err != nil {
 				t.Error(err)
 			}
+
 			return ctx
 		}).
 		Assess("Verify the VulnerabilityReport is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			vulnReports := storagev1alpha1.VulnerabilityReportList{
-				Items: []storagev1alpha1.VulnerabilityReport{
-					{ObjectMeta: metav1.ObjectMeta{Name: crName, Namespace: cfg.Namespace()}},
-				},
-			}
-
-			err := wait.For(conditions.New(cfg.Client().Resources()).ResourcesFound(&vulnReports))
+			vulnReports := storagev1alpha1.VulnerabilityReportList{}
+			err := wait.For(conditions.New(cfg.Client().Resources(cfg.Namespace())).ResourceListN(
+				&vulnReports,
+				totalImages,
+				resources.WithLabelSelector(labelSelector)),
+			)
 			if err != nil {
 				t.Error(err)
 			}
+
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {

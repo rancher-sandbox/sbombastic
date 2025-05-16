@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func scanSBOM(t *testing.T, sourceSBOMJSON, expectedReportJSON string) {
+func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string) {
 	spdxData, err := os.ReadFile(sourceSBOMJSON)
 	require.NoError(t, err)
 
@@ -85,7 +85,7 @@ func scanSBOM(t *testing.T, sourceSBOMJSON, expectedReportJSON string) {
 	}))
 	diff := cmp.Diff(expectedReport, report, filter)
 
-	assert.Empty(t, diff)
+	assert.Empty(t, diff, "diff mismatch on platform %s\nDiff:\n%s", platform, diff)
 }
 
 func TestScanSBOMHandler_Handle(t *testing.T) {
@@ -131,7 +131,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 		},
 	} {
 		t.Run(test.platform, func(t *testing.T) {
-			scanSBOM(t, test.sourceSBOMJSON, test.expectedReportJSON)
+			scanSBOM(t, test.platform, test.sourceSBOMJSON, test.expectedReportJSON)
 		})
 	}
 }

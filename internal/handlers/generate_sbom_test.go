@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -86,7 +85,7 @@ func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	}, cmp.Ignore())
 	diff := cmp.Diff(expectedSPDX, generatedSPDX, filter, cmpopts.IgnoreUnexported(spdx.Package{}))
 
-	assert.Empty(t, diff)
+	assert.Empty(t, diff, "SPDX diff mismatch on platform %s\nDiff:\n%s", platform, diff)
 }
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
@@ -131,7 +130,7 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 			expectedSPDXJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.spdx.json"),
 		},
 	} {
-		t.Run(fmt.Sprintf("%s_%s", test.platform, test.sha256), func(t *testing.T) {
+		t.Run(test.platform, func(t *testing.T) {
 			generateSBOM(t, test.platform, test.sha256, test.expectedSPDXJSON)
 		})
 	}
