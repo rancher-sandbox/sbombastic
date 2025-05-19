@@ -23,7 +23,7 @@ import (
 
 func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string) {
 	spdxData, err := os.ReadFile(sourceSBOMJSON)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to read source SBOM file %s", sourceSBOMJSON)
 
 	sbom := &storagev1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,11 +44,11 @@ func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string)
 		Build()
 
 	reportData, err := os.ReadFile(expectedReportJSON)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to read expected report file %s", expectedReportJSON)
 
 	expectedReport := &sarif.Report{}
 	err = json.Unmarshal(reportData, expectedReport)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to unmarshal expected report file %s", expectedReportJSON)
 
 	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
@@ -56,21 +56,21 @@ func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string)
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
 	err = k8sClient.Get(t.Context(), client.ObjectKey{
 		Name:      sbom.Name,
 		Namespace: sbom.Namespace,
 	}, vulnerabilityReport)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to get vulnerability report, with platform %s", platform)
 
 	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
 	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
 
 	report := &sarif.Report{}
 	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to unmarshal vulnerability report, with platform %s", platform)
 
 	// Filter out fields containing the file path from the comparison
 	filter := cmp.FilterPath(func(path cmp.Path) bool {

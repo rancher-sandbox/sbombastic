@@ -49,11 +49,11 @@ func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		Build()
 
 	spdxData, err := os.ReadFile(expectedSPDXJSON)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to read expected SPDX JSON file %s", expectedSPDXJSON)
 
 	expectedSPDX := &spdx.Document{}
 	err = json.Unmarshal(spdxData, expectedSPDX)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to unmarshal expected SPDX JSON file %s", expectedSPDXJSON)
 
 	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
@@ -61,21 +61,21 @@ func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		ImageName:      image.Name,
 		ImageNamespace: image.Namespace,
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
 
 	sbom := &storagev1alpha1.SBOM{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{
 		Name:      image.Name,
 		Namespace: image.Namespace,
 	}, sbom)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to get SBOM, with platform %s", platform)
 
 	assert.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
 	assert.Equal(t, image.UID, sbom.GetOwnerReferences()[0].UID)
 
 	generatedSPDX := &spdx.Document{}
 	err = json.Unmarshal(sbom.Spec.SPDX.Raw, generatedSPDX)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to unmarshal generated SPDX, with platform %s", platform)
 
 	// Filter out "DocumentNamespace" and any field named "AnnotationDate" or "Created" regardless of nesting,
 	// since they contain timestamps and are not deterministic.
