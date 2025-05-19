@@ -42,6 +42,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	db.SetMaxOpenConns(1)
 	db.MustExec(storage.CreateImageTableSQL)
 	db.MustExec(storage.CreateSBOMTableSQL)
 	db.MustExec(storage.CreateVulnerabilityReportTableSQL)
