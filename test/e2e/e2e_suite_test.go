@@ -133,15 +133,15 @@ func TestRegistryCreation(t *testing.T) {
 			}
 			err = cfg.Client().Resources().Delete(ctx, registry)
 			require.NoError(t, err)
-			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
-			require.NoError(t, err)
 
-			// Wait for the VulnerabilityReport/Image/SBOM to be deleted
-			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&images))
+			// Wait for the deletion, with order: VulnerabilityReport/Image/SBOM/Registry
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&vulnReports))
 			require.NoError(t, err)
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&sboms))
 			require.NoError(t, err)
-			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&vulnReports))
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&images))
+			require.NoError(t, err)
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
 			require.NoError(t, err)
 
 			return ctx
