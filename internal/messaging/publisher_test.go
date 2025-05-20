@@ -11,7 +11,8 @@ import (
 )
 
 func TestPublisher_Publish(t *testing.T) {
-	ns, err := NewServer()
+	tmpDir := t.TempDir()
+	ns, err := NewServer(tmpDir)
 	require.NoError(t, err)
 	defer ns.Shutdown()
 

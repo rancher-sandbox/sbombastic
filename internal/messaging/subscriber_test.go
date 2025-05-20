@@ -25,7 +25,9 @@ func (h *testHandler) NewMessage() Message {
 }
 
 func TestSubscriber_Run(t *testing.T) {
-	ns, err := NewServer()
+	tmpDir := t.TempDir()
+
+	ns, err := NewServer(tmpDir)
 	require.NoError(t, err)
 	defer ns.Shutdown()
 

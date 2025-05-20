@@ -100,7 +100,8 @@ func main() {
 	ctrl.SetLogger(logger)
 	setupLog := logger.WithName("setup")
 
-	ns, err := messaging.NewServer()
+	natsStorageDir := "/data/nats"
+	ns, err := messaging.NewServer(natsStorageDir)
 	if err != nil {
 		setupLog.Error(err, "unable to start NATS server")
 		os.Exit(1)

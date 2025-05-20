@@ -10,9 +10,10 @@ import (
 
 const sbombasticSubject = "sbombastic"
 
-func NewServer() (*server.Server, error) {
+func NewServer(storeDir string) (*server.Server, error) {
 	opts := &server.Options{
 		JetStream: true,
+		StoreDir:  storeDir,
 	}
 
 	ns, err := server.NewServer(opts)
