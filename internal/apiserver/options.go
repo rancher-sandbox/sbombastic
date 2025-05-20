@@ -23,7 +23,3 @@ func (o *RestOptionsGetter) GetRESTOptions(
 		ResourcePrefix:          fmt.Sprintf("/%s/%s", resource.Group, resource.Resource),
 	}, nil
 }
-
-func GetRESTOptionsGetter() *RestOptionsGetter {
-	return &RestOptionsGetter{}
-}

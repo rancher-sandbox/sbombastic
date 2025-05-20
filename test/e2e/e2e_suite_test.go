@@ -103,65 +103,46 @@ func TestRegistryCreation(t *testing.T) {
 		}).
 		Assess("Verify the OwnerReference deletion", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			// Get all the VulnerabilityReport/Image/SBOM associated with the Registry
-			labelSelector := labels.FormatLabels(
-				map[string]string{handlers.LabelManagedByKey: handlers.LabelManagedByValue},
-			)
 			images := storagev1alpha1.ImageList{}
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
 				&images,
-				1,
+				totalImages,
 				resources.WithLabelSelector(labelSelector),
 			))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			sboms := storagev1alpha1.SBOMList{}
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
 				&sboms,
-				1,
+				totalImages,
 				resources.WithLabelSelector(labelSelector)),
 			)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			vulnReports := storagev1alpha1.VulnerabilityReportList{}
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
 				&vulnReports,
-				1,
+				totalImages,
 				resources.WithLabelSelector(labelSelector)),
 			)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			// Delete the Registry CR
 			registry := &v1alpha1.Registry{
 				ObjectMeta: metav1.ObjectMeta{Name: registryName, Namespace: cfg.Namespace()},
 			}
 			err = cfg.Client().Resources().Delete(ctx, registry)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			// Wait for the VulnerabilityReport/Image/SBOM to be deleted
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&images))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&sboms))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&vulnReports))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			return ctx
 		}).

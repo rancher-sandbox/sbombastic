@@ -214,9 +214,7 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	serverConfig.EffectiveVersion = o.ComponentGlobalsRegistry.EffectiveVersionFor(apiserver.WardleComponentName)
 
 	// As we don't have a real etcd, we need to set a dummy storage factory
-	serverConfig.RESTOptionsGetter = &genericoptions.StorageFactoryRestOptionsFactory{
-		StorageFactory: &genericoptions.SimpleStorageFactory{},
-	}
+	serverConfig.RESTOptionsGetter = &apiserver.RestOptionsGetter{}
 
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, fmt.Errorf("error applying options to server config: %w", err)

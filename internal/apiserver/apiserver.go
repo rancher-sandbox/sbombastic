@@ -110,18 +110,17 @@ func (c completedConfig) New(db *sqlx.DB, logger *slog.Logger) (*WardleServer, e
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(v1alpha1.GroupName, Scheme, metav1.ParameterCodec, Codecs)
 
-	restOptionsGetter := GetRESTOptionsGetter()
-	imageStore, err := storage.NewImageStore(Scheme, restOptionsGetter, db, logger)
+	imageStore, err := storage.NewImageStore(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Image store: %w", err)
 	}
-	sbomStore, err := storage.NewSBOMStore(Scheme, restOptionsGetter, db, logger)
+	sbomStore, err := storage.NewSBOMStore(Scheme, c.GenericConfig.RESTOptionsGetter, db, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error creating SBOM store: %w", err)
 	}
 	vulnerabilityReportStore, err := storage.NewVulnerabilityReport(
 		Scheme,
-		restOptionsGetter,
+		c.GenericConfig.RESTOptionsGetter,
 		db,
 		logger,
 	)
