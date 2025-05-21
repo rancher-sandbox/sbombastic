@@ -101,6 +101,51 @@ func TestRegistryCreation(t *testing.T) {
 
 			return ctx
 		}).
+		Assess("Verify the OwnerReference deletion", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			// Get all the VulnerabilityReport/Image/SBOM associated with the Registry
+			images := storagev1alpha1.ImageList{}
+			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&images,
+				totalImages,
+				resources.WithLabelSelector(labelSelector),
+			))
+			require.NoError(t, err)
+
+			sboms := storagev1alpha1.SBOMList{}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&sboms,
+				totalImages,
+				resources.WithLabelSelector(labelSelector)),
+			)
+			require.NoError(t, err)
+
+			vulnReports := storagev1alpha1.VulnerabilityReportList{}
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceListN(
+				&vulnReports,
+				totalImages,
+				resources.WithLabelSelector(labelSelector)),
+			)
+			require.NoError(t, err)
+
+			// Delete the Registry CR
+			registry := &v1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{Name: registryName, Namespace: cfg.Namespace()},
+			}
+			err = cfg.Client().Resources().Delete(ctx, registry)
+			require.NoError(t, err)
+
+			// Wait for the deletion, with order: VulnerabilityReport/Image/SBOM/Registry
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&vulnReports))
+			require.NoError(t, err)
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&sboms))
+			require.NoError(t, err)
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesDeleted(&images))
+			require.NoError(t, err)
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
+			require.NoError(t, err)
+
+			return ctx
+		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			manager := helm.New(cfg.KubeconfigFile())
 			err := manager.RunUninstall(

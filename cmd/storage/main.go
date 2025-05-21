@@ -42,7 +42,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(1) // Avoid connection pool issues
 	db.MustExec(storage.CreateImageTableSQL)
 	db.MustExec(storage.CreateSBOMTableSQL)
 	db.MustExec(storage.CreateVulnerabilityReportTableSQL)
