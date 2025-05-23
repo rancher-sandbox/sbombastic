@@ -23,6 +23,8 @@ spec:
         - name: worker
           image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          securityContext:
+            {{ include "sbombastic.securityContext" . | nindent 12 }}
           args:
             - -nats-url
             - {{ .Release.Name }}-controller-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
@@ -32,6 +34,10 @@ spec:
           volumeMounts:
             - mountPath: /var/run/worker
               name: run-volume
+            - mountPath: /tmp
+              name: tmp-dir
       volumes:
         - name: run-volume
+          emptyDir: {}
+        - name: tmp-dir
           emptyDir: {}

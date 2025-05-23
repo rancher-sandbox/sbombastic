@@ -61,3 +61,18 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Security Contexts
+*/}}
+{{- define "sbombastic.securityContext" -}}
+readOnlyRootFilesystem: true
+runAsNonRoot: true
+runAsUser: 65532
+seccompProfile:
+    type: RuntimeDefault
+allowPrivilegeEscalation: false
+capabilities:
+    drop:
+    - "ALL"
+{{- end}}

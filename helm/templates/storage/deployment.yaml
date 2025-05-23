@@ -22,6 +22,8 @@ spec:
       containers:
         - name: storage
           image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
+          securityContext:
+            {{ include "sbombastic.securityContext" . | nindent 12 }}
           args:
             - --cert-dir=/certs
           {{- if .Values.storage.logLevel }}

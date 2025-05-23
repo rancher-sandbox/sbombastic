@@ -27,7 +27,10 @@ func TestMain(m *testing.M) {
 
 	testenv.Setup(
 		envfuncs.CreateCluster(kind.NewProvider(), kindClusterName),
-		envfuncs.CreateNamespace(namespace),
+		envfuncs.CreateNamespace(namespace, envfuncs.WithLabels(map[string]string{
+			"pod-security.kubernetes.io/enforce":         "restricted",
+			"pod-security.kubernetes.io/enforce-version": "latest",
+		})),
 		envfuncs.LoadImageToCluster(kindClusterName, workerImage, "--verbose", "--mode", "direct"),
 		envfuncs.LoadImageToCluster(kindClusterName, controllerImage, "--verbose", "--mode", "direct"),
 		envfuncs.LoadImageToCluster(kindClusterName, storageImage, "--verbose", "--mode", "direct"),
