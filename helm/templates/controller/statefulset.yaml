@@ -32,10 +32,7 @@ spec:
           imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
           name: controller
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - "ALL"
+            {{ include "sbombastic.securityContext" . | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -55,6 +52,12 @@ spec:
             requests:
               cpu: 10m
               memory: 64Mi
+          volumeMounts:
+            - name: nats-data
+              mountPath: /data/nats
+      volumes:
+        - name: nats-data
+          emptyDir: {}
       serviceAccountName: {{ include "sbombastic.fullname" . }}-controller
       terminationGracePeriodSeconds: 10
 
