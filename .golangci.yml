@@ -21,7 +21,7 @@ issues:
 formatters:
   enable:
     - goimports # checks if the code and import statements are formatted according to the 'goimports' command
-    - golines # checks if code is formatted, and fixes long lines
+    # - golines # checks if code is formatted, and fixes long lines
 
     ## you may want to enable
     #- gci # checks if code and import statements are formatted, with additional rules
@@ -116,7 +116,7 @@ linters:
     ## you may want to enable
     #- decorder # checks declaration order and count of types, constants, variables and functions
     #- exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
-    #- ginkgolinter # [if you use ginkgo/gomega] enforces standards of using ginkgo and gomega
+    - ginkgolinter # [if you use ginkgo/gomega] enforces standards of using ginkgo and gomega
     #- godox # detects usage of FIXME, TODO and other keywords inside comments
     #- goheader # checks is file header matches to pattern
     #- inamedparam # [great idea, but too strict, need to ignore a lot of cases by default] reports interfaces with unnamed method parameters
@@ -125,7 +125,7 @@ linters:
     #- prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
     #- tagalign # checks that struct tags are well aligned
     #- varnamelen # [great idea, but too many false positives] checks that the length of a variable's name matches its scope
-    #- wrapcheck # checks that errors returned from external packages are wrapped
+    - wrapcheck # checks that errors returned from external packages are wrapped
     #- zerologlint # detects the wrong usage of zerolog that a user forgets to dispatch zerolog.Event
 
     ## disabled
@@ -333,7 +333,7 @@ linters:
         shadow:
           # Whether to be strict about shadowing; can be noisy.
           # Default: false
-          strict: true
+          strict: false
 
     inamedparam:
       # Skips check for interface methods with only a single parameter.
