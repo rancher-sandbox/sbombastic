@@ -133,4 +133,7 @@ docker_build_with_restart(
     live_update=[
         sync("./bin/worker", "/worker"),
     ],
+    # We need to change the default restart file, since the /tmp directory is an emptyDir volumeMount in this Pod
+    # and tilt doesn't seem to be able to work with it.
+    restart_file="/.restart-proc"
 )
