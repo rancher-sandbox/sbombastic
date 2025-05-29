@@ -51,6 +51,7 @@ type Config struct {
 	EnableLeaderElection bool
 	SecureMetrics        bool
 	EnableHTTP2          bool
+	NatsURL              string
 	LogLevel             string
 }
 
@@ -66,6 +67,7 @@ func parseFlags() Config {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&cfg.NatsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
 	flag.StringVar(&cfg.LogLevel, "log-level", slog.LevelInfo.String(), "Log level")
 	flag.Parse()
 	return cfg
@@ -100,14 +102,7 @@ func main() {
 	ctrl.SetLogger(logger)
 	setupLog := logger.WithName("setup")
 
-	natsStorageDir := "/data/nats"
-	ns, err := messaging.NewServer(natsStorageDir)
-	if err != nil {
-		setupLog.Error(err, "unable to start NATS server")
-		os.Exit(1)
-	}
-
-	js, err := messaging.NewJetStreamContext(ns)
+	js, err := messaging.NewJetStreamContext(cfg.NatsURL)
 	if err != nil {
 		setupLog.Error(err, "unable to create JetStream context")
 		os.Exit(1)
