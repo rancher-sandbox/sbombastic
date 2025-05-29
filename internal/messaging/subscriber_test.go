@@ -27,11 +27,11 @@ func (h *testHandler) NewMessage() Message {
 func TestSubscriber_Run(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	ns, err := NewServer(tmpDir)
+	ns, err := newEmbeddedTestServer(tmpDir)
 	require.NoError(t, err)
 	defer ns.Shutdown()
 
-	js, err := NewJetStreamContext(ns)
+	js, err := NewJetStreamContext(ns.ClientURL())
 	require.NoError(t, err)
 
 	err = AddStream(js, nats.MemoryStorage)
