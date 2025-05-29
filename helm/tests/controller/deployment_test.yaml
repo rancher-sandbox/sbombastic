@@ -1,9 +1,8 @@
-suite: "Controller StatefulSet Tests"
+suite: "Controller Deployment Tests"
 templates:
-  - "templates/controller/statefulset.yaml"
-
+  - "templates/controller/deployment.yaml"
 tests:
-  - it: "should render a StatefulSet with the correct replica count, logging level, image, and imagePullPolicy"
+  - it: "should render a Deployment with the correct replica count, logging level, image, and imagePullPolicy"
     set:
       controller:
         replicas: 5
