@@ -6,3 +6,6 @@ bin
 
 # Tilt settings
 tilt-settings.yaml
+
+# e2e cluster logs
+test/e2e/logs
