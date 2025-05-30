@@ -27,7 +27,7 @@ spec:
             {{ include "sbombastic.securityContext" . | nindent 12 }}
           args:
             - -nats-url
-            - {{ .Release.Name }}-controller-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
+            - {{ .Release.Name }}-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
             {{- if .Values.worker.logLevel }}
             - -log-level={{ .Values.worker.logLevel }}
             {{- end }}

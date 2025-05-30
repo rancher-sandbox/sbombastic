@@ -26,6 +26,39 @@ worker:
   replicas: 3
   logLevel: "info"
 
+nats:
+  config:
+    cluster:
+      enabled: true
+    jetstream:
+      enabled: true
+  natsBox:
+    enabled: false
+  container:
+    merge:
+      securityContext:
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+            type: RuntimeDefault
+        allowPrivilegeEscalation: false
+        capabilities:
+            drop:
+            - "ALL"
+  reloader:
+    merge:
+      securityContext:
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+            type: RuntimeDefault
+        allowPrivilegeEscalation: false
+        capabilities:
+            drop:
+            - "ALL"
+
 persistence:
   enabled: true
 
