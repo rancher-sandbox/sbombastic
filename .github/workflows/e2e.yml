@@ -13,3 +13,11 @@ jobs:
         with:
           go-version: "1.24.1"
       - run: make test-e2e
+      - name: Upload cluster logs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-test-cluster-logs
+          path: test/e2e/logs
+          if-no-files-found: error
+          retention-days: 7
