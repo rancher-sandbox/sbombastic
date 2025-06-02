@@ -7,7 +7,7 @@ on:
 
 jobs:
     call-build:
-        uses: ./.github/workflows/build-image.yaml
+        uses: ./.github/workflows/container-build.yaml
         with:
           version: ${{ github.ref_name }}
         secrets: inherit
