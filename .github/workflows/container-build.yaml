@@ -2,6 +2,10 @@ name: Build container image, sign it, and generate SBOMs
 
 on:
   workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
     outputs:
       digest:
         description: "Container image digest"
