@@ -1,0 +1,30 @@
+name: Create a new release for SBOMbastic stack
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+    call-build:
+        uses: ./.github/workflows/build-image.yaml
+        with:
+          version: ${{ github.ref_name }}
+        secrets: inherit
+
+
+#   call-helm-update:
+#     needs: call-build/
+#     uses: ./.github/workflows/update-helm.yaml
+#     with:
+#       version: ${{ github.ref_name }}
+
+#   create-release:
+#     needs: [call-build, call-helm-update]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Create GitHub Release
+#         uses: softprops/action-gh-release@v1
+#         with:
+#           tag_name: ${{ github.ref_name }}
+#           name: Release ${{ github.ref_name }}
