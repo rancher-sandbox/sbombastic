@@ -12,8 +12,6 @@ jobs:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: "1.24.1"
-      - name: Run e2e tests
-        run: make test-e2e
       - name: Free up disk space
         # This is a workaround to avoud the "no space left on device" error when pulling the vulbanrability database.
         # We should move to self-hosted runners or enterprise runners to avoid this issue.
@@ -41,6 +39,8 @@ jobs:
           sudo apt-get clean || echo "::warning::The command [sudo apt-get clean] failed to complete successfully. Proceeding..."
           # Remove docker images
           sudo docker image prune --all --force || true
+      - name: Run e2e tests
+        run: make test-e2e
       - name: Upload cluster logs
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
