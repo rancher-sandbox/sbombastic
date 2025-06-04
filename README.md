@@ -64,3 +64,4 @@ make generate
 # Credits
 
 The storage API server is based on the [Kubernetes sample-apiserver](https://github.com/kubernetes/sample-apiserver) project.
+# cleanup
