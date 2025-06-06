@@ -1,0 +1,99 @@
+name: Build, Sign, and Generate SBOM, Attestation & Provenance
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+      component:
+        type: string
+        description: "SBOMbastic component"
+        required: true
+      arch:
+        type: string
+        description: "Architecture"
+        required: true
+  push:
+    branches:
+      - "main"
+jobs:
+  build-latest:
+    if: ${{ startsWith(github.ref, 'refs/heads/main') }}
+    strategy:
+      matrix:
+        component: [controller, worker, storage]
+        arch: [amd64]
+    permissions:
+      packages: write
+      id-token: write # to mint the OIDC token for Sigstore signatures
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-22.04-arm64' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve tag name (main branch)
+        run: |
+          echo TAG_NAME=latest >> $GITHUB_ENV
+      - name: Build and push ${{ matrix.component }} for ${{ matrix.arch }}
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.${{ matrix.component }}
+          platforms: linux/${{ matrix.arch }}
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}:${{ env.TAG_NAME }}
+  build:
+    if: ${{ inputs.version }}
+    permissions:
+      packages: write
+      id-token: write # to mint the OIDC token for Sigstore signatures
+    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-22.04-arm64' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve tag name (relaese)
+        run: |
+          echo TAG_NAME=${{ inputs.version }} >> $GITHUB_ENV
+      - name: Build and push ${{ inputs.component }} for ${{ inputs.arch }}
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.${{ inputs.component }}
+          platforms: linux/${{ inputs.arch }}
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: ghcr.io/${{ github.repository_owner }}/sbombastic/${{ inputs.component }}:${{ env.TAG_NAME }}
+    outputs:
+      digest: ${{ steps.build-image.outputs.digest }}
+  attest:
+    needs: [build]
+    if: ${{ inputs.version }}
+    uses: ./.github/workflows/attestation.yml
+    with:
+      component: ${{ inputs.component }}
+      arch: ${{ inputs.arch }}
+      digest: ${{ needs.build.outputs.digest }}
