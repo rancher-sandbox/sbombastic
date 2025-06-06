@@ -1,4 +1,4 @@
-name: Attestion generation
+name: Attestation generation
 on:
   workflow_call:
     inputs:
