@@ -1,4 +1,4 @@
-name: Create a new release for SBOMbastic stack
+name: SBOMbastic Release
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
       strategy:
         matrix:
           component: [controller, worker, storage]
-          arch: [amd64]
+          arch: [amd64, arm64]
       with:
         version: ${{ github.ref_name }}
         component: ${{ matrix.component }}
@@ -51,8 +51,10 @@ jobs:
 
       - name: Create tarball for the attestation files
         run: |
-          for component in "controller" "worker" "storage"; do
-            tar -czf attestation-SBOMbastic-$component-amd64.tar.gz $(ls SBOMbastic-$component-attestation-amd64-*)
+          for arch in "amd64" "arm64"; do
+            for component in "controller" "worker" "storage"; do
+              tar -czf attestation-SBOMbastic-$component-$arch.tar.gz $(ls SBOMbastic-$component-attestation-$arch-*)
+            done
           done
       - name: Upload release assets
         id: upload_release_assets
@@ -64,7 +66,10 @@ jobs:
             let files = [
                 'attestation-SBOMbastic-controller-amd64.tar.gz',
                 'attestation-SBOMbastic-worker-amd64.tar.gz',
-                'attestation-SBOMbastic-storage-amd64.tar.gz'
+                'attestation-SBOMbastic-storage-amd64.tar.gz',
+                'attestation-SBOMbastic-controller-arm64.tar.gz',
+                'attestation-SBOMbastic-worker-arm64.tar.gz',
+                'attestation-SBOMbastic-storage-arm64.tar.gz',
                 ]
             const {RELEASE_ID} = process.env
             for (const file of files) {
