@@ -1,0 +1,98 @@
+name: Attestion generation
+on:
+  workflow_call:
+    inputs:
+      component:
+        type: string
+        description: "SBOMbastic component"
+        required: true
+      arch:
+        type: string
+        description: "Architecture"
+        required: true
+jobs:
+  attest:
+    name: Sign attestations and upload as artifacts
+    permissions:
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+      - name: Install the crane command
+        uses: kubewarden/github-actions/crane-installer@7195340a122321bf547fda2ffc07eed6f6ae43f6 # v4.5.1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download all digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-${{ inputs.component }}-*
+          merge-multiple: true
+      - name: Retrieve digest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -e
+          DIGEST=$(cat ${{ inputs.component }}-${{ inputs.arch }}.txt)
+          echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Find attestation digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbombastic/${{ inputs.component }}@${{ env.DIGEST }} \
+          | jq -r '.manifests[]
+            | select(.annotations["vnd.docker.reference.type"] == "attestation-manifest")
+            | .digest')
+          echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Find provenance manifest digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbombastic/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
+                      jq -r '.layers[]
+                        | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2")
+                        | .digest')
+          echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Sign provenance manifest
+        run: |
+          cosign sign --yes \
+          ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/sbombastic/.github/workflows/attestation.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
+      - name: Find SBOM manifest layer digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Download provenance and SBOM files
+        run: |
+          set -e
+          crane blob ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
+            > SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json
+          sha256sum SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json \
+            >> SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+          crane blob ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
+            > SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+          sha256sum SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json \
+            >> SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+      - name: Sign checksum file
+        run: |
+          cosign sign-blob --yes \
+            --bundle SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
+            SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+          cosign verify-blob \
+            --bundle SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/sbombastic/.github/workflows/attestation.yml@${{ github.ref }}" \
+            SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: attestation-SBOMbastic-${{ inputs.component }}-${{ inputs.arch }}
+          path: SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}*
