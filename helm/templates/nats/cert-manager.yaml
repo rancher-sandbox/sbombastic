@@ -1,0 +1,79 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-selfsigned-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-nats-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: {{ include "sbombastic.fullname" . }}-nats-ca
+  secretName: sbombastic-nats-ca
+  duration: 8736h # 1 year
+  renewBefore: 240h # 10 days
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: {{ include "sbombastic.fullname" . }}-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-nats-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: sbombastic-nats-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-nats-server-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+spec:
+  secretName: sbombastic-nats-server-tls
+  dnsNames:
+    - {{ include "sbombastic.fullname" . }}-nats.{{ .Release.Namespace }}.svc.cluster.local
+  duration: 2160h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: {{ include "sbombastic.fullname" . }}-nats-ca
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-nats-routes-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+spec:
+  secretName: sbombastic-nats-routes-tls
+  dnsNames:
+    - "*.{{ include "sbombastic.fullname" . }}-nats-headless"
+  duration: 2160h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: {{ include "sbombastic.fullname" . }}-nats-ca
+    kind: Issuer
+    group: cert-manager.io
+
