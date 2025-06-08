@@ -46,4 +46,4 @@ spec:
           emptyDir: {}
         - name: nats-tls
           secret:
-            secretName: sbombastic-nats-server-tls
+            secretName: {{ include "sbombastic.fullname" . }}-nats-worker-client-tls

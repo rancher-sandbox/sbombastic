@@ -60,6 +60,6 @@ spec:
       volumes:
         - name: nats-tls
           secret:
-            secretName: sbombastic-nats-server-tls
+            secretName: {{ include "sbombastic.fullname" . }}-nats-controller-client-tls
       serviceAccountName: {{ include "sbombastic.fullname" . }}-controller
       terminationGracePeriodSeconds: 10

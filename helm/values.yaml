@@ -35,6 +35,8 @@ nats:
       tls:
         enabled: true
         secretName: sbombastic-nats-server-tls
+        merge:
+          verify: true
     cluster:
       enabled: true
       tls:
