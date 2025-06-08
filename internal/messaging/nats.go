@@ -10,7 +10,9 @@ import (
 const sbombasticSubject = "sbombastic"
 
 func NewJetStreamContext(url string) (nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url)
+	nc, err := nats.Connect(url,
+		nats.RootCAs("/nats/tls/ca.crt"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS server: %w", err)
 	}
@@ -39,7 +41,9 @@ func AddStream(js nats.JetStreamContext, storage nats.StorageType) error {
 }
 
 func NewSubscription(url, durable string) (*nats.Subscription, error) {
-	nc, err := nats.Connect(url)
+	nc, err := nats.Connect(url,
+		nats.RootCAs("/nats/tls/ca.crt"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS server: %w", err)
 	}
