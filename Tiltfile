@@ -1,14 +1,14 @@
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
-update_settings(k8s_upsert_timeout_secs = 300)
+update_settings(k8s_upsert_timeout_secs=300)
 
 # Setup a development registry so we can push images to it
 # and use them to test the scanner.
-k8s_yaml('./hack/registry.yaml')
+k8s_yaml("./hack/registry.yaml")
 
 k8s_resource(
-    'dev-registry',
+    "dev-registry",
     port_forwards=5000,
 )
 
@@ -19,22 +19,29 @@ k8s_resource(
 # which takes a long time to delete when running `tilt down`.
 # We Install the cert-manager CRDs separately, so we are sure they will be avalable before the sbombastic Helm chart is installed.
 cert_manager_version = "v1.17.2"
-local_resource("cert-manager-crds", cmd="kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/{}/cert-manager.crds.yaml".format(cert_manager_version))
+local_resource(
+    "cert-manager-crds",
+    cmd="kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/{}/cert-manager.crds.yaml".format(
+        cert_manager_version
+    ),
+)
 
 load("ext://helm_resource", "helm_resource", "helm_repo")
 helm_repo("jetstack-repo", "https://charts.jetstack.io")
 helm_resource(
-    'cert-manager',
-    'jetstack/cert-manager',
-    namespace='cert-manager',
+    "cert-manager",
+    "jetstack/cert-manager",
+    namespace="cert-manager",
     flags=[
-        '--version', cert_manager_version,
-        '--create-namespace',
-        '--set', 'installCRDs=false',
+        "--version",
+        cert_manager_version,
+        "--create-namespace",
+        "--set",
+        "installCRDs=false",
     ],
     resource_deps=[
-        'jetstack-repo',
-        'cert-manager-crds',
+        "jetstack-repo",
+        "cert-manager-crds",
     ],
 )
 
@@ -58,8 +65,8 @@ yaml = helm(
         "worker.image.repository=" + worker_image,
         "controller.replicas=1",
         "storage.replicas=1",
-        "worker.replicas=1"
-    ]
+        "worker.replicas=1",
+    ],
 )
 k8s_yaml(yaml)
 
@@ -106,7 +113,7 @@ local_resource(
         "api",
         "internal/apiserver",
         "internal/storage",
-        "pkg"
+        "pkg",
     ],
 )
 
@@ -164,5 +171,5 @@ docker_build_with_restart(
     ],
     # We need to change the default restart file, since the /tmp directory is an emptyDir volumeMount in this Pod
     # and tilt doesn't seem to be able to work with it.
-    restart_file="/.restart-proc"
+    restart_file="/.restart-proc",
 )
