@@ -1,10 +1,10 @@
-|              |                                 |
-| :----------- | :------------------------------ |
-| Feature Name | Scan trigger                    |
-| Start Date   | 2025-05-30                      |
-| Category     | Architecture                    |
-| RFC PR       | [fill this in after opening PR] |
-| State        | **ACCEPTED**                    |
+|              |                                                                |
+| :----------- | :------------------------------------------------------------- |
+| Feature Name | Scan trigger                                                   |
+| Start Date   | 2025-05-30                                                     |
+| Category     | Architecture                                                   |
+| RFC PR       | [#227](https://github.com/rancher-sandbox/sbombastic/pull/227) |
+| State        | **ACCEPTED**                                                   |
 
 # Summary
 
