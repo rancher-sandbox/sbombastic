@@ -27,6 +27,7 @@ This enables better integration with the Rancher UI, workflows, automation, and 
 
 - As a user I want to manually trigger the execution of a scan configuration on demand.
 - As a user I want the system to automatically trigger scans on a registry periodically.
+- As a user I want the system to automatically trigger a scan when a new registry is created or an existing one is updated with new repositories.
 
 # Detailed design
 
