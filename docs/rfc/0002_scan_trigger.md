@@ -55,15 +55,15 @@ spec:
 
 The `ScanJob` resource will include a status field to reflect the scan's progress and outcome. This status will contain:
 
-- `phase`: Indicates the current state of the scan (`Pending`, `InProgress`, `Complete`, `Failed`).
 - `conditions`: Represents detailed job conditions, similar to those used in Kubernetes Jobs, showing whether the scan completed successfully or encountered issues (`Complete`, `Failed`).
 - `imagesCount`: The number of images found in the registry during the scan.
+
+Please refer to the [Kubernetes API conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties) for more information about the status conditions.
 
 Example status:
 
 ```yaml
 status:
-  phase: InProgress
   imagesCount: 100
   conditions:
     - type: Complete
