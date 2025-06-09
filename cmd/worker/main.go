@@ -12,6 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nats-io/nats.go"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/cmdutil"
@@ -47,12 +48,6 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "worker")
 	logger.Info("Starting worker")
 
-	sub, err := messaging.NewSubscription(natsURL, "worker")
-	if err != nil {
-		logger.Error("Error creating subscription", "error", err)
-		os.Exit(1)
-	}
-
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
 	if err = v1alpha1.AddToScheme(scheme); err != nil {
@@ -77,7 +72,15 @@ func main() {
 		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, logger),
 		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
 	}
-	subscriber := messaging.NewSubscriber(sub, handlers, logger)
+
+	nc, err := nats.Connect(natsURL,
+		nats.RootCAs("/nats/tls/ca.crt"),
+		nats.ClientCert("/nats/tls/tls.crt", "/nats/tls/tls.key"),
+	)
+	if err != nil {
+		logger.Error("Unable to connect to NATS server", "error", err, "natsURL", natsURL)
+		os.Exit(1)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalChan := make(chan os.Signal, 1)
@@ -87,6 +90,12 @@ func main() {
 		<-signalChan
 		cancel()
 	}()
+
+	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", handlers, logger)
+	if err != nil {
+		logger.Error("Error creating NATS subscriber", "error", err)
+		os.Exit(1)
+	}
 
 	err = subscriber.Run(ctx)
 	if err != nil {

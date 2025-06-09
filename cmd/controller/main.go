@@ -37,6 +37,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/cmdutil"
@@ -73,48 +74,29 @@ func parseFlags() Config {
 	return cfg
 }
 
-func setupLogger(cfg Config) (logr.Logger, error) {
-	slogLevel, err := cmdutil.ParseLogLevel(cfg.LogLevel)
-	if err != nil {
-		return logr.Logger{}, err //nolint:wrapcheck // Original error preserved for logging
-	}
-	opts := slog.HandlerOptions{
-		Level: slogLevel,
-	}
-	return logr.FromSlogHandler(slog.NewJSONHandler(os.Stdout, &opts)).WithValues("component", "controller"), nil
-}
-
 //nolint:funlen // TODO: refactor to reduce function length
 func main() {
 	var tlsOpts []func(*tls.Config)
 	cfg := parseFlags()
-	logger, err := setupLogger(cfg)
+
+	slogLevel, err := cmdutil.ParseLogLevel(cfg.LogLevel)
 	if err != nil {
 		//nolint:sloglint // Use the global logger since the logger is not yet initialized
 		slog.Error(
-			"error initializing the logger",
+			"error parsing log level",
 			"error",
 			err,
 		)
 		os.Exit(1)
 	}
-
+	opts := slog.HandlerOptions{
+		Level: slogLevel,
+	}
+	slogHandler := slog.NewJSONHandler(os.Stdout, &opts)
+	slogger := slog.New(slogHandler)
+	logger := logr.FromSlogHandler(slogHandler).WithValues("component", "controller")
 	ctrl.SetLogger(logger)
 	setupLog := logger.WithName("setup")
-
-	js, err := messaging.NewJetStreamContext(cfg.NatsURL)
-	if err != nil {
-		setupLog.Error(err, "unable to create JetStream context")
-		os.Exit(1)
-	}
-
-	err = messaging.AddStream(js, nats.FileStorage)
-	if err != nil {
-		setupLog.Error(err, "unable to add JetStream stream")
-		os.Exit(1)
-	}
-
-	publisher := messaging.NewPublisher(js)
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -190,6 +172,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	signalHandler := ctrl.SetupSignalHandler()
+
+	nc, err := nats.Connect(cfg.NatsURL,
+		nats.RootCAs("/nats/tls/ca.crt"),
+		nats.ClientCert("/nats/tls/tls.crt", "/nats/tls/tls.key"),
+	)
+	if err != nil {
+		setupLog.Error(err, "unable to connect to NATS server", "natsURL", cfg.NatsURL)
+		os.Exit(1)
+	}
+
+	publisher, err := messaging.NewNatsPublisher(nc, slogger)
+	if err != nil {
+		setupLog.Error(err, "unable to create NATS publisher")
+		os.Exit(1)
+	}
+	if err = publisher.CreateStream(signalHandler, jetstream.FileStorage); err != nil {
+		setupLog.Error(err, "unable to add JetStream stream")
+		os.Exit(1)
+	}
+
 	if err = (&controller.RegistryReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
@@ -229,7 +232,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(signalHandler); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
