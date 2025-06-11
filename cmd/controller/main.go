@@ -175,6 +175,7 @@ func main() {
 	signalHandler := ctrl.SetupSignalHandler()
 
 	nc, err := nats.Connect(cfg.NatsURL,
+		nats.RetryOnFailedConnect(true),
 		nats.RootCAs("/nats/tls/ca.crt"),
 		nats.ClientCert("/nats/tls/tls.crt", "/nats/tls/tls.key"),
 	)

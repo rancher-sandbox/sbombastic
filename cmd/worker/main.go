@@ -74,6 +74,7 @@ func main() {
 	}
 
 	nc, err := nats.Connect(natsURL,
+		nats.RetryOnFailedConnect(true),
 		nats.RootCAs("/nats/tls/ca.crt"),
 		nats.ClientCert("/nats/tls/tls.crt", "/nats/tls/tls.key"),
 	)
