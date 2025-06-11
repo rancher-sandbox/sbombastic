@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
+	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
@@ -12,9 +13,11 @@ import (
 )
 
 func TestPublisher_Publish(t *testing.T) {
-	tmpDir := t.TempDir()
-	ns, err := newEmbeddedTestServer(tmpDir)
-	require.NoError(t, err)
+	opts := natstest.DefaultTestOptions
+	opts.Port = -1 // Use a random port
+	opts.JetStream = true
+	opts.StoreDir = t.TempDir()
+	ns := natstest.RunServer(&opts)
 	defer ns.Shutdown()
 
 	nc, err := nats.Connect(ns.ClientURL())
