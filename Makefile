@@ -1,9 +1,11 @@
 CONTROLLER_TOOLS_VERSION := v0.16.5
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
+MOCKERY_VERSION := v3.3.4
 
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+MOCKERY ?= go run github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
 
 GO_MOD_SRCS := go.mod go.sum
 
@@ -106,7 +108,7 @@ generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/gen
 
 .PHONY: generate-mocks
 generate-mocks: ## Generate mocks for testing.
-	go generate ./...
+	$(MOCKERY)
 
 ##@ Dependencies
 
