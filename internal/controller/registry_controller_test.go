@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
 	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
+	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,8 +64,8 @@ var _ = Describe("Registry Controller", func() {
 
 		It("Should start the discovery process", func(ctx context.Context) {
 			By("Ensuring the right message is published to the worker queue")
-			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
-			mockPublisher.On("Publish", &messaging.CreateCatalog{
+			mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
+			mockPublisher.On("Publish", mock.Anything, &messaging.CreateCatalog{
 				RegistryName:      registry.Name,
 				RegistryNamespace: registry.Namespace,
 			}).Return(nil)
@@ -105,8 +106,8 @@ var _ = Describe("Registry Controller", func() {
 			"Should set the Discovery status condition to Unknown if the message cannot be published",
 			func(ctx context.Context) {
 				By("Returning an error when publishing the message")
-				mockPublisher := messagingMocks.NewPublisher(GinkgoT())
-				mockPublisher.On("Publish", &messaging.CreateCatalog{
+				mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
+				mockPublisher.On("Publish", mock.Anything, &messaging.CreateCatalog{
 					RegistryName:      registry.Name,
 					RegistryNamespace: registry.Namespace,
 				}).Return(errors.New("failed to publish message"))

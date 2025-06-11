@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
 	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
+	"github.com/stretchr/testify/mock"
 
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,8 +102,8 @@ var _ = Describe("SBOM Controller", func() {
 
 		It("should successfully reconcile the resource", func(ctx context.Context) {
 			By("Ensuring the right message is published to the worker queue")
-			mockPublisher := messagingMocks.NewPublisher(GinkgoT())
-			mockPublisher.On("Publish", &messaging.ScanSBOM{
+			mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
+			mockPublisher.On("Publish", mock.Anything, &messaging.ScanSBOM{
 				SBOMName:      sbom.Name,
 				SBOMNamespace: sbom.Namespace,
 			}).Return(nil)
