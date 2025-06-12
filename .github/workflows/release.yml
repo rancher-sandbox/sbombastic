@@ -1,0 +1,95 @@
+name: Create a new release for SBOMbastic stack
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/container-build.yaml
+    with:
+      version: ${{ github.ref_name }}
+    secrets: inherit
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo ${{ github.ref_name }}) >> $GITHUB_ENV
+      - name: Get release ID from the release created by release drafter
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            let releases = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+            });
+            for (const release of releases.data) {
+              if (release.draft) {
+                      core.info(release)
+                      core.exportVariable('RELEASE_ID', release.id)
+                      return
+              }
+            }
+            core.setFailed(`Draft release not found`)
+      - name: Download attestation artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: attestation-SBOMbastic-*
+          merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Create tarball for the attestation files
+        run: |
+          for arch in "amd64" "arm64"; do
+            for component in "controller" "worker" "storage"; do
+              tar -czf attestation-SBOMbastic-$component-$arch.tar.gz $(ls SBOMbastic-$component-attestation-$arch-*)
+            done
+          done
+      - name: Upload release assets
+        id: upload_release_assets
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            let fs = require('fs');
+            let path = require('path');
+            let files = [
+                'attestation-SBOMbastic-controller-amd64.tar.gz',
+                'attestation-SBOMbastic-worker-amd64.tar.gz',
+                'attestation-SBOMbastic-storage-amd64.tar.gz',
+                'attestation-SBOMbastic-controller-arm64.tar.gz',
+                'attestation-SBOMbastic-worker-arm64.tar.gz',
+                'attestation-SBOMbastic-storage-arm64.tar.gz',
+                ]
+            const {RELEASE_ID} = process.env
+            for (const file of files) {
+              let file_data = fs.readFileSync(file);
+              let response = await github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: `${RELEASE_ID}`,
+                name: path.basename(file),
+                data: file_data,
+              });
+            }
+      - name: Publish release
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const {RELEASE_ID} = process.env
+            const {TAG_NAME} = process.env
+            isPreRelease = ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: `${RELEASE_ID}`,
+              draft: false,
+              tag_name: `${TAG_NAME}`,
+              name: `SBOMbastic ${TAG_NAME}`,
+              prerelease: isPreRelease,
+              make_latest: !isPreRelease
+            });
