@@ -27,9 +27,21 @@ worker:
   logLevel: "info"
 
 nats:
+  tlsCA:
+    enabled: true
+    secretName: sbombastic-nats-server-tls
   config:
+    nats:
+      tls:
+        enabled: true
+        secretName: sbombastic-nats-server-tls
+        merge:
+          verify: true
     cluster:
       enabled: true
+      tls:
+        enabled: true
+        secretName: sbombastic-nats-routes-tls
     jetstream:
       enabled: true
   natsBox:

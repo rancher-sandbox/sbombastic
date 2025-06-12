@@ -5,8 +5,8 @@ apiVersion: v1
 metadata:
   name: {{ template "sbombastic.fullname" . }}-storage-data
   labels:
-  {{ include "sbombastic.labels" .| nindent 4 }}
-  app.kubernetes.io/component: storage
+    {{ include "sbombastic.labels" .| nindent 4 }}
+    app.kubernetes.io/component: storage
   {{- with .Values.persistence.storageData.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}

@@ -1,0 +1,7 @@
+packages:
+  github.com/rancher/sbombastic/internal/messaging:
+    interfaces:
+      Publisher:
+        config:
+          filename: publisher.go
+          dir: "{{.InterfaceDir}}/mocks"

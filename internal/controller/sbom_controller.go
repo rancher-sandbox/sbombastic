@@ -62,7 +62,7 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
 	}
-	if err := r.Publisher.Publish(scanSBOM); err != nil {
+	if err := r.Publisher.Publish(ctx, scanSBOM); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to publish ScanSBOM message: %w", err)
 	}
 

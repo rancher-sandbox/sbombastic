@@ -75,7 +75,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			RegistryName:      registry.Name,
 			RegistryNamespace: registry.Namespace,
 		}
-		if err := r.Publisher.Publish(&msg); err != nil {
+		if err := r.Publisher.Publish(ctx, &msg); err != nil {
 			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
 				Type:    v1alpha1.RegistryDiscoveringCondition,
 				Status:  metav1.ConditionUnknown,

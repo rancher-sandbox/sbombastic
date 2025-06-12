@@ -53,5 +53,13 @@ spec:
             requests:
               cpu: 10m
               memory: 64Mi
+          volumeMounts:
+            - mountPath: "/nats/tls"
+              name: nats-tls
+              readOnly: true
+      volumes:
+        - name: nats-tls
+          secret:
+            secretName: {{ include "sbombastic.fullname" . }}-nats-controller-client-tls
       serviceAccountName: {{ include "sbombastic.fullname" . }}-controller
       terminationGracePeriodSeconds: 10
