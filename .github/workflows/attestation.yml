@@ -17,11 +17,23 @@ jobs:
       packages: write
       id-token: write
     runs-on: ubuntu-latest
+    env:
+      CRANE_VERSION: v0.20.5
+      CRANE_CHECKSUM: ad4cd9af2568c62c97e346de6d1295ee8c6ce3341f7b71cf02d41292b4532680
+
     steps:
       - name: Install cosign
         uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
       - name: Install the crane command
-        uses: kubewarden/github-actions/crane-installer@7195340a122321bf547fda2ffc07eed6f6ae43f6 # v4.5.1
+        run: |
+          set -e
+          INSTALL_DIR=$HOME/.crane
+          mkdir -p $INSTALL_DIR
+          curl -sL https://github.com/google/go-containerregistry/releases/download/${{ env.CRANE_VERSION }}/go-containerregistry_Linux_x86_64.tar.gz -o $INSTALL_DIR/crane.tar.gz
+          echo "${{ env.CRANE_CHECKSUM }} $INSTALL_DIR/crane.tar.gz" | sha256sum -c
+          tar xvf $INSTALL_DIR/crane.tar.gz -C $INSTALL_DIR
+          rm $INSTALL_DIR/crane.tar.gz
+          echo $INSTALL_DIR >> $GITHUB_PATH
       - name: Login to GitHub Container Registry
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
