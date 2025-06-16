@@ -22,7 +22,7 @@ import (
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
-func main() {
+func main() { //nolint:funlen // This function is intentionally long to keep the main logic together.
 	var natsURL string
 	var natsCert string
 	var natsKey string
