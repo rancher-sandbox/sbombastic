@@ -53,6 +53,9 @@ type Config struct {
 	SecureMetrics        bool
 	EnableHTTP2          bool
 	NatsURL              string
+	NatsCert             string
+	NatsKey              string
+	NatsCA               string
 	LogLevel             string
 }
 
@@ -69,7 +72,11 @@ func parseFlags() Config {
 	flag.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.StringVar(&cfg.NatsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&cfg.NatsCert, "nats-cert", "/nats/tls/tls.crt", "The path to the NATS client certificate.")
+	flag.StringVar(&cfg.NatsKey, "nats-key", "/nats/tls/tls.key", "The path to the NATS client key.")
+	flag.StringVar(&cfg.NatsCA, "nats-ca", "/nats/tls/ca.crt", "The path to the NATS CA certificate.")
 	flag.StringVar(&cfg.LogLevel, "log-level", slog.LevelInfo.String(), "Log level")
+
 	flag.Parse()
 	return cfg
 }
@@ -176,8 +183,8 @@ func main() {
 
 	nc, err := nats.Connect(cfg.NatsURL,
 		nats.RetryOnFailedConnect(true),
-		nats.RootCAs("/nats/tls/ca.crt"),
-		nats.ClientCert("/nats/tls/tls.crt", "/nats/tls/tls.key"),
+		nats.RootCAs(cfg.NatsCA),
+		nats.ClientCert(cfg.NatsCert, cfg.NatsKey),
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to connect to NATS server", "natsURL", cfg.NatsURL)
