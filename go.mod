@@ -7,6 +7,7 @@ godebug default=go1.23
 require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/aquasecurity/trivy v0.63.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.5
@@ -167,7 +168,6 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-errors/errors v1.4.2 // indirect

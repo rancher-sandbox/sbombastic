@@ -36,8 +36,14 @@ spec:
               name: run-volume
             - mountPath: /tmp
               name: tmp-dir
+            - mountPath: "/nats/tls"
+              name: nats-tls
+              readOnly: true
       volumes:
         - name: run-volume
           emptyDir: {}
         - name: tmp-dir
           emptyDir: {}
+        - name: nats-tls
+          secret:
+            secretName: {{ include "sbombastic.fullname" . }}-nats-worker-client-tls

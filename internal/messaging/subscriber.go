@@ -6,69 +6,85 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
+// HandlerRegistry is a map that associates message types with their respective handlers.
 type HandlerRegistry map[string]Handler
 
-type Subscriber struct {
-	sub      *nats.Subscription
+// NatsSubscriber is an implementation of a message subscriber that uses NATS JetStream to receive messages.
+type NatsSubscriber struct {
+	cons     jetstream.Consumer
 	handlers HandlerRegistry
 	logger   *slog.Logger
 }
 
-func NewSubscriber(sub *nats.Subscription, handlers HandlerRegistry, logger *slog.Logger) *Subscriber {
-	return &Subscriber{
-		sub:      sub,
+// NewNatsSubscriber creates a new NatsSubscriber instance with the provided NATS connection and durable subscription name.
+func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handlers HandlerRegistry, logger *slog.Logger) (*NatsSubscriber, error) {
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
+	}
+
+	cons, err := js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		Durable: durable,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create or update consumer: %w", err)
+	}
+
+	subscriber := &NatsSubscriber{
+		cons:     cons,
 		handlers: handlers,
 		logger:   logger.With("component", "subscriber"),
 	}
+
+	return subscriber, nil
 }
 
-//nolint:gocognit // We are a bit more tolerant for the runner.
-func (s *Subscriber) Run(ctx context.Context) error {
-	for {
-		select {
-		case <-ctx.Done():
-			s.logger.InfoContext(ctx, "Subscriber shutting down...")
+// Run starts the subscriber and processes messages in a loop until the context is done.
+func (s *NatsSubscriber) Run(ctx context.Context) error {
+	consContext, err := s.cons.Consume(
+		func(msg jetstream.Msg) {
+			s.logger.DebugContext(ctx, "Processing message", "subject", msg.Subject())
 
-			return nil
-		default:
-			msgs, err := s.sub.Fetch(1, nats.MaxWait(5*time.Second))
-			if err != nil {
-				if errors.Is(err, nats.ErrTimeout) {
-					continue
-				}
-
-				return fmt.Errorf("failed to fetch message: %w", err)
+			if err := s.processMessage(msg.Headers().Get(MessageTypeHeader), msg.Data()); err != nil {
+				s.logger.ErrorContext(ctx, "Failed to process message",
+					"subject", msg.Subject(),
+					"headers", msg.Headers(),
+					"error", err,
+				)
 			}
 
-			for _, msg := range msgs {
-				s.logger.DebugContext(ctx, "Processing message", "message", msg)
-				if err = s.processMessage(msg); err != nil {
-					s.logger.ErrorContext(ctx, "Failed to process message",
-						"subject", msg.Subject,
-						"header", msg.Header,
-						"data", msg.Data,
-						"error", err,
-					)
-				}
-
-				if err = msg.Ack(); err != nil {
-					return fmt.Errorf("failed to ack message: %w", err)
-				}
+			if err := msg.Ack(); err != nil {
+				s.logger.ErrorContext(ctx, "Failed to ack message",
+					"subject", msg.Subject(),
+					"error", err,
+				)
 			}
-		}
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start consuming: %w", err)
 	}
+
+	s.logger.InfoContext(ctx, "Subscriber started, waiting for messages...")
+
+	<-ctx.Done()
+
+	s.logger.InfoContext(ctx, "Subscriber shutting down...")
+
+	consContext.Stop()
+
+	return nil
 }
 
 // processMessage handles individual message processing.
-func (s *Subscriber) processMessage(msg *nats.Msg) error {
-	msgType := msg.Header.Get(MessageTypeHeader)
+func (s *NatsSubscriber) processMessage(msgType string, data []byte) error {
 	if msgType == "" {
-		return fmt.Errorf("malformed message: missing type header, header: %v", msg.Header)
+		return errors.New("malformed message: missing type header")
 	}
 
 	handler, found := s.handlers[msgType]
@@ -77,7 +93,7 @@ func (s *Subscriber) processMessage(msg *nats.Msg) error {
 	}
 
 	message := handler.NewMessage()
-	if err := json.Unmarshal(msg.Data, message); err != nil {
+	if err := json.Unmarshal(data, message); err != nil {
 		return fmt.Errorf("failed to unmarshal message of type %s: %w", msgType, err)
 	}
 

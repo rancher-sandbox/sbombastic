@@ -12,6 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nats-io/nats.go"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/cmdutil"
@@ -21,12 +22,18 @@ import (
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
-func main() {
+func main() { //nolint:funlen // This function is intentionally long to keep the main logic together.
 	var natsURL string
+	var natsCert string
+	var natsKey string
+	var natsCA string
 	var logLevel string
 	var runDir string
 
 	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&natsCert, "nats-cert", "/nats/tls/tls.crt", "The path to the NATS client certificate.")
+	flag.StringVar(&natsKey, "nats-key", "/nats/tls/tls.key", "The path to the NATS client key.")
+	flag.StringVar(&natsCA, "nats-ca", "/nats/tls/ca.crt", "The path to the NATS CA certificate.")
 	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
 	flag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
 	flag.Parse()
@@ -46,12 +53,6 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "worker")
 	logger.Info("Starting worker")
-
-	sub, err := messaging.NewSubscription(natsURL, "worker")
-	if err != nil {
-		logger.Error("Error creating subscription", "error", err)
-		os.Exit(1)
-	}
 
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
@@ -77,7 +78,16 @@ func main() {
 		messaging.GenerateSBOMType:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, logger),
 		messaging.ScanSBOMType:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
 	}
-	subscriber := messaging.NewSubscriber(sub, handlers, logger)
+
+	nc, err := nats.Connect(natsURL,
+		nats.RetryOnFailedConnect(true),
+		nats.RootCAs(natsCA),
+		nats.ClientCert(natsCert, natsKey),
+	)
+	if err != nil {
+		logger.Error("Unable to connect to NATS server", "error", err, "natsURL", natsURL)
+		os.Exit(1)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalChan := make(chan os.Signal, 1)
@@ -87,6 +97,12 @@ func main() {
 		<-signalChan
 		cancel()
 	}()
+
+	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", handlers, logger)
+	if err != nil {
+		logger.Error("Error creating NATS subscriber", "error", err)
+		os.Exit(1)
+	}
 
 	err = subscriber.Run(ctx)
 	if err != nil {

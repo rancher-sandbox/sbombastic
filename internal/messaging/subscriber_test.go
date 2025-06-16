@@ -2,13 +2,14 @@ package messaging
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"testing"
 	"time"
 
+	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,23 +26,22 @@ func (h *testHandler) NewMessage() Message {
 }
 
 func TestSubscriber_Run(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	ns, err := newEmbeddedTestServer(tmpDir)
-	require.NoError(t, err)
+	opts := natstest.DefaultTestOptions
+	opts.Port = -1 // Use a random port
+	opts.JetStream = true
+	opts.StoreDir = t.TempDir()
+	ns := natstest.RunServer(&opts)
 	defer ns.Shutdown()
 
-	js, err := NewJetStreamContext(ns.ClientURL())
+	nc, err := nats.Connect(ns.ClientURL())
+	require.NoError(t, err)
+	defer nc.Close()
+
+	publisher, err := NewNatsPublisher(nc, slog.Default())
 	require.NoError(t, err)
 
-	err = AddStream(js, nats.MemoryStorage)
-	require.NoError(t, err)
-
-	sub, err := NewSubscription(ns.ClientURL(), "test-sub")
-	require.NoError(t, err)
-
-	message := &testMessage{Data: "data"}
-	header := nats.Header{MessageTypeHeader: {"test-type"}}
+	err = publisher.CreateStream(t.Context(), jetstream.MemoryStorage)
+	require.NoError(t, err, "failed to add stream")
 
 	processed := make(chan Message, 1)
 	done := make(chan struct{})
@@ -55,21 +55,14 @@ func TestSubscriber_Run(t *testing.T) {
 	handlers := HandlerRegistry{
 		"test-type": testHandler,
 	}
-	subscriber := NewSubscriber(sub, handlers, slog.Default())
+	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable", handlers, slog.Default())
+	require.NoError(t, err, "failed to create subscriber")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	data, err := json.Marshal(message)
-	require.NoError(t, err, "failed to marshal testMessage data")
-
-	msg := &nats.Msg{
-		Subject: sbombasticSubject,
-		Data:    data,
-		Header:  header,
-	}
-
-	_, err = js.PublishMsg(msg)
+	message := &testMessage{Data: "data"}
+	err = publisher.Publish(t.Context(), message)
 	require.NoError(t, err, "failed to publish message")
 
 	go func() {
@@ -143,6 +136,7 @@ func TestProcessMessage(t *testing.T) {
 				Data:    []byte(`{"data":"valid"}`),
 				Header:  nats.Header{MessageTypeHeader: {"test-type"}},
 			},
+
 			handleFunc: func(_ Message) error {
 				return errors.New("handler error")
 			},
@@ -157,12 +151,12 @@ func TestProcessMessage(t *testing.T) {
 				handleFunc: test.handleFunc,
 			}
 
-			subscriber := &Subscriber{
+			subscriber := &NatsSubscriber{
 				handlers: handlers,
 				logger:   slog.Default(),
 			}
 
-			err := subscriber.processMessage(test.msg)
+			err := subscriber.processMessage(test.msg.Header.Get(MessageTypeHeader), test.msg.Data)
 
 			if test.expectedError == "" {
 				require.NoError(t, err, "expected no error, got: %v", err)

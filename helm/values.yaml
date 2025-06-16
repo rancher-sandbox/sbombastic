@@ -26,10 +26,42 @@ worker:
   replicas: 3
   logLevel: "info"
 
+persistence:
+  enabled: true
+
+  ## Specify a PVC for the storage data
+  storageData:
+    enabled: true
+    subPath:
+    annotations: {}
+    labels: {}
+    # storageClass: ""
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+    accessMode: ReadWriteOnce
+    size: 1Gi
+
+
+
+# NOTE: This section is used to configure the NATS server and its components
+# deployed by the NATS chart dependency.
+# Do not edit this section manually.
 nats:
+  tlsCA:
+    enabled: true
+    secretName: sbombastic-nats-server-tls
   config:
+    nats:
+      tls:
+        enabled: true
+        secretName: sbombastic-nats-server-tls
+        merge:
+          verify: true
     cluster:
       enabled: true
+      tls:
+        enabled: true
+        secretName: sbombastic-nats-routes-tls
     jetstream:
       enabled: true
   natsBox:
@@ -58,18 +90,3 @@ nats:
         capabilities:
             drop:
             - "ALL"
-
-persistence:
-  enabled: true
-
-  ## Specify a PVC for the storage data
-  storageData:
-    enabled: true
-    subPath:
-    annotations: {}
-    labels: {}
-    # storageClass: ""
-    ## If defined, PVC must be created manually before volume will be bound
-    # existingClaim:
-    accessMode: ReadWriteOnce
-    size: 1Gi
