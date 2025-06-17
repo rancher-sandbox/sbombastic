@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -12,13 +11,12 @@ import (
 
 const (
 	streamName        = "SBOMBASTIC"
-	sbombasticSubject = "sbombastic"
-	MessageTypeHeader = "MessageType"
+	sbombasticSubject = "sbombastic.>"
 )
 
 type Publisher interface {
 	// Publish publishes a message.
-	Publish(ctx context.Context, message Message) error
+	Publish(ctx context.Context, subject string, message []byte) error
 }
 
 // NatsPublisher is an implementation of the Publisher interface that uses NATS JetStream to publish messages.
@@ -43,21 +41,12 @@ func NewNatsPublisher(nc *nats.Conn, logger *slog.Logger) (*NatsPublisher, error
 }
 
 // Publish publishes a message.
-func (p *NatsPublisher) Publish(ctx context.Context, message Message) error {
-	data, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message to JSON: %w", err)
-	}
-
-	header := make(nats.Header)
-	header.Add(MessageTypeHeader, message.MessageType())
-
+func (p *NatsPublisher) Publish(ctx context.Context, subject string, message []byte) error {
 	msg := &nats.Msg{
-		Subject: sbombasticSubject,
-		Data:    data,
-		Header:  header,
+		Subject: subject,
+		Data:    message,
 	}
-	if _, err = p.js.PublishMsg(ctx, msg); err != nil {
+	if _, err := p.js.PublishMsg(ctx, msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 

@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"encoding/json"
 	"log/slog"
 	"testing"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const testPublisherSubject = "sbombastic.publisher.test"
 
 func TestPublisher_Publish(t *testing.T) {
 	opts := natstest.DefaultTestOptions
@@ -29,11 +30,8 @@ func TestPublisher_Publish(t *testing.T) {
 	err = publisher.CreateStream(t.Context(), jetstream.MemoryStorage)
 	require.NoError(t, err)
 
-	msg := testMessage{
-		Data: "test data",
-	}
-
-	err = publisher.Publish(t.Context(), msg)
+	message := []byte(`{"data":"test data"}`)
+	err = publisher.Publish(t.Context(), testPublisherSubject, message)
 	require.NoError(t, err)
 
 	cons, err := publisher.js.CreateOrUpdateConsumer(t.Context(), streamName, jetstream.ConsumerConfig{})
@@ -49,11 +47,7 @@ func TestPublisher_Publish(t *testing.T) {
 	}
 	require.Len(t, messages, 1)
 
-	receivedMsg := messages[0]
-	assert.Equal(t, msg.MessageType(), receivedMsg.Headers().Get(MessageTypeHeader))
-
-	var receivedData testMessage
-	err = json.Unmarshal(receivedMsg.Data(), &receivedData)
-	require.NoError(t, err)
-	assert.Equal(t, msg.Data, receivedData.Data)
+	receivedMessage := messages[0]
+	assert.Equal(t, testPublisherSubject, receivedMessage.Subject())
+	assert.Equal(t, message, receivedMessage.Data())
 }
