@@ -2,8 +2,6 @@ package messaging
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// HandlerRegistry is a map that associates message types with their respective handlers.
+// HandlerRegistry is a map that associates subjects with their respective handlers.
 type HandlerRegistry map[string]Handler
 
 // NatsSubscriber is an implementation of a message subscriber that uses NATS JetStream to receive messages.
@@ -28,9 +26,11 @@ func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handl
 		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
 	}
 
-	cons, err := js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
-		Durable: durable,
-	})
+	cons, err := js.CreateOrUpdateConsumer(ctx,
+		streamName,
+		jetstream.ConsumerConfig{
+			Durable: durable,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create or update consumer: %w", err)
 	}
@@ -50,7 +50,7 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 		func(msg jetstream.Msg) {
 			s.logger.DebugContext(ctx, "Processing message", "subject", msg.Subject())
 
-			if err := s.processMessage(msg.Headers().Get(MessageTypeHeader), msg.Data()); err != nil {
+			if err := s.processMessage(msg.Subject(), msg.Data()); err != nil {
 				s.logger.ErrorContext(ctx, "Failed to process message",
 					"subject", msg.Subject(),
 					"headers", msg.Headers(),
@@ -82,23 +82,14 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 }
 
 // processMessage handles individual message processing.
-func (s *NatsSubscriber) processMessage(msgType string, data []byte) error {
-	if msgType == "" {
-		return errors.New("malformed message: missing type header")
-	}
-
-	handler, found := s.handlers[msgType]
+func (s *NatsSubscriber) processMessage(subject string, message []byte) error {
+	handler, found := s.handlers[subject]
 	if !found {
-		return fmt.Errorf("no handler found for message type: %s", msgType)
-	}
-
-	message := handler.NewMessage()
-	if err := json.Unmarshal(data, message); err != nil {
-		return fmt.Errorf("failed to unmarshal message of type %s: %w", msgType, err)
+		return fmt.Errorf("no handler found for subject: %s", subject)
 	}
 
 	if err := handler.Handle(message); err != nil {
-		return fmt.Errorf("failed to handle message of type %s: %w", msgType, err)
+		return fmt.Errorf("failed to handle message on subject %s: %w", subject, err)
 	}
 
 	return nil

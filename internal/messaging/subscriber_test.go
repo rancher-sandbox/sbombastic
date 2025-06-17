@@ -13,16 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testSubscriberSubject = "sbombastic.subscriber.test"
+
 type testHandler struct {
-	handleFunc func(Message) error
+	handleFunc func(message []byte) error
 }
 
-func (h *testHandler) Handle(message Message) error {
+func (h *testHandler) Handle(message []byte) error {
 	return h.handleFunc(message)
-}
-
-func (h *testHandler) NewMessage() Message {
-	return &testMessage{}
 }
 
 func TestSubscriber_Run(t *testing.T) {
@@ -43,17 +41,17 @@ func TestSubscriber_Run(t *testing.T) {
 	err = publisher.CreateStream(t.Context(), jetstream.MemoryStorage)
 	require.NoError(t, err, "failed to add stream")
 
-	processed := make(chan Message, 1)
+	processed := make(chan []byte, 1)
 	done := make(chan struct{})
 
-	handleFunc := func(m Message) error {
+	handleFunc := func(m []byte) error {
 		processed <- m
 		return nil
 	}
 
 	testHandler := &testHandler{handleFunc: handleFunc}
 	handlers := HandlerRegistry{
-		"test-type": testHandler,
+		testSubscriberSubject: testHandler,
 	}
 	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable", handlers, slog.Default())
 	require.NoError(t, err, "failed to create subscriber")
@@ -61,8 +59,8 @@ func TestSubscriber_Run(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	message := &testMessage{Data: "data"}
-	err = publisher.Publish(t.Context(), message)
+	message := []byte(`{"data":"test data"}`)
+	err = publisher.Publish(t.Context(), testSubscriberSubject, message)
 	require.NoError(t, err, "failed to publish message")
 
 	go func() {
@@ -87,67 +85,45 @@ func TestProcessMessage(t *testing.T) {
 	tests := []struct {
 		name          string
 		msg           *nats.Msg
-		handleFunc    func(Message) error
+		handleFunc    func([]byte) error
 		expectedError string
 	}{
 		{
 			name: "valid message",
 			msg: &nats.Msg{
-				Subject: sbombasticSubject,
-				Data:    []byte(`{"data":"valid"}`),
-				Header:  nats.Header{MessageTypeHeader: {"test-type"}},
+				Subject: testSubscriberSubject,
+				Data:    []byte("data"),
 			},
-			handleFunc: func(_ Message) error {
+			handleFunc: func(_ []byte) error {
 				return nil
 			},
 			expectedError: "",
 		},
 		{
-			name: "missing type header",
+			name: "unregistered subject",
 			msg: &nats.Msg{
-				Subject: sbombasticSubject,
-				Data:    []byte(`{"data":"valid"}`),
-				Header:  nats.Header{},
+				Subject: "unknown",
+				Data:    []byte("data"),
 			},
-			expectedError: "malformed message: missing type header",
-		},
-		{
-			name: "unknown message type",
-			msg: &nats.Msg{
-				Subject: sbombasticSubject,
-				Data:    []byte(`{"data":"valid"}`),
-				Header:  nats.Header{MessageTypeHeader: {"unknown-type"}},
-			},
-			expectedError: "no handler found for message type: unknown-type",
-		},
-		{
-			name: "invalid message format",
-			msg: &nats.Msg{
-				Subject: sbombasticSubject,
-				Data:    []byte(`{"invalid-json"`),
-				Header:  nats.Header{MessageTypeHeader: {"test-type"}},
-			},
-			expectedError: "failed to unmarshal message of type test-type",
+			expectedError: "no handler found for subject: unknown",
 		},
 		{
 			name: "handler failure",
 			msg: &nats.Msg{
-				Subject: sbombasticSubject,
-				Data:    []byte(`{"data":"valid"}`),
-				Header:  nats.Header{MessageTypeHeader: {"test-type"}},
+				Subject: testSubscriberSubject,
+				Data:    []byte("data"),
 			},
-
-			handleFunc: func(_ Message) error {
+			handleFunc: func(_ []byte) error {
 				return errors.New("handler error")
 			},
-			expectedError: "failed to handle message of type test-type: handler error",
+			expectedError: "failed to handle message on subject sbombastic.subscriber.test: handler error",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			handlers := HandlerRegistry{}
-			handlers["test-type"] = &testHandler{
+			handlers[testSubscriberSubject] = &testHandler{
 				handleFunc: test.handleFunc,
 			}
 
@@ -156,7 +132,7 @@ func TestProcessMessage(t *testing.T) {
 				logger:   slog.Default(),
 			}
 
-			err := subscriber.processMessage(test.msg.Header.Get(MessageTypeHeader), test.msg.Data)
+			err := subscriber.processMessage(test.msg.Subject, test.msg.Data)
 
 			if test.expectedError == "" {
 				require.NoError(t, err, "expected no error, got: %v", err)
