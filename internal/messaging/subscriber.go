@@ -26,10 +26,16 @@ func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handl
 		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
 	}
 
+	var subjects []string
+	for subject := range handlers {
+		subjects = append(subjects, subject)
+	}
+
 	cons, err := js.CreateOrUpdateConsumer(ctx,
 		streamName,
 		jetstream.ConsumerConfig{
-			Durable: durable,
+			FilterSubjects: subjects,
+			Durable:        durable,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create or update consumer: %w", err)
