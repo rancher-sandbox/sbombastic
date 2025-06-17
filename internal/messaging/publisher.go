@@ -26,15 +26,29 @@ type NatsPublisher struct {
 }
 
 // NewNatsPublisher creates a new NatsPublisher instance with the provided NATS connection.
-func NewNatsPublisher(nc *nats.Conn, logger *slog.Logger) (*NatsPublisher, error) {
+func NewNatsPublisher(ctx context.Context, nc *nats.Conn, logger *slog.Logger) (*NatsPublisher, error) {
 	js, err := jetstream.New(nc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
 	}
 
+	logger = logger.With("component", "nats_publisher")
+
+	// CreateStream is an idempotent operation, if the stream already exists, it will succeed without error.
+	_, err = js.CreateStream(ctx, jetstream.StreamConfig{
+		Name:      streamName,
+		Retention: jetstream.WorkQueuePolicy,
+		Subjects:  []string{sbombasticSubject},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JetStream stream: %w", err)
+	}
+
+	logger.DebugContext(ctx, "Stream created", "stream", streamName, "subjects", sbombasticSubject)
+
 	publisher := &NatsPublisher{
 		js:     js,
-		logger: logger.With("component", "publisher"),
+		logger: logger,
 	}
 
 	return publisher, nil
@@ -51,24 +65,6 @@ func (p *NatsPublisher) Publish(ctx context.Context, subject string, message []b
 	}
 
 	p.logger.DebugContext(ctx, "Message published", "subject", msg.Subject, "header", msg.Header, "message", string(msg.Data))
-
-	return nil
-}
-
-// CreateStream adds a stream to the NATS JetStream context with the specified storage type.
-func (p *NatsPublisher) CreateStream(ctx context.Context, storage jetstream.StorageType) error {
-	// CreateStream is an idempotent operation, if the stream already exists, it will succeed without error.
-	_, err := p.js.CreateStream(ctx, jetstream.StreamConfig{
-		Name:      streamName,
-		Retention: jetstream.WorkQueuePolicy,
-		Subjects:  []string{sbombasticSubject},
-		Storage:   storage,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create JetStream stream: %w", err)
-	}
-
-	p.logger.DebugContext(ctx, "Stream created", "subjects", sbombasticSubject, "storage", storage)
 
 	return nil
 }

@@ -24,10 +24,7 @@ func TestPublisher_Publish(t *testing.T) {
 	nc, err := nats.Connect(ns.ClientURL())
 	require.NoError(t, err)
 
-	publisher, err := NewNatsPublisher(nc, slog.Default())
-	require.NoError(t, err)
-
-	err = publisher.CreateStream(t.Context(), jetstream.MemoryStorage)
+	publisher, err := NewNatsPublisher(t.Context(), nc, slog.Default())
 	require.NoError(t, err)
 
 	message := []byte(`{"data":"test data"}`)

@@ -9,7 +9,6 @@ import (
 
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,11 +34,8 @@ func TestSubscriber_Run(t *testing.T) {
 	require.NoError(t, err)
 	defer nc.Close()
 
-	publisher, err := NewNatsPublisher(nc, slog.Default())
+	publisher, err := NewNatsPublisher(t.Context(), nc, slog.Default())
 	require.NoError(t, err)
-
-	err = publisher.CreateStream(t.Context(), jetstream.MemoryStorage)
-	require.NoError(t, err, "failed to add stream")
 
 	processed := make(chan []byte, 1)
 	done := make(chan struct{})
