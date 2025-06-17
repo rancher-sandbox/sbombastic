@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -26,8 +27,14 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
+
+const CreateCatalogSubject = "sbombastic.catalog.create"
+
+type CreateCatalogMessage struct {
+	RegistryName      string `json:"registryName"`
+	RegistryNamespace string `json:"registryNamespace"`
+}
 
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
 type CreateCatalogHandler struct {
@@ -52,10 +59,11 @@ func NewCreateCatalogHandler(
 }
 
 //nolint:gocognit // We are a bit more tolerant for the handler.
-func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
-	createCatalogMessage, ok := message.(*messaging.CreateCatalog)
-	if !ok {
-		return fmt.Errorf("unexpected message type: %T", message)
+func (h *CreateCatalogHandler) Handle(message []byte) error {
+	createCatalogMessage := &CreateCatalogMessage{}
+	err := json.Unmarshal(message, createCatalogMessage)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal message: %w", err)
 	}
 
 	h.logger.Debug("Catalog creation requested",
@@ -66,7 +74,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	ctx := context.Background()
 
 	registry := &v1alpha1.Registry{}
-	err := h.k8sClient.Get(ctx, client.ObjectKey{
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      createCatalogMessage.RegistryName,
 		Namespace: createCatalogMessage.RegistryNamespace,
 	}, registry)
@@ -142,10 +150,6 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	return nil
-}
-
-func (h *CreateCatalogHandler) NewMessage() messaging.Message {
-	return &messaging.CreateCatalog{}
 }
 
 // discoverRepositories discovers all the repositories in a registry.

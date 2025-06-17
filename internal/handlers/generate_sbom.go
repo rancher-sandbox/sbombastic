@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,8 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
+
+const GenerateSBOMSubject = "sbombastic.sbom.generate"
+
+type GenerateSBOMMessage struct {
+	ImageName      string `json:"imageName"`
+	ImageNamespace string `json:"imageNamespace"`
+}
 
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
@@ -41,10 +48,10 @@ func NewGenerateSBOMHandler(
 	}
 }
 
-func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
-	generateSBOMMessage, ok := message.(*messaging.GenerateSBOM)
-	if !ok {
-		return fmt.Errorf("unexpected message type: %T", message)
+func (h *GenerateSBOMHandler) Handle(message []byte) error {
+	generateSBOMMessage := &GenerateSBOMMessage{}
+	if err := json.Unmarshal(message, generateSBOMMessage); err != nil {
+		return fmt.Errorf("failed to unmarshal GenerateSBOM message: %w", err)
 	}
 
 	h.logger.Debug("SBOM generation requested",
@@ -141,8 +148,4 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	return nil
-}
-
-func (h *GenerateSBOMHandler) NewMessage() messaging.Message {
-	return &messaging.GenerateSBOM{}
 }
