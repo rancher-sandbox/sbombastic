@@ -29,8 +29,10 @@ import (
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
 )
 
+// CreateCatalogSubject is the subject for the create catalog message.
 const CreateCatalogSubject = "sbombastic.catalog.create"
 
+// CreateCatalogMessage represents a request to create a catalog of images in a registry.
 type CreateCatalogMessage struct {
 	RegistryName      string `json:"registryName"`
 	RegistryNamespace string `json:"registryNamespace"`
@@ -44,6 +46,7 @@ type CreateCatalogHandler struct {
 	logger                *slog.Logger
 }
 
+// NewCreateCatalogHandler creates a new instance of CreateCatalogHandler.
 func NewCreateCatalogHandler(
 	registryClientFactory registryclient.ClientFactory,
 	k8sClient client.Client,
@@ -58,8 +61,8 @@ func NewCreateCatalogHandler(
 	}
 }
 
-//nolint:gocognit // We are a bit more tolerant for the handler.
-func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error {
+// Handle processes the create catalog message and creates Image resources.
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit // We are a bit more tolerant for the handler.
 	createCatalogMessage := &CreateCatalogMessage{}
 	err := json.Unmarshal(message, createCatalogMessage)
 	if err != nil {
@@ -202,6 +205,7 @@ func (h *CreateCatalogHandler) discoverImages(
 	return contents, nil
 }
 
+// refToImages converts a reference to a list of Image resources.
 func (h *CreateCatalogHandler) refToImages(
 	registryClient registryclient.Client,
 	ref name.Reference,
@@ -339,6 +343,7 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(
 	return nil
 }
 
+// imageDetailsToImage converts ImageDetails from the registry client to an Image resource.
 func imageDetailsToImage(
 	ref name.Reference,
 	details registryclient.ImageDetails,

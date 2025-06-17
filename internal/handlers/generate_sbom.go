@@ -20,13 +20,16 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 )
 
+// GenerateSBOMSubject is the subject for messages that trigger SBOM generation.
 const GenerateSBOMSubject = "sbombastic.sbom.generate"
 
+// GenerateSBOMMessage represents the request message for generating a SBOM.
 type GenerateSBOMMessage struct {
 	ImageName      string `json:"imageName"`
 	ImageNamespace string `json:"imageNamespace"`
 }
 
+// GenerateSBOMHandler is responsible for handling SBOM generation requests.
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
@@ -34,6 +37,7 @@ type GenerateSBOMHandler struct {
 	logger    *slog.Logger
 }
 
+// NewGenerateSBOMHandler creates a new instance of GenerateSBOMHandler.
 func NewGenerateSBOMHandler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
@@ -48,6 +52,7 @@ func NewGenerateSBOMHandler(
 	}
 }
 
+// Handle processes the GenerateSBOMMessage and generates a SBOM resource from the specified image.
 func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error {
 	generateSBOMMessage := &GenerateSBOMMessage{}
 	if err := json.Unmarshal(message, generateSBOMMessage); err != nil {
