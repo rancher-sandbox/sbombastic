@@ -59,19 +59,17 @@ func NewCreateCatalogHandler(
 }
 
 //nolint:gocognit // We are a bit more tolerant for the handler.
-func (h *CreateCatalogHandler) Handle(message []byte) error {
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error {
 	createCatalogMessage := &CreateCatalogMessage{}
 	err := json.Unmarshal(message, createCatalogMessage)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal message: %w", err)
 	}
 
-	h.logger.Debug("Catalog creation requested",
+	h.logger.DebugContext(ctx, "Catalog creation requested",
 		"registry", createCatalogMessage.RegistryName,
 		"namespace", createCatalogMessage.RegistryNamespace,
 	)
-
-	ctx := context.Background()
 
 	registry := &v1alpha1.Registry{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
@@ -87,7 +85,7 @@ func (h *CreateCatalogHandler) Handle(message []byte) error {
 		)
 	}
 
-	h.logger.Debug("Registry found", "registry", registry)
+	h.logger.DebugContext(ctx, "Registry found", "registry", registry)
 
 	transport, err := h.transportFromRegistry(registry)
 	if err != nil {
@@ -129,7 +127,7 @@ func (h *CreateCatalogHandler) Handle(message []byte) error {
 		var images []storagev1alpha1.Image
 		images, err = h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
+			h.logger.WarnContext(ctx, "cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}

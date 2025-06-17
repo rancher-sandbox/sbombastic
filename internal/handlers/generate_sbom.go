@@ -48,18 +48,16 @@ func NewGenerateSBOMHandler(
 	}
 }
 
-func (h *GenerateSBOMHandler) Handle(message []byte) error {
+func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error {
 	generateSBOMMessage := &GenerateSBOMMessage{}
 	if err := json.Unmarshal(message, generateSBOMMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal GenerateSBOM message: %w", err)
 	}
 
-	h.logger.Debug("SBOM generation requested",
+	h.logger.DebugContext(ctx, "SBOM generation requested",
 		"image", generateSBOMMessage.ImageName,
 		"namespace", generateSBOMMessage.ImageNamespace,
 	)
-
-	ctx := context.Background()
 
 	image := &storagev1alpha1.Image{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
@@ -75,7 +73,7 @@ func (h *GenerateSBOMHandler) Handle(message []byte) error {
 		)
 	}
 
-	h.logger.Debug("Image found",
+	h.logger.DebugContext(ctx, "Image found",
 		"image", image,
 	)
 
@@ -113,7 +111,7 @@ func (h *GenerateSBOMHandler) Handle(message []byte) error {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.Debug("SBOM generated",
+	h.logger.DebugContext(ctx, "SBOM generated",
 		"image", image.Name,
 		"namespace", image.Namespace,
 	)

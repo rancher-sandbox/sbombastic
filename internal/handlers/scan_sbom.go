@@ -49,18 +49,16 @@ func NewScanSBOMHandler(
 }
 
 //nolint:funlen
-func (h *ScanSBOMHandler) Handle(message []byte) error {
+func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error {
 	scanSBOMMessage := &ScanSBOMMessage{}
 	if err := json.Unmarshal(message, scanSBOMMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal scan job message: %w", err)
 	}
 
-	h.logger.Debug("SBOM scan requested",
+	h.logger.DebugContext(ctx, "SBOM scan requested",
 		"sbom", scanSBOMMessage.SBOMName,
 		"namespace", scanSBOMMessage.SBOMNamespace,
 	)
-
-	ctx := context.Background()
 
 	sbom := &storagev1alpha1.SBOM{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
@@ -120,7 +118,7 @@ func (h *ScanSBOMHandler) Handle(message []byte) error {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.Debug("SBOM scanned",
+	h.logger.DebugContext(ctx, "SBOM scanned",
 		"sbom", scanSBOMMessage.SBOMName,
 		"namespace", scanSBOMMessage.SBOMNamespace,
 	)

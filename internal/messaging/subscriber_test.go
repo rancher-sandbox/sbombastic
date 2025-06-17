@@ -19,7 +19,7 @@ type testHandler struct {
 	handleFunc func(message []byte) error
 }
 
-func (h *testHandler) Handle(message []byte) error {
+func (h *testHandler) Handle(_ context.Context, message []byte) error {
 	return h.handleFunc(message)
 }
 
@@ -132,7 +132,7 @@ func TestProcessMessage(t *testing.T) {
 				logger:   slog.Default(),
 			}
 
-			err := subscriber.processMessage(test.msg.Subject, test.msg.Data)
+			err := subscriber.processMessage(t.Context(), test.msg.Subject, test.msg.Data)
 
 			if test.expectedError == "" {
 				require.NoError(t, err, "expected no error, got: %v", err)

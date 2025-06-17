@@ -62,7 +62,7 @@ func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(message)
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
 
 	sbom := &storagev1alpha1.SBOM{}

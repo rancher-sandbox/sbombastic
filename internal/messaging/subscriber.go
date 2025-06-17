@@ -50,7 +50,7 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 		func(msg jetstream.Msg) {
 			s.logger.DebugContext(ctx, "Processing message", "subject", msg.Subject())
 
-			if err := s.processMessage(msg.Subject(), msg.Data()); err != nil {
+			if err := s.processMessage(ctx, msg.Subject(), msg.Data()); err != nil {
 				s.logger.ErrorContext(ctx, "Failed to process message",
 					"subject", msg.Subject(),
 					"headers", msg.Headers(),
@@ -82,13 +82,13 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 }
 
 // processMessage handles individual message processing.
-func (s *NatsSubscriber) processMessage(subject string, message []byte) error {
+func (s *NatsSubscriber) processMessage(ctx context.Context, subject string, message []byte) error {
 	handler, found := s.handlers[subject]
 	if !found {
 		return fmt.Errorf("no handler found for subject: %s", subject)
 	}
 
-	if err := handler.Handle(message); err != nil {
+	if err := handler.Handle(ctx, message); err != nil {
 		return fmt.Errorf("failed to handle message on subject %s: %w", subject, err)
 	}
 

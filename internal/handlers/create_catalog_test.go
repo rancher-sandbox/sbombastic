@@ -146,7 +146,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(message)
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}

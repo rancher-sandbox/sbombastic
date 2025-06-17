@@ -57,7 +57,7 @@ func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string)
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(message)
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
