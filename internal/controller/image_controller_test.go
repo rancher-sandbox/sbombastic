@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
 	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
@@ -29,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/rancher/sbombastic/internal/handlers"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
@@ -57,14 +58,16 @@ var _ = Describe("Image Controller", func() {
 		It("should successfully reconcile the resource", func(ctx context.Context) {
 			By("Ensuring the right message is published to the worker queue")
 			mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
-			mockPublisher.On("Publish", mock.Anything, &messaging.GenerateSBOM{
+			message, err := json.Marshal(&handlers.GenerateSBOMMessage{
 				ImageName:      image.Name,
 				ImageNamespace: image.Namespace,
-			}).Return(nil)
+			})
+			Expect(err).NotTo(HaveOccurred())
+			mockPublisher.On("Publish", mock.Anything, handlers.GenerateSBOMSubject, message).Return(nil)
 			reconciler.Publisher = mockPublisher
 
 			By("Reconciling the Registry")
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      image.Name,
 					Namespace: image.Namespace,

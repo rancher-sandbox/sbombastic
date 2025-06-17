@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
@@ -62,7 +64,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
-	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" {
+	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" { //nolint:nestif // (fabrizio) This logic will go away with the implementation of the ScanJob RFC.
 		log.Info(
 			"Registry needs to be discovered, sending the request.",
 			"name",
@@ -71,11 +73,15 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			registry.Namespace,
 		)
 
-		msg := messaging.CreateCatalog{
+		message, err := json.Marshal(&handlers.CreateCatalogMessage{
 			RegistryName:      registry.Name,
 			RegistryNamespace: registry.Namespace,
+		})
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
 		}
-		if err := r.Publisher.Publish(ctx, &msg); err != nil {
+
+		if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, message); err != nil {
 			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
 				Type:    v1alpha1.RegistryDiscoveringCondition,
 				Status:  metav1.ConditionUnknown,
