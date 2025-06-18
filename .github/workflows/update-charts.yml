@@ -1,0 +1,22 @@
+name: Update helm charts
+on:
+  workflow_call:
+jobs:
+  update-sbombastic-charts:
+    name: Update SBOMbastic charts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for updatecli to update the repository
+      pull-requests: write # for updatecli to create a PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@307ce72e224b82157cc31c78828f168b8e55d47d # v2.84.0
+
+      - name: Update SBOMbastic charts
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: "updatecli apply --config ./updatecli/updatecli.d/helm-chart-update.yaml --values updatecli/values.yaml"
