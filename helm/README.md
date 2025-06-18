@@ -1,4 +1,4 @@
-# SBOMbastic Storage
+## SBOMbastic Storage
 
 The `storage` Helm chart installs the SBOMbastic storage deployment, which should be installed alongside the SBOMbastic controller and worker components.
 

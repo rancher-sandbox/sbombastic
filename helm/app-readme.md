@@ -20,4 +20,4 @@ SBOMbastic is a SBOM-centric security scanner for Kubernetes. It provides native
 
 ## Learn More
 
-- [Source Code](https://github.com/rancher-box/sbombastic)
+- [Source Code](https://github.com/rancher-sandbox/sbombastic)
