@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/rancher/sbombastic/internal/handlers"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
@@ -65,14 +66,16 @@ var _ = Describe("Registry Controller", func() {
 		It("Should start the discovery process", func(ctx context.Context) {
 			By("Ensuring the right message is published to the worker queue")
 			mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
-			mockPublisher.On("Publish", mock.Anything, &messaging.CreateCatalog{
+			message, err := json.Marshal(&handlers.CreateCatalogMessage{
 				RegistryName:      registry.Name,
 				RegistryNamespace: registry.Namespace,
-			}).Return(nil)
+			})
+			Expect(err).NotTo(HaveOccurred())
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(nil)
 			reconciler.Publisher = mockPublisher
 
 			By("Reconciling the Registry")
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      registry.Name,
 					Namespace: registry.Namespace,
@@ -107,14 +110,16 @@ var _ = Describe("Registry Controller", func() {
 			func(ctx context.Context) {
 				By("Returning an error when publishing the message")
 				mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
-				mockPublisher.On("Publish", mock.Anything, &messaging.CreateCatalog{
+				message, err := json.Marshal(&handlers.CreateCatalogMessage{
 					RegistryName:      registry.Name,
 					RegistryNamespace: registry.Namespace,
-				}).Return(errors.New("failed to publish message"))
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(errors.New("failed to publish message"))
 				reconciler.Publisher = mockPublisher
 
 				By("Reconciling the Registry")
-				_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      registry.Name,
 						Namespace: registry.Namespace,

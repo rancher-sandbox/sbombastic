@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -30,7 +31,6 @@ import (
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/handlers/registry"
 	registryMocks "github.com/rancher/sbombastic/internal/handlers/registry/mocks"
-	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
@@ -140,10 +140,13 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		Build()
 
 	handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, slog.Default())
-	err = handler.Handle(&messaging.CreateCatalog{
+	message, err := json.Marshal(&CreateCatalogMessage{
 		RegistryName:      registry.Name,
 		RegistryNamespace: registry.Namespace,
 	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}
@@ -251,11 +254,11 @@ func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
 
 	ctx := t.Context()
 
-	existingImageNames := sets.New[string](
+	existingImageNames := sets.New(
 		"image-1",
 		"image-2",
 	)
-	newImageNames := sets.New[string](
+	newImageNames := sets.New(
 		"image-1", // Image 2 is obsolete
 	)
 

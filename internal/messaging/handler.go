@@ -1,6 +1,7 @@
 package messaging
 
+import "context"
+
 type Handler interface {
-	Handle(msg Message) error
-	NewMessage() Message
+	Handle(ctx context.Context, message []byte) error
 }

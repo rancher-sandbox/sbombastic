@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,9 +18,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
 
+// GenerateSBOMSubject is the subject for messages that trigger SBOM generation.
+const GenerateSBOMSubject = "sbombastic.sbom.generate"
+
+// GenerateSBOMMessage represents the request message for generating a SBOM.
+type GenerateSBOMMessage struct {
+	ImageName      string `json:"imageName"`
+	ImageNamespace string `json:"imageNamespace"`
+}
+
+// GenerateSBOMHandler is responsible for handling SBOM generation requests.
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
@@ -27,6 +37,7 @@ type GenerateSBOMHandler struct {
 	logger    *slog.Logger
 }
 
+// NewGenerateSBOMHandler creates a new instance of GenerateSBOMHandler.
 func NewGenerateSBOMHandler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
@@ -41,18 +52,17 @@ func NewGenerateSBOMHandler(
 	}
 }
 
-func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
-	generateSBOMMessage, ok := message.(*messaging.GenerateSBOM)
-	if !ok {
-		return fmt.Errorf("unexpected message type: %T", message)
+// Handle processes the GenerateSBOMMessage and generates a SBOM resource from the specified image.
+func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error {
+	generateSBOMMessage := &GenerateSBOMMessage{}
+	if err := json.Unmarshal(message, generateSBOMMessage); err != nil {
+		return fmt.Errorf("failed to unmarshal GenerateSBOM message: %w", err)
 	}
 
-	h.logger.Debug("SBOM generation requested",
+	h.logger.DebugContext(ctx, "SBOM generation requested",
 		"image", generateSBOMMessage.ImageName,
 		"namespace", generateSBOMMessage.ImageNamespace,
 	)
-
-	ctx := context.Background()
 
 	image := &storagev1alpha1.Image{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
@@ -68,7 +78,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		)
 	}
 
-	h.logger.Debug("Image found",
+	h.logger.DebugContext(ctx, "Image found",
 		"image", image,
 	)
 
@@ -106,7 +116,7 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.Debug("SBOM generated",
+	h.logger.DebugContext(ctx, "SBOM generated",
 		"image", image.Name,
 		"namespace", image.Namespace,
 	)
@@ -141,8 +151,4 @@ func (h *GenerateSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	return nil
-}
-
-func (h *GenerateSBOMHandler) NewMessage() messaging.Message {
-	return &messaging.GenerateSBOM{}
 }

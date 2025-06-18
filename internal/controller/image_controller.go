@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
@@ -57,19 +59,22 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	var sbom storagev1alpha1.SBOM
 	if err := r.Get(ctx, req.NamespacedName, &sbom); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Creating SBOM of Image", "name", image.Name, "namespace", image.Namespace)
-
-			msg := messaging.GenerateSBOM{
-				ImageName:      image.Name,
-				ImageNamespace: image.Namespace,
-			}
-
-			if err = r.Publisher.Publish(ctx, &msg); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
-			}
-		} else {
+		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
+		}
+
+		log.Info("Creating SBOM of Image", "name", image.Name, "namespace", image.Namespace)
+
+		message, err := json.Marshal(&handlers.GenerateSBOMMessage{
+			ImageName:      image.Name,
+			ImageNamespace: image.Namespace,
+		})
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("unable to marshal GenerateSBOM message: %w", err)
+		}
+
+		if err = r.Publisher.Publish(ctx, handlers.GenerateSBOMSubject, message); err != nil {
+			return ctrl.Result{}, fmt.Errorf("unable to publish GenerateSBOM message: %w", err)
 		}
 	}
 

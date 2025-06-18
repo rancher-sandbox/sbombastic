@@ -37,7 +37,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/cmdutil"
@@ -191,13 +190,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	publisher, err := messaging.NewNatsPublisher(nc, slogger)
+	publisher, err := messaging.NewNatsPublisher(signalHandler, nc, slogger)
 	if err != nil {
 		setupLog.Error(err, "unable to create NATS publisher")
-		os.Exit(1)
-	}
-	if err = publisher.CreateStream(signalHandler, jetstream.FileStorage); err != nil {
-		setupLog.Error(err, "unable to add JetStream stream")
 		os.Exit(1)
 	}
 

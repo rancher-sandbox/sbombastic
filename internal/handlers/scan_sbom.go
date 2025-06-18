@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,9 +18,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
 
+// ScanSBOMSubject is the subject for messages that trigger SBOM scanning.
+const ScanSBOMSubject = "sbombastic.sbom.scan"
+
+// ScanSBOMMessage represents the request message for scanning a SBOM.
+type ScanSBOMMessage struct {
+	SBOMName      string `json:"sbomName"`
+	SBOMNamespace string `json:"sbomNamespace"`
+}
+
+// ScanSBOMHandler is responsible for handling SBOM scan requests.
 type ScanSBOMHandler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
@@ -27,6 +37,7 @@ type ScanSBOMHandler struct {
 	logger    *slog.Logger
 }
 
+// NewScanSBOMHandler creates a new instance of ScanSBOMHandler.
 func NewScanSBOMHandler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
@@ -41,19 +52,17 @@ func NewScanSBOMHandler(
 	}
 }
 
-//nolint:funlen
-func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
-	scanSBOMMessage, ok := message.(*messaging.ScanSBOM)
-	if !ok {
-		return fmt.Errorf("unexpected message type: %T", message)
+// Handle processes the ScanSBOMMessage and scans the specified SBOM resource for vulnerabilities.
+func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //nolint:funlen
+	scanSBOMMessage := &ScanSBOMMessage{}
+	if err := json.Unmarshal(message, scanSBOMMessage); err != nil {
+		return fmt.Errorf("failed to unmarshal scan job message: %w", err)
 	}
 
-	h.logger.Debug("SBOM scan requested",
+	h.logger.DebugContext(ctx, "SBOM scan requested",
 		"sbom", scanSBOMMessage.SBOMName,
 		"namespace", scanSBOMMessage.SBOMNamespace,
 	)
-
-	ctx := context.Background()
 
 	sbom := &storagev1alpha1.SBOM{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
@@ -113,7 +122,7 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.Debug("SBOM scanned",
+	h.logger.DebugContext(ctx, "SBOM scanned",
 		"sbom", scanSBOMMessage.SBOMName,
 		"namespace", scanSBOMMessage.SBOMNamespace,
 	)
@@ -150,8 +159,4 @@ func (h *ScanSBOMHandler) Handle(message messaging.Message) error {
 	}
 
 	return nil
-}
-
-func (h *ScanSBOMHandler) NewMessage() messaging.Message {
-	return &messaging.ScanSBOM{}
 }

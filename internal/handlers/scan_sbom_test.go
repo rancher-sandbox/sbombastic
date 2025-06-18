@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/owenrumney/go-sarif/v2/sarif"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,10 +51,13 @@ func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string)
 
 	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
-	err = handler.Handle(&messaging.ScanSBOM{
+	message, err := json.Marshal(&ScanSBOMMessage{
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
 	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}

@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
 
@@ -57,10 +56,13 @@ func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 
 	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
-	err = handler.Handle(&messaging.GenerateSBOM{
+	message, err := json.Marshal(&GenerateSBOMMessage{
 		ImageName:      image.Name,
 		ImageNamespace: image.Namespace,
 	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
 
 	sbom := &storagev1alpha1.SBOM{}

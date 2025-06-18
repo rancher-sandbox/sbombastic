@@ -7,7 +7,6 @@ package messaging
 import (
 	"context"
 
-	"github.com/rancher/sbombastic/internal/messaging"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,16 +38,16 @@ func (_m *MockPublisher) EXPECT() *MockPublisher_Expecter {
 }
 
 // Publish provides a mock function for the type MockPublisher
-func (_mock *MockPublisher) Publish(ctx context.Context, message messaging.Message) error {
-	ret := _mock.Called(ctx, message)
+func (_mock *MockPublisher) Publish(ctx context.Context, subject string, msg []byte) error {
+	ret := _mock.Called(ctx, subject, msg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Publish")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, messaging.Message) error); ok {
-		r0 = returnFunc(ctx, message)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) error); ok {
+		r0 = returnFunc(ctx, subject, msg)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,24 +61,30 @@ type MockPublisher_Publish_Call struct {
 
 // Publish is a helper method to define mock.On call
 //   - ctx context.Context
-//   - message messaging.Message
-func (_e *MockPublisher_Expecter) Publish(ctx interface{}, message interface{}) *MockPublisher_Publish_Call {
-	return &MockPublisher_Publish_Call{Call: _e.mock.On("Publish", ctx, message)}
+//   - subject string
+//   - msg []byte
+func (_e *MockPublisher_Expecter) Publish(ctx interface{}, subject interface{}, msg interface{}) *MockPublisher_Publish_Call {
+	return &MockPublisher_Publish_Call{Call: _e.mock.On("Publish", ctx, subject, msg)}
 }
 
-func (_c *MockPublisher_Publish_Call) Run(run func(ctx context.Context, message messaging.Message)) *MockPublisher_Publish_Call {
+func (_c *MockPublisher_Publish_Call) Run(run func(ctx context.Context, subject string, msg []byte)) *MockPublisher_Publish_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 messaging.Message
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(messaging.Message)
+			arg1 = args[1].(string)
+		}
+		var arg2 []byte
+		if args[2] != nil {
+			arg2 = args[2].([]byte)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,7 +95,7 @@ func (_c *MockPublisher_Publish_Call) Return(err error) *MockPublisher_Publish_C
 	return _c
 }
 
-func (_c *MockPublisher_Publish_Call) RunAndReturn(run func(ctx context.Context, message messaging.Message) error) *MockPublisher_Publish_Call {
+func (_c *MockPublisher_Publish_Call) RunAndReturn(run func(ctx context.Context, subject string, msg []byte) error) *MockPublisher_Publish_Call {
 	_c.Call.Return(run)
 	return _c
 }

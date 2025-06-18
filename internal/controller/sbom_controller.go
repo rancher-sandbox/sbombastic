@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
@@ -58,16 +60,20 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
 	}
 
-	scanSBOM := &messaging.ScanSBOM{
+	scanSBOM := &handlers.ScanSBOMMessage{
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
 	}
-	if err := r.Publisher.Publish(ctx, scanSBOM); err != nil {
+	message, err := json.Marshal(scanSBOM)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("unable to marshal ScanSBOM message: %w", err)
+	}
+	if err = r.Publisher.Publish(ctx, handlers.ScanSBOMSubject, message); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to publish ScanSBOM message: %w", err)
 	}
 
 	var sbomList storagev1alpha1.SBOMList
-	err := r.List(ctx, &sbomList, client.InNamespace(req.Namespace), client.MatchingFieldsSelector{
+	err = r.List(ctx, &sbomList, client.InNamespace(req.Namespace), client.MatchingFieldsSelector{
 		Selector: fields.SelectorFromSet(map[string]string{
 			"spec.imageMetadata.registry": sbom.GetImageMetadata().Registry,
 		}),

@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -26,8 +27,16 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
+
+// CreateCatalogSubject is the subject for the create catalog message.
+const CreateCatalogSubject = "sbombastic.catalog.create"
+
+// CreateCatalogMessage represents a request to create a catalog of images in a registry.
+type CreateCatalogMessage struct {
+	RegistryName      string `json:"registryName"`
+	RegistryNamespace string `json:"registryNamespace"`
+}
 
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
 type CreateCatalogHandler struct {
@@ -37,6 +46,7 @@ type CreateCatalogHandler struct {
 	logger                *slog.Logger
 }
 
+// NewCreateCatalogHandler creates a new instance of CreateCatalogHandler.
 func NewCreateCatalogHandler(
 	registryClientFactory registryclient.ClientFactory,
 	k8sClient client.Client,
@@ -51,22 +61,21 @@ func NewCreateCatalogHandler(
 	}
 }
 
-//nolint:gocognit // We are a bit more tolerant for the handler.
-func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
-	createCatalogMessage, ok := message.(*messaging.CreateCatalog)
-	if !ok {
-		return fmt.Errorf("unexpected message type: %T", message)
+// Handle processes the create catalog message and creates Image resources.
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit // We are a bit more tolerant for the handler.
+	createCatalogMessage := &CreateCatalogMessage{}
+	err := json.Unmarshal(message, createCatalogMessage)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal message: %w", err)
 	}
 
-	h.logger.Debug("Catalog creation requested",
+	h.logger.DebugContext(ctx, "Catalog creation requested",
 		"registry", createCatalogMessage.RegistryName,
 		"namespace", createCatalogMessage.RegistryNamespace,
 	)
 
-	ctx := context.Background()
-
 	registry := &v1alpha1.Registry{}
-	err := h.k8sClient.Get(ctx, client.ObjectKey{
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      createCatalogMessage.RegistryName,
 		Namespace: createCatalogMessage.RegistryNamespace,
 	}, registry)
@@ -79,7 +88,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		)
 	}
 
-	h.logger.Debug("Registry found", "registry", registry)
+	h.logger.DebugContext(ctx, "Registry found", "registry", registry)
 
 	transport, err := h.transportFromRegistry(registry)
 	if err != nil {
@@ -121,7 +130,7 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 		var images []storagev1alpha1.Image
 		images, err = h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			h.logger.Info("cannot get images", "reference", ref.String(), "error", err)
+			h.logger.WarnContext(ctx, "cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -142,10 +151,6 @@ func (h *CreateCatalogHandler) Handle(message messaging.Message) error {
 	}
 
 	return nil
-}
-
-func (h *CreateCatalogHandler) NewMessage() messaging.Message {
-	return &messaging.CreateCatalog{}
 }
 
 // discoverRepositories discovers all the repositories in a registry.
@@ -200,6 +205,7 @@ func (h *CreateCatalogHandler) discoverImages(
 	return contents, nil
 }
 
+// refToImages converts a reference to a list of Image resources.
 func (h *CreateCatalogHandler) refToImages(
 	registryClient registryclient.Client,
 	ref name.Reference,
@@ -337,6 +343,7 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(
 	return nil
 }
 
+// imageDetailsToImage converts ImageDetails from the registry client to an Image resource.
 func imageDetailsToImage(
 	ref name.Reference,
 	details registryclient.ImageDetails,
