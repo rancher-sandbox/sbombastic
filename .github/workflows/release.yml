@@ -7,12 +7,17 @@ on:
 
 jobs:
   build:
+    permissions:
+      packages: write # Pushing images to ghcr.io
+      id-token: write # Signing images with cosign
     uses: ./.github/workflows/container-build.yaml
     with:
       version: ${{ github.ref_name }}
     secrets: inherit
   create-release:
     needs: [build]
+    permissions:
+      contents: write # Creating a release
     runs-on: ubuntu-latest
     steps:
       - name: Retrieve tag name

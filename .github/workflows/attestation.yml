@@ -14,8 +14,8 @@ jobs:
   attest:
     name: Sign attestations and upload as artifacts
     permissions:
-      packages: write
-      id-token: write
+      packages: write # Uploading signed artifacts to ghcr.io
+      id-token: write # Signing images with cosign
     runs-on: ubuntu-latest
     env:
       CRANE_VERSION: v0.20.5
