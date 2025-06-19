@@ -122,6 +122,9 @@ jobs:
     needs: [merge]
     if: ${{ inputs.version }}
     uses: ./.github/workflows/attestation.yml
+    permissions:
+      id-token: write # Generating OIDC token for Sigstore/Cosign authentication
+      packages: write # Pushing attestations to container registry
     strategy:
       matrix:
         component: [controller, worker, storage]
