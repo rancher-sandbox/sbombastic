@@ -56,7 +56,7 @@ storage_image = settings.get("storage").get("image")
 worker_image = settings.get("worker").get("image")
 
 yaml = helm(
-    "./helm",
+    "./charts/sbombastic",
     name="sbombastic",
     namespace="sbombastic",
     set=[
