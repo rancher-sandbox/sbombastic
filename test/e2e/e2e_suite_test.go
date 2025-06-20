@@ -25,6 +25,7 @@ func TestRegistryCreation(t *testing.T) {
 	registryName := "test-registry"
 	registryURI := "ghcr.io"
 	registryRepository := "rancher-sandbox/sbombastic/test-assets/golang"
+	chartPath := "../../charts/sbombastic"
 	totalImages := 7 // Current number of images in the test-assets/golang directory
 
 	labelSelector := labels.FormatLabels(
@@ -36,7 +37,7 @@ func TestRegistryCreation(t *testing.T) {
 			manager := helm.New(cfg.KubeconfigFile())
 			err := manager.RunInstall(helm.WithName(releaseName),
 				helm.WithNamespace(cfg.Namespace()),
-				helm.WithChart("../../helm"),
+				helm.WithChart(chartPath),
 				helm.WithWait(),
 				helm.WithArgs("--set", "controller.image.tag=latest",
 					"--set", "storage.image.tag=latest",

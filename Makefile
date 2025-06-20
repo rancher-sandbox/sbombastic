@@ -24,7 +24,7 @@ test: vet ## Run tests.
 
 .PHONY: helm-unittest
 helm-unittest:
-	helm unittest helm/ --file "tests/**/*_test.yaml"
+	helm unittest charts/sbombastic --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image storage-image worker-image
@@ -49,7 +49,7 @@ vet:
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
 CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
-.PHONY: controller 
+.PHONY: controller
 controller: $(CONTROLLER_SRCS) vet
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/controller ./cmd/controller
 
@@ -94,9 +94,9 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=helm/templates/crd output:rbac:artifacts:config=helm/templates/controller
-	sed -i 's/controller-role/{{ include "sbombastic.fullname" . }}-controller/' helm/templates/controller/role.yaml
-	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' helm/templates/controller/role.yaml
+	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbombastic/templates/crd output:rbac:artifacts:config=charts/sbombastic/templates/controller
+	sed -i 's/controller-role/{{ include "sbombastic.fullname" . }}-controller/' charts/sbombastic/templates/controller/role.yaml
+	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/sbombastic/templates/controller/role.yaml
 
 .PHONY: generate-storage-test-crd
 generate-storage-test-crd: ## Generate CRD used by the controller tests to access the storage resources. This is needed since storage does not provide CRD, being an API server extension.

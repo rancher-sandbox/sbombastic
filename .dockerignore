@@ -1,5 +1,5 @@
 coverage/
 docs/
 examples/
-helm/
+charts/
 test/
