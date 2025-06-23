@@ -21,7 +21,7 @@ storage:
 worker:
   image:
     repository: ghcr.io/rancher-sandbox/sbombastic/worker
-    tag: v0.1.0-alpha1
+    tag: v0.0.1
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
@@ -32,7 +32,7 @@ persistence:
   ## Specify a PVC for the storage data
   storageData:
     enabled: true
-    subPath:
+    subPath: null
     annotations: {}
     labels: {}
     # storageClass: ""
@@ -40,8 +40,6 @@ persistence:
     # existingClaim:
     accessMode: ReadWriteOnce
     size: 1Gi
-
-
 
 # NOTE: This section is used to configure the NATS server and its components
 # deployed by the NATS chart dependency.
