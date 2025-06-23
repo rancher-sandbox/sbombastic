@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
-	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/google/uuid"
