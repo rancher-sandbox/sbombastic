@@ -162,7 +162,7 @@ func (s *ScanJob) MarkFailed(reason, message string) {
 
 // IsInProgress returns true if the job is running.
 func (s *ScanJob) IsInProgress() bool {
-	return !s.IsComplete() && !s.IsFailed()
+	return !s.IsComplete() && !s.IsFailed() && s.Status.StartTime != nil
 }
 
 // IsComplete returns true if the job has completed successfully.
