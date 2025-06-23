@@ -34,7 +34,7 @@ scms:
         type: "chore"
         title: "Update SBOMbastic Helm charts"
         hidecredit: true
-        footers: "Signed-off-by: SBOMbastic bot."
+        footers: "Signed-off-by: SBOMbastic bot <sbombastic-bot@users.noreply.github.com>"
 
 actions:
   default:
