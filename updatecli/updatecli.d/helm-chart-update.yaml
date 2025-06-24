@@ -24,6 +24,7 @@ scms:
     kind: github
     spec:
       user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
       directory: "/tmp/helm-charts"
       owner: "{{ requiredEnv .github.owner }}"
       repository: "sbombastic"
