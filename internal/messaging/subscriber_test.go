@@ -56,7 +56,7 @@ func TestSubscriber_Run(t *testing.T) {
 	defer cancel()
 
 	message := []byte(`{"data":"test data"}`)
-	err = publisher.Publish(t.Context(), testSubscriberSubject, message)
+	err = publisher.Publish(t.Context(), testSubscriberSubject, "id", message)
 	require.NoError(t, err, "failed to publish message")
 
 	go func() {
