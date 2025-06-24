@@ -28,13 +28,18 @@ func TestPublisher_Publish(t *testing.T) {
 	require.NoError(t, err)
 
 	message := []byte(`{"data":"test data"}`)
-	err = publisher.Publish(t.Context(), testPublisherSubject, message)
+	err = publisher.Publish(t.Context(), testPublisherSubject, "id", message)
+	require.NoError(t, err)
+
+	// Send a duplicate message with the same ID to test idempotency
+	messageDup := []byte(`{"data":"test data duplicate"}`)
+	err = publisher.Publish(t.Context(), testPublisherSubject, "id", messageDup)
 	require.NoError(t, err)
 
 	cons, err := publisher.js.CreateOrUpdateConsumer(t.Context(), streamName, jetstream.ConsumerConfig{})
 	require.NoError(t, err)
 
-	batch, err := cons.Fetch(1)
+	batch, err := cons.FetchNoWait(10) // Fetch max 10 messages, but we expect only 1
 	require.NoError(t, err)
 	require.NoError(t, batch.Error())
 
