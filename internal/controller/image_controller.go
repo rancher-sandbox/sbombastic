@@ -65,6 +65,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 		log.Info("Creating SBOM of Image", "name", image.Name, "namespace", image.Namespace)
 
+		messageID := string(image.GetUID())
 		message, err := json.Marshal(&handlers.GenerateSBOMMessage{
 			ImageName:      image.Name,
 			ImageNamespace: image.Namespace,
@@ -73,7 +74,7 @@ func (r *ImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			return ctrl.Result{}, fmt.Errorf("unable to marshal GenerateSBOM message: %w", err)
 		}
 
-		if err = r.Publisher.Publish(ctx, handlers.GenerateSBOMSubject, message); err != nil {
+		if err = r.Publisher.Publish(ctx, handlers.GenerateSBOMSubject, messageID, message); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to publish GenerateSBOM message: %w", err)
 		}
 	}
