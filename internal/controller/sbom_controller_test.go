@@ -109,7 +109,7 @@ var _ = Describe("SBOM Controller", func() {
 				SBOMNamespace: sbom.Namespace,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.ScanSBOMSubject, message).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.ScanSBOMSubject, string(sbom.GetUID()), message).Return(nil)
 			reconciler.Publisher = mockPublisher
 
 			By("Reconciling the Registry")

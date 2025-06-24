@@ -73,6 +73,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			registry.Namespace,
 		)
 
+		messageID := fmt.Sprintf("%s:%d", registry.GetUID(), registry.Generation)
 		message, err := json.Marshal(&handlers.CreateCatalogMessage{
 			RegistryName:      registry.Name,
 			RegistryNamespace: registry.Namespace,
@@ -81,7 +82,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
 		}
 
-		if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, message); err != nil {
+		if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, messageID, message); err != nil {
 			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
 				Type:    v1alpha1.RegistryDiscoveringCondition,
 				Status:  metav1.ConditionUnknown,

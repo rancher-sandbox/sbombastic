@@ -63,7 +63,7 @@ var _ = Describe("Image Controller", func() {
 				ImageNamespace: image.Namespace,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.GenerateSBOMSubject, message).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.GenerateSBOMSubject, string(image.GetUID()), message).Return(nil)
 			reconciler.Publisher = mockPublisher
 
 			By("Reconciling the Registry")

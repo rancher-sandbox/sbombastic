@@ -118,12 +118,13 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 
 	scanJob.MarkInProgress(sbombasticv1alpha1.ReasonProcessing, "Processing scan job")
 
+	messageID := string(scanJob.UID)
 	message, err := json.Marshal(&handlers.CreateCatalogMessage{})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
 	}
 
-	if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, message); err != nil {
+	if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, messageID, message); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
 	}
 
