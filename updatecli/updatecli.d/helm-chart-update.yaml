@@ -39,14 +39,14 @@ scms:
 
 actions:
   default:
-    title: 'chore: Helm chart {{ source "releaseVersion" }} release'
+    title: 'chore: Helm chart {{ source "chartVersion" }} release'
     kind: github/pullrequest
     scmid: default
     spec:
       automerge: false
       mergemethod: squash
       description: |
-        Automatic Helm chart {{ source "releaseVersion" }} update.
+        Automatic Helm chart {{ source "chartVersion" }} update.
         This PR has been created by the automation used to automatically update the Helm charts when SBOMbastic is released or helm chart content is updated.
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
