@@ -39,6 +39,7 @@ const (
 const (
 	ReasonInitializing     = "Initializing"
 	ReasonProcessing       = "Processing"
+	ReasonNoImagesToScan   = "NoImagesToScan"
 	ReasonAllImagesScanned = "AllImagesScanned"
 	ReasonRegistryNotFound = "RegistryNotFound"
 	ReasonInternalError    = "InternalError"

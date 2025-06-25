@@ -25,8 +25,10 @@ const GenerateSBOMSubject = "sbombastic.sbom.generate"
 
 // GenerateSBOMMessage represents the request message for generating a SBOM.
 type GenerateSBOMMessage struct {
-	ImageName      string `json:"imageName"`
-	ImageNamespace string `json:"imageNamespace"`
+	ScanJobName      string `json:"scanJobName"`
+	ScanJobNamespace string `json:"scanJobNamespace"`
+	ImageName        string `json:"imageName"`
+	ImageNamespace   string `json:"imageNamespace"`
 }
 
 // GenerateSBOMHandler is responsible for handling SBOM generation requests.
