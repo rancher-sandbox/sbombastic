@@ -18,12 +18,9 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,15 +29,12 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers"
-	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // RegistryReconciler reconciles a Registry object
 type RegistryReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Publisher messaging.Publisher
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -62,50 +56,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		return ctrl.Result{}, nil
-	}
-
-	if registry.Annotations[v1alpha1.RegistryLastDiscoveredAtAnnotation] == "" { //nolint:nestif // (fabrizio) This logic will go away with the implementation of the ScanJob RFC.
-		log.Info(
-			"Registry needs to be discovered, sending the request.",
-			"name",
-			registry.Name,
-			"namespace",
-			registry.Namespace,
-		)
-
-		messageID := fmt.Sprintf("%s:%d", registry.GetUID(), registry.Generation)
-		message, err := json.Marshal(&handlers.CreateCatalogMessage{
-			RegistryName:      registry.Name,
-			RegistryNamespace: registry.Namespace,
-		})
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
-		}
-
-		if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, messageID, message); err != nil {
-			meta.SetStatusCondition(&registry.Status.Conditions, metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
-				Message: "Failed to communicate with the workers",
-			})
-			if err = r.Status().Update(ctx, &registry); err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
-			}
-
-			return ctrl.Result{}, fmt.Errorf("failed to publish CreateCatalog message: %w", err)
-		}
-
-		meta.SetStatusCondition(&registry.Status.Conditions,
-			metav1.Condition{
-				Type:    v1alpha1.RegistryDiscoveringCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
-				Message: "Registry discovery in progress",
-			})
-		if err := r.Status().Update(ctx, &registry); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to set status condition: %w", err)
-		}
 	}
 
 	if len(registry.Spec.Repositories) > 0 {
