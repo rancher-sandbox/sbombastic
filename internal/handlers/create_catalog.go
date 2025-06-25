@@ -18,6 +18,7 @@ import (
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -27,6 +28,7 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // CreateCatalogSubject is the subject for the create catalog message.
@@ -34,8 +36,8 @@ const CreateCatalogSubject = "sbombastic.catalog.create"
 
 // CreateCatalogMessage represents a request to create a catalog of images in a registry.
 type CreateCatalogMessage struct {
-	RegistryName      string `json:"registryName"`
-	RegistryNamespace string `json:"registryNamespace"`
+	ScanJobName      string `json:"scanJobName"`
+	ScanJobNamespace string `json:"scanJobNamespace"`
 }
 
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
@@ -43,6 +45,7 @@ type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
 	k8sClient             client.Client
 	scheme                *runtime.Scheme
+	publisher             messaging.Publisher
 	logger                *slog.Logger
 }
 
@@ -51,18 +54,20 @@ func NewCreateCatalogHandler(
 	registryClientFactory registryclient.ClientFactory,
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
+	publisher messaging.Publisher,
 	logger *slog.Logger,
 ) *CreateCatalogHandler {
 	return &CreateCatalogHandler{
 		registryClientFactory: registryClientFactory,
 		k8sClient:             k8sClient,
+		publisher:             publisher,
 		scheme:                scheme,
 		logger:                logger.With("handler", "create_catalog_handler"),
 	}
 }
 
 // Handle processes the create catalog message and creates Image resources.
-func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit // We are a bit more tolerant for the handler.
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit,funlen // We are a bit more tolerant for the handler.
 	createCatalogMessage := &CreateCatalogMessage{}
 	err := json.Unmarshal(message, createCatalogMessage)
 	if err != nil {
@@ -70,25 +75,36 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	h.logger.DebugContext(ctx, "Catalog creation requested",
-		"registry", createCatalogMessage.RegistryName,
-		"namespace", createCatalogMessage.RegistryNamespace,
+		"scanjob", createCatalogMessage.ScanJobName,
+		"namespace", createCatalogMessage.ScanJobNamespace,
 	)
 
-	registry := &v1alpha1.Registry{}
+	scanJob := &v1alpha1.ScanJob{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      createCatalogMessage.RegistryName,
-		Namespace: createCatalogMessage.RegistryNamespace,
-	}, registry)
+		Name:      createCatalogMessage.ScanJobName,
+		Namespace: createCatalogMessage.ScanJobNamespace,
+	}, scanJob)
 	if err != nil {
-		return fmt.Errorf(
-			"cannot get registry %s/%s: %w",
-			createCatalogMessage.RegistryNamespace,
-			createCatalogMessage.RegistryName,
-			err,
-		)
-	}
+		// If the scan job is not found, we skip the catalog creation since it might have been deleted.
+		if apierrors.IsNotFound(err) {
+			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", createCatalogMessage.ScanJobName, "namespace", createCatalogMessage.ScanJobNamespace)
+			return nil
+		}
 
-	h.logger.DebugContext(ctx, "Registry found", "registry", registry)
+		return fmt.Errorf("cannot get scan job %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+	}
+	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+
+	// Retrieve the registry from the scan job annotations.
+	registrData, ok := scanJob.Annotations[v1alpha1.RegistryAnnotation]
+	if !ok {
+		return fmt.Errorf("scan job %s/%s does not have a registry annotation", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName)
+	}
+	registry := &v1alpha1.Registry{}
+	if err = json.Unmarshal([]byte(registrData), registry); err != nil {
+		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+	}
+	h.logger.DebugContext(ctx, "Registry found", "registry", registry.Name, "namespace", registry.Namespace)
 
 	transport, err := h.transportFromRegistry(registry)
 	if err != nil {
@@ -112,7 +128,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
-	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingLabels{"registry": registry.Name}); err != nil {
+	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingFields{"spec.imageMetadata.registry": registry.Name}); err != nil {
 		return fmt.Errorf("cannot list existing images in registry %s: %w", registry.Name, err)
 	}
 	existingImageNames := sets.Set[string]{}
@@ -120,22 +136,28 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		existingImageNames.Insert(existingImage.Name)
 	}
 
+	var imageToProcess []storagev1alpha1.Image
+
 	for newImageName := range discoveredImageNames {
 		var ref name.Reference
 		ref, err = name.ParseReference(newImageName)
 		if err != nil {
-			return fmt.Errorf("cannot parse reference %s: %w", newImageName, err)
+			h.logger.ErrorContext(ctx, "Cannot parse image reference", "reference", newImageName, "error", err)
+			// Avoid blocking other images to be cataloged
+			continue
 		}
 
 		var images []storagev1alpha1.Image
 		images, err = h.refToImages(registryClient, ref, registry)
 		if err != nil {
-			h.logger.WarnContext(ctx, "cannot get images", "reference", ref.String(), "error", err)
+			h.logger.ErrorContext(ctx, "Cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
 		for _, image := range images {
+			imageToProcess = append(imageToProcess, image)
+
 			if existingImageNames.Has(image.Name) {
 				continue
 			}
@@ -148,6 +170,41 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 
 	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
 		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
+	}
+
+	originalScanJob := scanJob.DeepCopy()
+
+	if len(imageToProcess) == 0 {
+		h.logger.DebugContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+
+		scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
+	} else {
+		h.logger.DebugContext(ctx, "Images to process", "count", len(imageToProcess))
+
+		scanJob.Status.ImagesCount = len(imageToProcess)
+		scanJob.Status.ScannedImagesCount = 0
+	}
+
+	if err = h.k8sClient.Status().Patch(ctx, scanJob, client.MergeFrom(originalScanJob)); err != nil {
+		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+	}
+
+	for _, image := range imageToProcess {
+		h.logger.DebugContext(ctx, "Send sbom message", "image", image.Name, "namespace", image.Namespace)
+
+		messageID := string(image.UID)
+		message, err := json.Marshal(&GenerateSBOMMessage{
+			ScanJobName:      createCatalogMessage.ScanJobName,
+			ScanJobNamespace: createCatalogMessage.ScanJobNamespace,
+			ImageName:        image.Name,
+			ImageNamespace:   image.Namespace,
+		})
+		if err != nil {
+			return fmt.Errorf("cannot marshal generate sbom message for image %s in namespace %s: %w", image.Name, image.Namespace, err)
+		}
+		if err = h.publisher.Publish(ctx, GenerateSBOMSubject, messageID, message); err != nil {
+			return fmt.Errorf("cannot publish generate sbom message for image %s in namespace %s: %w", image.Name, image.Namespace, err)
+		}
 	}
 
 	return nil
