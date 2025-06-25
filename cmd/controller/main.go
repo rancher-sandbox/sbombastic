@@ -204,24 +204,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.ImageReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Image")
-		os.Exit(1)
-	}
-
-	if err = (&controller.SBOMReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SBOM")
-		os.Exit(1)
-	}
-
 	if err = (&controller.ScanJobReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
