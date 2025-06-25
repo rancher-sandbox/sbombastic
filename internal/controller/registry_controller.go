@@ -40,6 +40,7 @@ type RegistryReconciler struct {
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries/finalizers,verbs=update
+// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=images,verbs=list;watch
 
 // Reconcile reconciles a Registry.
 // If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.
@@ -88,7 +89,18 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := ctrl.NewControllerManagedBy(mgr).
+	err := mgr.GetFieldIndexer().IndexField(context.Background(), &storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(rawObj client.Object) []string {
+		image, ok := rawObj.(*storagev1alpha1.Image)
+		if !ok {
+			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
+		}
+		return []string{image.Spec.Registry}
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create field indexer: %w", err)
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Registry{}).
 		Complete(r)
 	if err != nil {
