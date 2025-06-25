@@ -197,9 +197,8 @@ func main() {
 	}
 
 	if err = (&controller.RegistryReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Registry")
 		os.Exit(1)
