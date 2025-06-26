@@ -456,6 +456,13 @@ linters:
       - text: 'comment on exported \S+ \S+ should be of the form ".+"'
         source: "// ?(nolint|TODO)"
         linters: [revive, staticcheck]
+      # Disable the 'unparam' warning "result 0 ... is always nil" in internal/controller.
+      # Controller methods often return a zero-valued ctrl.Result even if unused,
+      # so this suppresses noise in idiomatic code without disabling 'unparam' globally.
+      - path: ^internal/controller/.*\.go$
+        linters:
+          - unparam
+        text: "result 0.*is always nil"
       - path: '_test\.go'
         linters:
           - bodyclose
@@ -466,3 +473,7 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+      - path: '_test\.go'
+        linters:
+          - revive
+        text: "dot-imports"

@@ -49,7 +49,7 @@ spec:
             description: ScanJobStatus defines the observed state of ScanJob.
             properties:
               completionTime:
-                description: CompletionTime is when the job completed or failed
+                description: CompletionTime is when the job completed or failed.
                 format: date-time
                 type: string
               conditions:
@@ -118,8 +118,7 @@ spec:
                   been scanned.
                 type: integer
               startTime:
-                description: StartTime is when the job began processing (not just
-                  queued)
+                description: StartTime is when the job started processing.
                 format: date-time
                 type: string
             type: object

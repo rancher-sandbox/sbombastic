@@ -11,6 +11,7 @@ rules:
   - sbombastic.rancher.io
   resources:
   - registries
+  - scanjobs
   verbs:
   - create
   - delete
@@ -23,12 +24,14 @@ rules:
   - sbombastic.rancher.io
   resources:
   - registries/finalizers
+  - scanjobs/finalizers
   verbs:
   - update
 - apiGroups:
   - sbombastic.rancher.io
   resources:
   - registries/status
+  - scanjobs/status
   verbs:
   - get
   - patch
