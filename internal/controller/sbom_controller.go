@@ -60,15 +60,15 @@ func (r *SBOMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("unable to fetch SBOM: %w", err)
 	}
 
-	scanSBOM := &handlers.ScanSBOMMessage{
+	messageID := string(sbom.GetUID())
+	message, err := json.Marshal(&handlers.ScanSBOMMessage{
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
-	}
-	message, err := json.Marshal(scanSBOM)
+	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to marshal ScanSBOM message: %w", err)
 	}
-	if err = r.Publisher.Publish(ctx, handlers.ScanSBOMSubject, message); err != nil {
+	if err = r.Publisher.Publish(ctx, handlers.ScanSBOMSubject, messageID, message); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to publish ScanSBOM message: %w", err)
 	}
 
