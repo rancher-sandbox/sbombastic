@@ -1,19 +1,20 @@
-name: Release Charts
+name: Release helm chart
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
 
-concurrency:
-  group: "release"
-  cancel-in-progress: false
-
 jobs:
   release:
-    permissions:
-      contents: write # chart-releaser needs to release the charts to the repository
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+      contents: write
+      attestations: write
+      pages: write
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -25,16 +26,98 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Install Helm
-        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
 
-      - name: Add dependency chart repos
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install chart-releaser
+        uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
+        with:
+          install_only: true
+
+      - uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+        with:
+          version: "latest"
+
+      - name: Add Helm dependency repos
         run: |
           helm repo add nats https://nats-io.github.io/k8s/helm/charts/
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
-        with:
-          config: cr.yaml
+      - name: Release Helm charts
+        shell: bash
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -ex
+
+          OWNER=${{ github.repository_owner }}
+          REPO=sbombastic
+          CONFIG_FILE=cr.yaml
+          PACKAGE_PATH=.cr-release-packages
+          CR_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+          rm -rf ${PACKAGE_PATH}
+          # Release each chart in the charts directory
+          for chart in $(find charts -maxdepth 1 -mindepth 1  -type d ); do
+            chart_name=$(basename $chart)
+            chart_path=${PACKAGE_PATH}/${chart_name}-*.tgz
+
+            cr package charts/${chart_name} --config ${CONFIG_FILE} --package-path ${PACKAGE_PATH}
+
+            # check if the chart version is already release. If so, do nothing
+            chart_version=$(helm show chart $chart_path | yq -r '.version')
+
+            # check if the chart version is already release. If so, do nothing
+            if gh --repo ${OWNER}/${REPO} release view $chart_name-chart-$chart_version; then
+              echo "Chart $chart_name-chart-$chart_version already released. No need to release again."
+              rm $chart_path
+              continue
+            fi
+
+          done
+
+          # Upload the charts if the .cr-release-packages directory is not empty
+          if [ "$(ls ${PACKAGE_PATH})" ]; then
+            # Upload the chart to the GitHub release
+            cr upload --config ${CONFIG_FILE} -o ${OWNER} -r ${REPO} -c "$(git rev-parse HEAD)" --skip-existing  --make-release-latest=false --token ${CR_TOKEN} --push
+            echo "Charts released!"
+
+            # Reindex the repository
+            cr index --config ${CONFIG_FILE} -o ${OWNER} -r ${REPO} --push --token ${CR_TOKEN} --index-path .
+            echo "Repository indexed!"
+
+            # Publish the charts to the OCI registry and sign them
+            REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER/sbombastic/charts"
+            echo "REGISTRY=${REGISTRY}" >> "$GITHUB_ENV"
+            for chart_path in $(find ${PACKAGE_PATH} -maxdepth 1 -mindepth 1 ); do
+              echo "Pushing chart $chart_path to ghcr.io"
+              chart_name=$(helm show chart ${chart_path} | yq ".name")
+              push_output=$(helm push $chart_path "oci://$REGISTRY" 2>&1)
+              chart_url=$(echo $push_output | sed -n 's/Pushed: \(.*\):.* Digest: \(.*\)$/\1\@\2/p')
+              digest=$(echo $push_output | sed -n 's/Pushed: \(.*\):.* Digest: \(.*\)$/\2/p')
+              echo "DIGEST_${chart_name}=${digest}" >> "$GITHUB_ENV"
+              cosign sign --yes "$chart_url"
+              echo "Chart $chart_name signed and pushed to ghcr.io"
+            done
+          fi
+      - name: Configure Git
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Generate provenance attestation for sbombastic chart and push to OCI
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        if: env.DIGEST_sbombastic != ''
+        with:
+          push-to-registry: true
+          subject-name: ${{ env.REGISTRY }}/sbombastic
+          subject-digest: ${{ env.DIGEST_sbombastic }}
