@@ -45,8 +45,6 @@ type RegistryReconciler struct {
 // Reconcile reconciles a Registry.
 // If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.
 // If the Registry has repositories specified, it deletes all images that are not in the current list of repositories.
-//
-//nolint:gocognit // We are a bit more tolerant of cyclomatic complexity in controllers.
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
