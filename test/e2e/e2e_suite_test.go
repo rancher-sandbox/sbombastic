@@ -15,9 +15,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	v1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers"
 )
 
 func TestRegistryCreation(t *testing.T) {
@@ -29,7 +29,7 @@ func TestRegistryCreation(t *testing.T) {
 	totalImages := 7 // Current number of images in the test-assets/golang directory
 
 	labelSelector := labels.FormatLabels(
-		map[string]string{handlers.LabelManagedByKey: handlers.LabelManagedByValue},
+		map[string]string{api.LabelManagedByKey: api.LabelManagedByValue},
 	)
 
 	f := features.New("Start Registry CR Creation test").
