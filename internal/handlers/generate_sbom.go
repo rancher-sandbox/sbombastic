@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
@@ -94,7 +95,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 
 	// Check if the SBOM already exists.
 	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
 		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.ImageName, "namespace", generateSBOMMessage.ImageNamespace)
 		sbom, err = h.generateSBOM(ctx, image, generateSBOMMessage)
 		if err != nil {
@@ -116,7 +117,11 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		return fmt.Errorf("cannot marshal scan SBOM message: %w", err)
 	}
 
-	return h.publisher.Publish(ctx, ScanSBOMSubject, scanSBOMMessageID, scanSBOMMessage)
+	if err = h.publisher.Publish(ctx, ScanSBOMSubject, scanSBOMMessageID, scanSBOMMessage); err != nil {
+		return fmt.Errorf("failed to publish scan SBOM message: %w", err)
+	}
+
+	return nil
 }
 
 // generateSBOM creates a new SBOM using Trivy and stores it in a SBOM resource.
@@ -168,8 +173,8 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 			Name:      message.ImageName,
 			Namespace: message.ImageNamespace,
 			Labels: map[string]string{
-				LabelManagedByKey: LabelManagedByValue,
-				LabelPartOfKey:    LabelPartOfValue,
+				api.LabelManagedByKey: api.LabelManagedByValue,
+				api.LabelPartOfKey:    api.LabelPartOfValue,
 			},
 		},
 		Spec: storagev1alpha1.SBOMSpec{
