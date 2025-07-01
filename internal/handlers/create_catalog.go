@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
@@ -447,8 +448,8 @@ func imageDetailsToImage(
 			Name:      computeImageUID(ref, details.Digest.String()),
 			Namespace: registry.Namespace,
 			Labels: map[string]string{
-				LabelManagedByKey: LabelManagedByValue,
-				LabelPartOfKey:    LabelPartOfValue,
+				api.LabelManagedByKey: api.LabelManagedByValue,
+				api.LabelPartOfKey:    api.LabelPartOfValue,
 			},
 		},
 		Spec: storagev1alpha1.ImageSpec{
