@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/owenrumney/go-sarif/v2/sarif"
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 	"github.com/stretchr/testify/assert"
@@ -19,76 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-func scanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string) {
-	spdxData, err := os.ReadFile(sourceSBOMJSON)
-	require.NoError(t, err, "failed to read source SBOM file %s", sourceSBOMJSON)
-
-	sbom := &storagev1alpha1.SBOM{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-sbom",
-			Namespace: "default",
-		},
-		Spec: storagev1alpha1.SBOMSpec{
-			SPDX: runtime.RawExtension{Raw: spdxData},
-		},
-	}
-
-	scheme := scheme.Scheme
-	err = storagev1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-	k8sClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRuntimeObjects(sbom).
-		Build()
-
-	reportData, err := os.ReadFile(expectedReportJSON)
-	require.NoError(t, err, "failed to read expected report file %s", expectedReportJSON)
-
-	expectedReport := &sarif.Report{}
-	err = json.Unmarshal(reportData, expectedReport)
-	require.NoError(t, err, "failed to unmarshal expected report file %s", expectedReportJSON)
-
-	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
-
-	message, err := json.Marshal(&ScanSBOMMessage{
-		SBOMName:      sbom.Name,
-		SBOMNamespace: sbom.Namespace,
-	})
-	require.NoError(t, err)
-
-	err = handler.Handle(t.Context(), message)
-	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
-
-	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
-	err = k8sClient.Get(t.Context(), client.ObjectKey{
-		Name:      sbom.Name,
-		Namespace: sbom.Namespace,
-	}, vulnerabilityReport)
-	require.NoError(t, err, "failed to get vulnerability report, with platform %s", platform)
-
-	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
-	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
-
-	report := &sarif.Report{}
-	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)
-	require.NoError(t, err, "failed to unmarshal vulnerability report, with platform %s", platform)
-
-	// Filter out fields containing the file path from the comparison
-	filter := cmp.FilterPath(func(path cmp.Path) bool {
-		lastField := path.Last().String()
-		return lastField == ".URI" || lastField == ".Text"
-	}, cmp.Comparer(func(a, b *string) bool {
-		if strings.Contains(*a, ".json") && strings.Contains(*b, ".json") {
-			return true
-		}
-
-		return cmp.Equal(a, b)
-	}))
-	diff := cmp.Diff(expectedReport, report, filter)
-
-	assert.Empty(t, diff, "diff mismatch on platform %s\nDiff:\n%s", platform, diff)
-}
 
 func TestScanSBOMHandler_Handle(t *testing.T) {
 	for _, test := range []struct {
@@ -133,7 +64,79 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 		},
 	} {
 		t.Run(test.platform, func(t *testing.T) {
-			scanSBOM(t, test.platform, test.sourceSBOMJSON, test.expectedReportJSON)
+			testScanSBOM(t, test.platform, test.sourceSBOMJSON, test.expectedReportJSON)
 		})
 	}
+}
+
+func testScanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON string) {
+	spdxData, err := os.ReadFile(sourceSBOMJSON)
+	require.NoError(t, err, "failed to read source SBOM file %s", sourceSBOMJSON)
+
+	sbom := &storagev1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-sbom",
+			Namespace: "default",
+		},
+		Spec: storagev1alpha1.SBOMSpec{
+			SPDX: runtime.RawExtension{Raw: spdxData},
+		},
+	}
+
+	scheme := scheme.Scheme
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(sbom).
+		Build()
+
+	reportData, err := os.ReadFile(expectedReportJSON)
+	require.NoError(t, err, "failed to read expected report file %s", expectedReportJSON)
+
+	expectedReport := &sarif.Report{}
+	err = json.Unmarshal(reportData, expectedReport)
+	require.NoError(t, err, "failed to unmarshal expected report file %s", expectedReportJSON)
+
+	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
+
+	message, err := json.Marshal(&ScanSBOMMessage{
+		SBOMName:      sbom.Name,
+		SBOMNamespace: sbom.Namespace,
+		ScanJobName:   "test-scanjob",
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
+
+	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Name:      sbom.Name,
+		Namespace: sbom.Namespace,
+	}, vulnerabilityReport)
+	require.NoError(t, err, "failed to get vulnerability report, with platform %s", platform)
+
+	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
+	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
+	assert.Equal(t, "test-scanjob", vulnerabilityReport.Labels[api.LabelScanJob])
+
+	report := &sarif.Report{}
+	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)
+	require.NoError(t, err, "failed to unmarshal vulnerability report, with platform %s", platform)
+
+	// Filter out fields containing the file path from the comparison
+	filter := cmp.FilterPath(func(path cmp.Path) bool {
+		lastField := path.Last().String()
+		return lastField == ".URI" || lastField == ".Text"
+	}, cmp.Comparer(func(a, b *string) bool {
+		if strings.Contains(*a, ".json") && strings.Contains(*b, ".json") {
+			return true
+		}
+
+		return cmp.Equal(a, b)
+	}))
+	diff := cmp.Diff(expectedReport, report, filter)
+
+	assert.Empty(t, diff, "diff mismatch on platform %s\nDiff:\n%s", platform, diff)
 }

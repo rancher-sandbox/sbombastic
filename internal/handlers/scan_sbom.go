@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 )
 
@@ -147,8 +148,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Labels = map[string]string{
-			LabelManagedByKey: LabelManagedByValue,
-			LabelPartOfKey:    LabelPartOfValue,
+			api.LabelScanJob:      scanSBOMMessage.ScanJobName,
+			api.LabelManagedByKey: api.LabelManagedByValue,
+			api.LabelPartOfKey:    api.LabelPartOfValue,
 		}
 
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
