@@ -119,7 +119,10 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 	scanJob.MarkInProgress(sbombasticv1alpha1.ReasonProcessing, "Processing scan job")
 
 	messageID := string(scanJob.UID)
-	message, err := json.Marshal(&handlers.CreateCatalogMessage{})
+	message, err := json.Marshal(&handlers.CreateCatalogMessage{
+		ScanJobName:      scanJob.Name,
+		ScanJobNamespace: scanJob.Namespace,
+	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
 	}
