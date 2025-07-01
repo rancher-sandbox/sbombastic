@@ -27,6 +27,7 @@ const ScanSBOMSubject = "sbombastic.sbom.scan"
 type ScanSBOMMessage struct {
 	SBOMName      string `json:"sbomName"`
 	SBOMNamespace string `json:"sbomNamespace"`
+	ScanJobName   string `json:"scanJobName"`
 }
 
 // ScanSBOMHandler is responsible for handling SBOM scan requests.
