@@ -94,7 +94,7 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbombastic/templates/crd output:rbac:artifacts:config=charts/sbombastic/templates/controller
+	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbombastic/crds output:rbac:artifacts:config=charts/sbombastic/templates/controller
 	sed -i 's/controller-role/{{ include "sbombastic.fullname" . }}-controller/' charts/sbombastic/templates/controller/role.yaml
 	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/sbombastic/templates/controller/role.yaml
 
