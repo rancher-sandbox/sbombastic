@@ -29,4 +29,11 @@ resources:
   webhooks:
     validation: true
     webhookVersion: v1
+- controller: true
+  domain: sbombastic.rancher.io
+  external: true
+  group: storage
+  kind: VulnerabilityReport
+  path: github.com/rancher/sbombastic/api/storage/v1alpha1
+  version: v1alpha1
 version: "3"
