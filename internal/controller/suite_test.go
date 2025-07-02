@@ -56,7 +56,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "charts", "sbombastic", "templates", "crd"),
+			filepath.Join("..", "..", "charts", "sbombastic", "crds"),
 			// Add storage CRD used only for testing.
 			// Storage does not need CRD, as it uses the API server extension mechanism.
 			filepath.Join("..", "..", "test", "crd"),
