@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,7 +72,7 @@ var _ = Describe("Registry Controller", func() {
 				RegistryNamespace: registry.Namespace,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, fmt.Sprintf("%s:%d", registry.GetUID(), registry.Generation), message).Return(nil)
 			reconciler.Publisher = mockPublisher
 
 			By("Reconciling the Registry")
@@ -115,7 +116,7 @@ var _ = Describe("Registry Controller", func() {
 					RegistryNamespace: registry.Namespace,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(errors.New("failed to publish message"))
+				mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, fmt.Sprintf("%s:%d", registry.GetUID(), registry.Generation), message).Return(errors.New("failed to publish message"))
 				reconciler.Publisher = mockPublisher
 
 				By("Reconciling the Registry")
