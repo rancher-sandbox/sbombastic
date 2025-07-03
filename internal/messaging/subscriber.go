@@ -62,6 +62,15 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 					"headers", msg.Headers(),
 					"error", err,
 				)
+
+				if err := msg.Nak(); err != nil {
+					s.logger.ErrorContext(ctx, "Failed to nak message",
+						"subject", msg.Subject(),
+						"error", err,
+					)
+				}
+
+				return
 			}
 
 			if err := msg.Ack(); err != nil {
