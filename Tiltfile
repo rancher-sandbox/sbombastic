@@ -68,6 +68,10 @@ yaml = helm(
         "controller.replicas=1",
         "storage.replicas=1",
         "worker.replicas=1",
+        "controller.logLevel=debug",
+        #  TODO: uncomment this, when the log parser in storage is implemented
+        # "storage.logLevel=debug", 
+        "worker.logLevel=debug",
     ],
 )
 k8s_yaml(yaml)
@@ -86,7 +90,7 @@ local_resource(
     ],
 )
 
-entrypoint = ["/controller", "--log-level=debug"]
+entrypoint = ["/controller"]
 dockerfile = "./hack/Dockerfile.controller.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
