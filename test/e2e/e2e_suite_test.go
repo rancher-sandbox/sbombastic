@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
@@ -32,7 +33,7 @@ func TestRegistryCreation(t *testing.T) {
 		map[string]string{api.LabelManagedByKey: api.LabelManagedByValue},
 	)
 
-	f := features.New("Start Registry CR Creation test").
+	f := features.New("Scan a Registry").
 		Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			manager := helm.New(cfg.KubeconfigFile())
 			err := manager.RunInstall(helm.WithName(releaseName),
@@ -41,7 +42,12 @@ func TestRegistryCreation(t *testing.T) {
 				helm.WithWait(),
 				helm.WithArgs("--set", "controller.image.tag=latest",
 					"--set", "storage.image.tag=latest",
-					"--set", "worker.image.tag=latest"),
+					"--set", "worker.image.tag=latest",
+					"--set", "controller.logLevel=debug",
+					// TODO:: Uncomment when storage log level is supported
+					// "--set", "storage.logLevel=debug",
+					"--set", "worker.logLevel=debug",
+				),
 				helm.WithTimeout("3m"))
 
 			require.NoError(t, err, "sbombastic helm chart is not installed correctly")
@@ -54,7 +60,7 @@ func TestRegistryCreation(t *testing.T) {
 
 			return ctx
 		}).
-		Assess("Create Registry CR", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		Assess("Create a Registry", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			registry := &v1alpha1.Registry{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      registryName,
@@ -67,6 +73,32 @@ func TestRegistryCreation(t *testing.T) {
 			}
 			err := cfg.Client().Resources().Create(ctx, registry)
 			require.NoError(t, err)
+			return ctx
+		}).
+		Assess("Create a ScanJob", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			scanJob := &v1alpha1.ScanJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-scanjob",
+					Namespace: cfg.Namespace(),
+				},
+				Spec: v1alpha1.ScanJobSpec{
+					Registry: registryName,
+				},
+			}
+			err := cfg.Client().Resources().Create(ctx, scanJob)
+			require.NoError(t, err)
+
+			return ctx
+		}).
+		Assess("Wait for the ScanJob to complete", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			scanJob := &v1alpha1.ScanJob{ObjectMeta: metav1.ObjectMeta{Name: "test-scanjob", Namespace: cfg.Namespace()}}
+
+			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(scanJob, func(object k8s.Object) bool {
+				s := object.(*v1alpha1.ScanJob)
+				return s.IsComplete()
+			}))
+			require.NoError(t, err, "Timeout waiting for ScanJob to complete")
+
 			return ctx
 		}).
 		Assess("Verify the Image is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
