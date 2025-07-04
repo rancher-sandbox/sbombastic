@@ -6,7 +6,7 @@ godebug default=go1.23
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
-	github.com/aquasecurity/trivy v0.64.0
+	github.com/aquasecurity/trivy v0.64.1
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
