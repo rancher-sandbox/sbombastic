@@ -61,6 +61,8 @@ func AddKnownTypes(scheme *runtime.Scheme) error {
 
 		&metav1.GetOptions{},
 		&metav1.CreateOptions{},
+		&metav1.UpdateOptions{},
+		&metav1.DeleteOptions{},
 		&metav1.ListOptions{},
 	)
 
