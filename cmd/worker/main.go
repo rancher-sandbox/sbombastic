@@ -54,6 +54,15 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts)).With("component", "worker")
 	logger.Info("Starting worker")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-signalChan
+		cancel()
+	}()
+
 	config := ctrl.GetConfigOrDie()
 	scheme := scheme.Scheme
 	if err = v1alpha1.AddToScheme(scheme); err != nil {
@@ -73,12 +82,6 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 		return registry.NewClient(transport, logger)
 	}
 
-	handlers := messaging.HandlerRegistry{
-		handlers.CreateCatalogSubject: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, logger),
-		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, logger),
-		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
-	}
-
 	nc, err := nats.Connect(natsURL,
 		nats.RetryOnFailedConnect(true),
 		nats.RootCAs(natsCA),
@@ -89,14 +92,17 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	publisher, err := messaging.NewNatsPublisher(ctx, nc, logger)
+	if err != nil {
+		logger.Error("Error creating NATS publisher", "error", err)
+		os.Exit(1)
+	}
 
-	go func() {
-		<-signalChan
-		cancel()
-	}()
+	handlers := messaging.HandlerRegistry{
+		handlers.CreateCatalogSubject: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, publisher, logger),
+		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, publisher, logger),
+		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
+	}
 
 	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", handlers, logger)
 	if err != nil {

@@ -40,7 +40,13 @@ rules:
   - storage.sbombastic.rancher.io
   resources:
   - images
-  - sboms
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - storage.sbombastic.rancher.io
+  resources:
+  - vulnerabilityreports
   verbs:
   - create
   - delete
@@ -52,15 +58,13 @@ rules:
 - apiGroups:
   - storage.sbombastic.rancher.io
   resources:
-  - images/finalizers
-  - sboms/finalizers
+  - vulnerabilityreports/finalizers
   verbs:
   - update
 - apiGroups:
   - storage.sbombastic.rancher.io
   resources:
-  - images/status
-  - sboms/status
+  - vulnerabilityreports/status
   verbs:
   - get
   - patch
