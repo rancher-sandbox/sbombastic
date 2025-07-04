@@ -108,11 +108,14 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to marshal registry data: %w", err)
 	}
+
+	original := scanJob.DeepCopy()
+
 	scanJob.Annotations = map[string]string{
 		sbombasticv1alpha1.RegistryAnnotation: string(registryData),
 	}
 
-	if err = r.Update(ctx, scanJob); err != nil {
+	if err = r.Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
 	}
 
