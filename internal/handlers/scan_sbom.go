@@ -108,6 +108,8 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	app := trivyCommands.NewApp()
 	app.SetArgs([]string{
 		"sbom",
+		"--skip-version-check",
+		"--disable-telemetry",
 		"--cache-dir", h.workDir,
 		"--format", "sarif",
 		// Use the public ECR repository to bypass GitHub's rate limits.
