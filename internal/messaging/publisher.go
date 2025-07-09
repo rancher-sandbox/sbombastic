@@ -66,7 +66,7 @@ func (p *NatsPublisher) Publish(ctx context.Context, subject string, messageID s
 		Subject: subject,
 		Data:    message,
 		Header: nats.Header{
-			"Nats-Msg-Id": []string{messageID},
+			jetstream.MsgIDHeader: []string{messageID},
 		},
 	}
 	if _, err := p.js.PublishMsg(ctx, msg); err != nil {
