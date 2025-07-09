@@ -108,18 +108,24 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to marshal registry data: %w", err)
 	}
+
+	original := scanJob.DeepCopy()
+
 	scanJob.Annotations = map[string]string{
 		sbombasticv1alpha1.RegistryAnnotation: string(registryData),
 	}
 
-	if err = r.Update(ctx, scanJob); err != nil {
+	if err = r.Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
 	}
 
 	scanJob.MarkInProgress(sbombasticv1alpha1.ReasonProcessing, "Processing scan job")
 
 	messageID := string(scanJob.UID)
-	message, err := json.Marshal(&handlers.CreateCatalogMessage{})
+	message, err := json.Marshal(&handlers.CreateCatalogMessage{
+		ScanJobName:      scanJob.Name,
+		ScanJobNamespace: scanJob.Namespace,
+	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)
 	}

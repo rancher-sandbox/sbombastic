@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/spdx/tools-golang/spdx"
@@ -18,77 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 )
-
-func generateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
-	image := &storagev1alpha1.Image{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-image",
-			Namespace: "default",
-		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "ghcr",
-				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
-				Repository:  "golang",
-				Tag:         "1.12-alpine",
-				Platform:    platform,
-				Digest:      sha256,
-			},
-		},
-	}
-
-	scheme := scheme.Scheme
-	err := storagev1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-	k8sClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRuntimeObjects(image).
-		Build()
-
-	spdxData, err := os.ReadFile(expectedSPDXJSON)
-	require.NoError(t, err, "failed to read expected SPDX JSON file %s", expectedSPDXJSON)
-
-	expectedSPDX := &spdx.Document{}
-	err = json.Unmarshal(spdxData, expectedSPDX)
-	require.NoError(t, err, "failed to unmarshal expected SPDX JSON file %s", expectedSPDXJSON)
-
-	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
-
-	message, err := json.Marshal(&GenerateSBOMMessage{
-		ImageName:      image.Name,
-		ImageNamespace: image.Namespace,
-	})
-	require.NoError(t, err)
-
-	err = handler.Handle(t.Context(), message)
-	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
-
-	sbom := &storagev1alpha1.SBOM{}
-	err = k8sClient.Get(t.Context(), types.NamespacedName{
-		Name:      image.Name,
-		Namespace: image.Namespace,
-	}, sbom)
-	require.NoError(t, err, "failed to get SBOM, with platform %s", platform)
-
-	assert.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
-	assert.Equal(t, image.UID, sbom.GetOwnerReferences()[0].UID)
-
-	generatedSPDX := &spdx.Document{}
-	err = json.Unmarshal(sbom.Spec.SPDX.Raw, generatedSPDX)
-	require.NoError(t, err, "failed to unmarshal generated SPDX, with platform %s", platform)
-
-	// Filter out "DocumentNamespace" and any field named "AnnotationDate" or "Created" regardless of nesting,
-	// since they contain timestamps and are not deterministic.
-	filter := cmp.FilterPath(func(path cmp.Path) bool {
-		lastField := path.Last().String()
-		return lastField == ".DocumentNamespace" || lastField == ".AnnotationDate" || lastField == ".Created"
-	}, cmp.Ignore())
-	diff := cmp.Diff(expectedSPDX, generatedSPDX, filter, cmpopts.IgnoreUnexported(spdx.Package{}))
-
-	assert.Empty(t, diff, "SPDX diff mismatch on platform %s\nDiff:\n%s", platform, diff)
-}
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
 	for _, test := range []struct {
@@ -133,7 +66,158 @@ func TestGenerateSBOMHandler_Handle(t *testing.T) {
 		},
 	} {
 		t.Run(test.platform, func(t *testing.T) {
-			generateSBOM(t, test.platform, test.sha256, test.expectedSPDXJSON)
+			testGenerateSBOM(t, test.platform, test.sha256, test.expectedSPDXJSON)
 		})
 	}
+}
+
+func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
+	image := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-image",
+			Namespace: "default",
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+				Repository:  "golang",
+				Tag:         "1.12-alpine",
+				Platform:    platform,
+				Digest:      sha256,
+			},
+		},
+	}
+
+	scheme := scheme.Scheme
+	err := storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(image).
+		Build()
+
+	spdxData, err := os.ReadFile(expectedSPDXJSON)
+	require.NoError(t, err, "failed to read expected SPDX JSON file %s", expectedSPDXJSON)
+
+	expectedSPDX := &spdx.Document{}
+	err = json.Unmarshal(spdxData, expectedSPDX)
+	require.NoError(t, err, "failed to unmarshal expected SPDX JSON file %s", expectedSPDXJSON)
+
+	publisher := messagingMocks.NewMockPublisher(t)
+
+	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
+		SBOMName:      image.Name,
+		SBOMNamespace: image.Namespace,
+	})
+	require.NoError(t, err)
+
+	publisher.On("Publish",
+		mock.Anything,
+		ScanSBOMSubject,
+		mock.Anything, // messageID is the SBOM UID which we can't predict with fake client
+		expectedScanMessage,
+	).Return(nil).Once()
+
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+
+	message, err := json.Marshal(&GenerateSBOMMessage{
+		ImageName:      image.Name,
+		ImageNamespace: image.Namespace,
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
+
+	sbom := &storagev1alpha1.SBOM{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{
+		Name:      image.Name,
+		Namespace: image.Namespace,
+	}, sbom)
+	require.NoError(t, err, "failed to get SBOM, with platform %s", platform)
+
+	assert.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
+	assert.Equal(t, image.UID, sbom.GetOwnerReferences()[0].UID)
+
+	generatedSPDX := &spdx.Document{}
+	err = json.Unmarshal(sbom.Spec.SPDX.Raw, generatedSPDX)
+	require.NoError(t, err, "failed to unmarshal generated SPDX, with platform %s", platform)
+
+	// Filter out "DocumentNamespace" and any field named "AnnotationDate" or "Created" regardless of nesting,
+	// since they contain timestamps and are not deterministic.
+	filter := cmp.FilterPath(func(path cmp.Path) bool {
+		lastField := path.Last().String()
+		return lastField == ".DocumentNamespace" || lastField == ".AnnotationDate" || lastField == ".Created"
+	}, cmp.Ignore())
+	diff := cmp.Diff(expectedSPDX, generatedSPDX, filter, cmpopts.IgnoreUnexported(spdx.Package{}))
+
+	assert.Empty(t, diff, "SPDX diff mismatch on platform %s\nDiff:\n%s", platform, diff)
+}
+
+func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
+	image := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-image",
+			Namespace: "default",
+			UID:       "image-uid",
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+				Repository:  "golang",
+				Tag:         "1.12-alpine",
+				Platform:    "linux/amd64",
+				Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
+			},
+		},
+	}
+
+	existingSBOM := &storagev1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-image",
+			Namespace: "default",
+			UID:       "sbom-uid",
+		},
+		Spec: storagev1alpha1.SBOMSpec{
+			ImageMetadata: image.Spec.ImageMetadata,
+		},
+	}
+
+	scheme := scheme.Scheme
+	err := storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(image, existingSBOM).
+		Build()
+
+	publisher := messagingMocks.NewMockPublisher(t)
+
+	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
+		SBOMName:      existingSBOM.Name,
+		SBOMNamespace: existingSBOM.Namespace,
+		ScanJobName:   "test-scanjob",
+	})
+	require.NoError(t, err)
+
+	publisher.On("Publish",
+		mock.Anything,
+		ScanSBOMSubject,
+		string(existingSBOM.UID),
+		expectedScanMessage,
+	).Return(nil).Once()
+
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+
+	message, err := json.Marshal(&GenerateSBOMMessage{
+		ImageName:      image.Name,
+		ImageNamespace: image.Namespace,
+		ScanJobName:    "test-scanjob",
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
 }

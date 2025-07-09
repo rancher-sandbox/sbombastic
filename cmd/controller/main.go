@@ -197,29 +197,10 @@ func main() {
 	}
 
 	if err = (&controller.RegistryReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Registry")
-		os.Exit(1)
-	}
-
-	if err = (&controller.ImageReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Image")
-		os.Exit(1)
-	}
-
-	if err = (&controller.SBOMReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Publisher: publisher,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SBOM")
 		os.Exit(1)
 	}
 
@@ -229,6 +210,14 @@ func main() {
 		Publisher: publisher,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ScanJob")
+		os.Exit(1)
+	}
+
+	if err = (&controller.VulnerabilityReportReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "VulnerabilityReport")
 		os.Exit(1)
 	}
 
