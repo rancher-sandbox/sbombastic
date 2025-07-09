@@ -21,7 +21,7 @@ spec:
       serviceAccountName: {{ include "sbombastic.fullname" . }}-worker
       containers:
         - name: worker
-          image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+          image: '{{ template "system_default_registry" . }}{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}'
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
           securityContext:
             {{ include "sbombastic.securityContext" . | nindent 12 }}

@@ -6,11 +6,14 @@ templates:
 tests:
   - it: "should render a Deployment with the correct replica count, logging level, image, and imagePullPolicy"
     set:
+      global:
+        cattle:
+          systemDefaultRegistry: rancher.io
       worker:
         replicas: 5
         logLevel: debug
         image:
-          repository: ghcr.io/rancher-sandbox/sbombastic/worker
+          repository: rancher-sandbox/sbombastic/worker
           tag: v0.1.0
           pullPolicy: Always
     asserts:
@@ -19,7 +22,7 @@ tests:
           value: 5
       - equal:
           path: "spec.template.spec.containers[0].image"
-          value: "ghcr.io/rancher-sandbox/sbombastic/worker:v0.1.0"
+          value: "rancher.io/rancher-sandbox/sbombastic/worker:v0.1.0"
       - equal:
           path: "spec.template.spec.containers[0].imagePullPolicy"
           value: "Always"
