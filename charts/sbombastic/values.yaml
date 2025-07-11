@@ -90,3 +90,8 @@ nats:
         capabilities:
             drop:
             - "ALL"
+
+cloudnative-pg:
+  config:
+    clusterWide: true
+  fullnameOverride: cnpg
