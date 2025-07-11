@@ -93,5 +93,5 @@ nats:
 
 cloudnative-pg:
   config:
-    clusterWide: true
+    clusterWide: false
   fullnameOverride: cnpg
