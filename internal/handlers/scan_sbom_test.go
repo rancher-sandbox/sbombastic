@@ -101,9 +101,15 @@ func testScanSBOM(t *testing.T, platform, sourceSBOMJSON, expectedReportJSON str
 	handler := NewScanSBOMHandler(k8sClient, scheme, "/tmp", slog.Default())
 
 	message, err := json.Marshal(&ScanSBOMMessage{
-		SBOMName:      sbom.Name,
-		SBOMNamespace: sbom.Namespace,
-		ScanJobName:   "test-scanjob",
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name: "test-scanjob",
+			},
+		},
+		SBOM: ObjectRef{
+			Name:      sbom.Name,
+			Namespace: sbom.Namespace,
+		},
 	})
 	require.NoError(t, err)
 

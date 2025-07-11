@@ -192,24 +192,40 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	)
 
 	message, err := json.Marshal(&CreateCatalogMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
 	})
 	require.NoError(t, err)
 
 	expectedMessageAmd64, err := json.Marshal(&GenerateSBOMMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        computeImageUID(image, digestLinuxAmd64.String()),
-		ImageNamespace:   registry.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      computeImageUID(image, digestLinuxAmd64.String()),
+			Namespace: registry.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
 	expectedMessageArm64, err := json.Marshal(&GenerateSBOMMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        computeImageUID(image, digestLinuxArm64.String()),
-		ImageNamespace:   registry.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      computeImageUID(image, digestLinuxArm64.String()),
+			Namespace: registry.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
