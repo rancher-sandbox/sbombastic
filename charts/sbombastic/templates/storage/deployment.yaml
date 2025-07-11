@@ -21,7 +21,7 @@ spec:
       serviceAccountName: {{ include "sbombastic.fullname" . }}-storage
       containers:
         - name: storage
-          image: {{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}
+          image: '{{ template "system_default_registry" . }}{{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}'
           securityContext:
             {{ include "sbombastic.securityContext" . | nindent 12 }}
           args:
