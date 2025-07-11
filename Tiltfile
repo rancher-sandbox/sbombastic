@@ -1,4 +1,5 @@
 tilt_settings_file = "./tilt-settings.yaml"
+load('ext://helm_resource', 'helm_resource')
 settings = read_yaml(tilt_settings_file)
 
 update_settings(k8s_upsert_timeout_secs=300)
@@ -69,6 +70,22 @@ yaml = helm(
     ],
 )
 k8s_yaml(yaml)
+
+# helm_resource(
+#   'sbombastic',
+#   './charts/sbombastic',
+#   namespace='sbombastic',
+#   deps=['./charts/sbombastic'],
+#   flags=[
+#     "--set=controller.image.repository=" + controller_image,
+#     "--set=worker.image.repository=" + worker_image,
+#     "--set=storage.image.repository=" + storage_image,
+#     "--set=controller.replicas=1",
+#     "--set=storage.replicas=1",
+#     "--set=worker.replicas=1",
+#     "--wait",
+#     ]
+# )
 
 # Hot reloading containers
 local_resource(

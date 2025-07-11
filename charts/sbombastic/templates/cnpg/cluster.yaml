@@ -4,8 +4,9 @@ metadata:
   name: cnpg-cluster
   namespace: sbombastic
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook": post-install
     "helm.sh/hook-weight": "1"
+    "helm.sh/resource-policy": keep
 spec:
   instances: 1
 
