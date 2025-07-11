@@ -11,25 +11,18 @@ rules:
     resources:
       - registries
     verbs:
-      - create
-      - delete
       - get
       - list
-      - patch
-      - update
       - watch
   - apiGroups:
       - sbombastic.rancher.io
     resources:
-      - registries/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - sbombastic.rancher.io
-    resources:
-      - registries/status
+      - scanjobs
+      - scanjobs/status
     verbs:
       - get
+      - list
+      - watch
       - patch
       - update
   - apiGroups:

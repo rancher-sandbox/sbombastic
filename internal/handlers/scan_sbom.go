@@ -17,17 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 )
-
-// ScanSBOMSubject is the subject for messages that trigger SBOM scanning.
-const ScanSBOMSubject = "sbombastic.sbom.scan"
-
-// ScanSBOMMessage represents the request message for scanning a SBOM.
-type ScanSBOMMessage struct {
-	SBOMName      string `json:"sbomName"`
-	SBOMNamespace string `json:"sbomNamespace"`
-}
 
 // ScanSBOMHandler is responsible for handling SBOM scan requests.
 type ScanSBOMHandler struct {
@@ -60,14 +52,14 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	}
 
 	h.logger.DebugContext(ctx, "SBOM scan requested",
-		"sbom", scanSBOMMessage.SBOMName,
-		"namespace", scanSBOMMessage.SBOMNamespace,
+		"sbom", scanSBOMMessage.SBOM.Name,
+		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
 
 	sbom := &storagev1alpha1.SBOM{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      scanSBOMMessage.SBOMName,
-		Namespace: scanSBOMMessage.SBOMNamespace,
+		Name:      scanSBOMMessage.SBOM.Name,
+		Namespace: scanSBOMMessage.SBOM.Namespace,
 	}, sbom)
 	if err != nil {
 		return fmt.Errorf("failed to get SBOM: %w", err)
@@ -125,8 +117,8 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	}
 
 	h.logger.DebugContext(ctx, "SBOM scanned",
-		"sbom", scanSBOMMessage.SBOMName,
-		"namespace", scanSBOMMessage.SBOMNamespace,
+		"sbom", scanSBOMMessage.SBOM.Name,
+		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
 
 	reportBytes, err := io.ReadAll(reportFile)
@@ -146,8 +138,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Labels = map[string]string{
-			LabelManagedByKey: LabelManagedByValue,
-			LabelPartOfKey:    LabelPartOfValue,
+			api.LabelScanJob:      scanSBOMMessage.ScanJob.Name,
+			api.LabelManagedByKey: api.LabelManagedByValue,
+			api.LabelPartOfKey:    api.LabelPartOfValue,
 		}
 
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
