@@ -1,6 +1,7 @@
+registry: ghcr.io
 storage: 
-    image: <your-repository>/storage
+    image: <username>/sbombastic/storage
 controller: 
-    image: <your-repository>/controller
+    image: <username>/sbombastic/controller
 worker: 
-    image: <your-repository>/worker
+    image: <username>/sbombastic/worker

@@ -51,6 +51,7 @@ helm_resource(
 load("ext://namespace", "namespace_create")
 namespace_create("sbombastic")
 
+registry = settings.get("registry")
 controller_image = settings.get("controller").get("image")
 storage_image = settings.get("storage").get("image")
 worker_image = settings.get("worker").get("image")
@@ -60,6 +61,7 @@ yaml = helm(
     name="sbombastic",
     namespace="sbombastic",
     set=[
+        "global.cattle.systemDefaultRegistry=" + registry,
         "controller.image.repository=" + controller_image,
         "storage.image.repository=" + storage_image,
         "worker.image.repository=" + worker_image,
@@ -89,7 +91,7 @@ dockerfile = "./hack/Dockerfile.controller.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
 docker_build_with_restart(
-    controller_image,
+    registry + "/" + controller_image,
     ".",
     dockerfile=dockerfile,
     entrypoint=entrypoint,
@@ -123,7 +125,7 @@ dockerfile = "./hack/Dockerfile.storage.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
 docker_build_with_restart(
-    storage_image,
+    registry + "/" + storage_image,
     ".",
     dockerfile=dockerfile,
     entrypoint=entrypoint,
@@ -157,7 +159,7 @@ dockerfile = "./hack/Dockerfile.worker.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
 docker_build_with_restart(
-    worker_image,
+    registry + "/" + worker_image,
     ".",
     dockerfile=dockerfile,
     entrypoint=entrypoint,
