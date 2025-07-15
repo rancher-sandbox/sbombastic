@@ -16,8 +16,13 @@ sources:
       owner: '{{ requiredEnv .github.owner }}'
       repository: sbombastic
       token: '{{ requiredEnv .github.token }}'
+      typefilter:
+        prerelease: true
+        release: true
+        draft: false
       versionfilter:
         kind: "semver"
+        pattern: ">=0.0.0-0" # include pre-release, release
 
 scms:
   default:
@@ -62,14 +67,6 @@ targets:
     spec:
       file: charts/sbombastic/Chart.yaml
       key: $.version
-  update_annotations_upstream_version:
-    scmid: default
-    name: Update Helm chart annotations upstream version
-    kind: yaml
-    sourceid: releaseVersion
-    spec:
-      file: charts/sbombastic/Chart.yaml
-      key: $.annotations.catalog\.cattle\.io/upstream-version
   update_appversion:
     scmid: default
     name: Update Helm chart appVersion
