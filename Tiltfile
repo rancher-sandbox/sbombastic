@@ -27,7 +27,7 @@ local_resource(
 )
 
 load("ext://helm_resource", "helm_resource", "helm_repo")
-helm_repo("jetstack-repo", "https://charts.jetstack.io")
+helm_repo("jetstack", "https://charts.jetstack.io")
 helm_resource(
     "cert-manager",
     "jetstack/cert-manager",
@@ -40,7 +40,7 @@ helm_resource(
         "installCRDs=false",
     ],
     resource_deps=[
-        "jetstack-repo",
+        "jetstack",
         "cert-manager-crds",
     ],
 )
