@@ -18,14 +18,11 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo/v2" //nolint:revive // Required for testing
-	. "github.com/onsi/gomega"    //nolint:revive // Required for testing
-	"github.com/stretchr/testify/mock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,123 +31,9 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers"
-	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 )
 
 var _ = Describe("Registry Controller", func() {
-	When("A Registry needs to be discovered", func() {
-		var reconciler RegistryReconciler
-		var registry v1alpha1.Registry
-
-		BeforeEach(func(ctx context.Context) {
-			By("Creating a new RegistryReconciler")
-			reconciler = RegistryReconciler{
-				Client: k8sClient,
-			}
-
-			By("Creating a new Registry without the last discovery time annotation set")
-			registry = v1alpha1.Registry{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      uuid.New().String(),
-					Namespace: "default",
-				},
-				Spec: v1alpha1.RegistrySpec{
-					URI:          "ghcr.io/rancher",
-					Repositories: []string{"sbombastic"},
-				},
-			}
-			Expect(k8sClient.Create(ctx, &registry)).To(Succeed())
-		})
-
-		It("Should start the discovery process", func(ctx context.Context) {
-			By("Ensuring the right message is published to the worker queue")
-			mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
-			message, err := json.Marshal(&handlers.CreateCatalogMessage{
-				RegistryName:      registry.Name,
-				RegistryNamespace: registry.Namespace,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(nil)
-			reconciler.Publisher = mockPublisher
-
-			By("Reconciling the Registry")
-			_, err = reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      registry.Name,
-					Namespace: registry.Namespace,
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Checking the Registry status condition")
-			Expect(k8sClient.Get(ctx, types.NamespacedName{
-				Name:      registry.Name,
-				Namespace: registry.Namespace,
-			}, &registry)).To(Succeed())
-
-			Expect(registry.Status.Conditions).To(ContainElement(
-				WithTransform(func(c metav1.Condition) metav1.Condition {
-					return metav1.Condition{
-						Type:    c.Type,
-						Status:  c.Status,
-						Reason:  c.Reason,
-						Message: c.Message,
-					}
-				}, Equal(metav1.Condition{
-					Type:    "Discovering",
-					Status:  metav1.ConditionTrue,
-					Reason:  v1alpha1.RegistryDiscoveryRequestedReason,
-					Message: "Registry discovery in progress",
-				}))))
-		})
-
-		It(
-			"Should set the Discovery status condition to Unknown if the message cannot be published",
-			func(ctx context.Context) {
-				By("Returning an error when publishing the message")
-				mockPublisher := messagingMocks.NewMockPublisher(GinkgoT())
-				message, err := json.Marshal(&handlers.CreateCatalogMessage{
-					RegistryName:      registry.Name,
-					RegistryNamespace: registry.Namespace,
-				})
-				Expect(err).NotTo(HaveOccurred())
-				mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, message).Return(errors.New("failed to publish message"))
-				reconciler.Publisher = mockPublisher
-
-				By("Reconciling the Registry")
-				_, err = reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      registry.Name,
-						Namespace: registry.Namespace,
-					},
-				})
-				Expect(err).To(HaveOccurred())
-
-				By("Checking the Registry status condition")
-				Expect(k8sClient.Get(ctx, types.NamespacedName{
-					Name:      registry.Name,
-					Namespace: registry.Namespace,
-				}, &registry)).To(Succeed())
-
-				Expect(registry.Status.Conditions).To(ContainElement(
-					WithTransform(func(c metav1.Condition) metav1.Condition {
-						return metav1.Condition{
-							Type:    c.Type,
-							Status:  c.Status,
-							Reason:  c.Reason,
-							Message: c.Message,
-						}
-					}, Equal(metav1.Condition{
-						Type:    "Discovering",
-						Status:  metav1.ConditionUnknown,
-						Reason:  v1alpha1.RegistryFailedToRequestDiscoveryReason,
-						Message: "Failed to communicate with the workers",
-					}))))
-			},
-		)
-	})
-
 	When("Repositories are updated", func() {
 		var registry v1alpha1.Registry
 

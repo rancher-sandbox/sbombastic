@@ -16,7 +16,10 @@ const (
 
 type Publisher interface {
 	// Publish publishes a message.
-	Publish(ctx context.Context, subject string, message []byte) error
+	// The messageID is set as the "Nats-Msg-Id" header to enable deduplication by JetStream.
+	// If a message with the same ID has already been published in, it will be ignored.
+	// The default deduplication window is 2 minutes.
+	Publish(ctx context.Context, subject string, messageID string, message []byte) error
 }
 
 // NatsPublisher is an implementation of the Publisher interface that uses NATS JetStream to publish messages.
@@ -55,10 +58,16 @@ func NewNatsPublisher(ctx context.Context, nc *nats.Conn, logger *slog.Logger) (
 }
 
 // Publish publishes a message.
-func (p *NatsPublisher) Publish(ctx context.Context, subject string, message []byte) error {
+// The messageID is set as the "Nats-Msg-Id" header to enable deduplication by JetStream.
+// If a message with the same ID has already been published in, it will be ignored.
+// The default deduplication window is 2 minutes.
+func (p *NatsPublisher) Publish(ctx context.Context, subject string, messageID string, message []byte) error {
 	msg := &nats.Msg{
 		Subject: subject,
 		Data:    message,
+		Header: nats.Header{
+			jetstream.MsgIDHeader: []string{messageID},
+		},
 	}
 	if _, err := p.js.PublishMsg(ctx, msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
