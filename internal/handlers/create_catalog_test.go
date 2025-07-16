@@ -266,6 +266,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, updatedScanJob.Status.ImagesCount)
 	assert.Equal(t, 0, updatedScanJob.Status.ScannedImagesCount)
+	assert.True(t, updatedScanJob.IsInProgress())
 }
 
 func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
