@@ -1,0 +1,30 @@
+{{ if .Values.storage.database.enableBuiltInCnpg }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.storage.database.cnpg.fullnameOverride }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: {{ .Values.storage.database.cnpg.cluster.instances }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.storage.database.cnpg.cluster.initdb.database }}
+      owner: {{ .Values.storage.database.cnpg.cluster.initdb.owner }}
+      secret:
+        name: "" # cnpg will create a secret with the name of the database owner
+
+  postgresql:
+    pg_hba:
+      - hostssl all all 0.0.0.0/0 scram-sha-256 clientcert=verify-full # mTLS and server login for all connections
+      - hostnossl all all 0.0.0.0/0 reject
+
+  storage:
+    size: {{ .Values.storage.database.cnpg.storege.size }}
+    storageClass: {{ .Values.storage.database.cnpg.storege.storageClass }}
+
+  certificates:
+    serverCASecret:   {{ include "sbombastic.fullname" . }}-cnpg-server-ca-key-pair
+    serverTLSSecret:  {{ include "sbombastic.fullname" . }}-cnpg-server-cert
+    clientCASecret:   {{ include "sbombastic.fullname" . }}-cnpg-client-ca-key-pair
+    replicationTLSSecret: {{ include "sbombastic.fullname" . }}-cnpg-client-cert
+{{- end }}

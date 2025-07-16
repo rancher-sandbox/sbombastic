@@ -51,30 +51,71 @@ helm_resource(
 load("ext://namespace", "namespace_create")
 namespace_create("sbombastic")
 
+helm_repo("cnpg-repo", "https://cloudnative-pg.github.io/charts")
+helm_resource(
+    "cnpg",
+    "cnpg/cloudnative-pg",
+    namespace="sbombastic",
+    flags=[
+        "--set",
+        "config.clusterWide=false",
+    ],
+    resource_deps=[
+        "cnpg-repo",
+    ],
+)
+
 registry = settings.get("registry")
 controller_image = settings.get("controller").get("image")
 storage_image = settings.get("storage").get("image")
 worker_image = settings.get("worker").get("image")
 
-yaml = helm(
-    "./charts/sbombastic",
-    name="sbombastic",
-    namespace="sbombastic",
-    set=[
-        "global.cattle.systemDefaultRegistry=" + registry,
-        "controller.image.repository=" + controller_image,
-        "storage.image.repository=" + storage_image,
-        "worker.image.repository=" + worker_image,
-        "controller.replicas=1",
-        "storage.replicas=1",
-        "worker.replicas=1",
-        "controller.logLevel=debug",
+
+controller_image_dep = registry + "/" + controller_image
+storage_image_dep = registry + "/" + storage_image
+worker_image_dep = registry + "/" + worker_image
+
+helm_resource(
+    name         = "sbombastic",
+    chart        = "./charts/sbombastic",
+    release_name = "sbombastic",
+    namespace    = "sbombastic",
+
+    flags = [
+        "--set=global.cattle.systemDefaultRegistry=", # ensure there is no double registry, like ghcr.io/ghcr.io/sbombastic/controller
+        "--set=controller.image.repository=" + controller_image,
+        "--set=worker.image.repository="     + worker_image,
+        "--set=storage.image.repository="    + storage_image,
+        "--set=controller.replicas=1",
+        "--set=worker.replicas=1",
+        "--set=storage.replicas=1",
+        "--set=security.harden_deployment=false",   # if we enable this, the live reload will not work
+        "--set=cnpg.enabled=true",
+        "--set=controller.logLevel=debug",
         #  TODO: uncomment this, when the log parser in storage is implemented
-        # "storage.logLevel=debug", 
-        "worker.logLevel=debug",
+        # "--set=storage.logLevel=debug",
+        "--set=worker.logLevel=debug",
+        "--set=storage.database.enableBuiltInCnpg=true",
+    ],
+
+    # # Tell Tilt which locally-built images map to which values
+    image_deps = [
+        controller_image_dep,
+        worker_image_dep,
+        storage_image_dep,
+    ],
+    image_keys = [
+        ("controller.image.repository", "controller.image.tag"),
+        ("worker.image.repository",     "worker.image.tag"),
+        ("storage.image.repository",    "storage.image.tag"),
+    ],
+
+    # Wait for cert-manager, cnpg first
+    resource_deps = [
+        "cert-manager",          # if you installed cert-manager above
+        "cnpg",                  # ensure the webhook is ready, so we then deploy the cluster
     ],
 )
-k8s_yaml(yaml)
 
 # Hot reloading containers
 local_resource(

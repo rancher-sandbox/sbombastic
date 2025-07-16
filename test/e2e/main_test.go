@@ -66,6 +66,28 @@ func TestMain(m *testing.M) {
 				return ctx, fmt.Errorf("failed to install cert-manager: %w", err)
 			}
 
+			// Add the CloudNativePG Helm repository for cnpg
+			err = manager.RunRepo(helm.WithArgs(
+				"add",
+				"cnpg",
+				"https://cloudnative-pg.github.io/charts",
+				"--force-update"),
+			)
+			if err != nil {
+				return ctx, fmt.Errorf("failed to add cnpg helm repo: %w", err)
+			}
+
+			// Install cloudnative-pg
+			err = manager.RunInstall(
+				helm.WithName("cnpg"),
+				helm.WithChart("cnpg/cloudnative-pg"),
+				helm.WithWait(),
+				helm.WithArgs("--set", "config.clusterWide=false"),
+				helm.WithNamespace(namespace),
+				helm.WithTimeout("3m"))
+			if err != nil {
+				return ctx, fmt.Errorf("failed to install cnpg: %w", err)
+			}
 			return ctx, nil
 		},
 	)

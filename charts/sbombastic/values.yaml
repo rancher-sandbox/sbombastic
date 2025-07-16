@@ -23,6 +23,49 @@ storage:
   replicas: 1
   # logLevel: "debug" //TODO: uncomment this, when the log parser in storage is implemented
 
+  # NOTE: This section configure the storage backend for the sbombastic.
+  # User can choose to between cloudnative PG (default) or an external PostgreSQL instance.
+  database:
+    enableBuiltInCnpg: true
+    # === Default Option : We provision the cluster ===
+    # NOTE: This section is used to enable cnpg by default, it will create postgres server pod for user.
+    cnpg:
+      credential: sbombastic-pg-server-app
+      tls:
+        sslmode: verify-full
+        clientCert: sbombastic-cnpg-client-cert
+        serverCA: sbombastic-cnpg-server-ca-key-pair
+
+      fullnameOverride: sbombastic-pg-server
+      cluster:
+        instances: 1
+        initdb:
+          database: sbombastic
+          owner: sbombastic
+
+      storege:
+        size: 1Gi
+        # storageClass: standard # Default storage class, can be overridden by the user
+
+    # === Option 2: User-provided PostgreSQL instance ===
+    # Enable this only if you're using an existing external PostgreSQL database.
+    externalPostgres:
+      credential: external-db-auth
+      # NOTE: The credential secret is used to store the credentials for the external PostgreSQL instance.
+      # It is expected to have the following fields:
+      # - host: PostgreSQL server URL
+      # - port: PostgreSQL server port
+      # - database: name of the database
+      # - username: username for the database
+      # - password: password for the database
+
+      # Optional TLS/mTLS settings
+      tls:
+        mode: mTLS                   # mTLS, TLS, disable
+        sslmode: verify-full         # Required: e.g., "disable", "require", "verify-ca", "verify-full"
+        serverCA: "external-db-server-ca"   # Optional: Secret with server CA cert (tls.crt), required for mTLS / TLS
+        clientCert: "external-db-client-cert" # Optional: Required for mTLS (tls.crt + tls.key), required for mTLS
+
 worker:
   image:
     repository: rancher-sandbox/sbombastic/worker
@@ -31,6 +74,8 @@ worker:
   replicas: 3
   logLevel: "info"
 
+
+# TODO: Remove this section when the cnpg integration is done
 persistence:
   enabled: true
 
@@ -40,11 +85,15 @@ persistence:
     subPath:
     annotations: {}
     labels: {}
-    # storageClass: ""
+    # storageClass: "standard" # TODO: change this to the storage class you want to use
     ## If defined, PVC must be created manually before volume will be bound
     # existingClaim:
     accessMode: ReadWriteOnce
     size: 1Gi
+
+# NOTE: This section is used to harden the deployment of the sbombastic components, default to true
+security:
+  harden_deployment: true
 
 # NOTE: This section is used to configure the NATS server and its components
 # deployed by the NATS chart dependency.

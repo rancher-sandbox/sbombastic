@@ -44,3 +44,171 @@ tests:
       - equal:
           path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
           value: "existing-claim"
+
+  - it: "Ensure the cnpg engine should mount the correct database credential secret"
+    set:
+      storage:
+        database:
+          engine: cnpg
+          cnpg:
+            credential: test-pg-server-app
+            tls:
+              sslmode: verify-cnpg-full
+              clientCert: test-client-cert
+              serverCA: test-server-ca-key-pair
+    asserts:
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-credential-volume"
+            secret:
+              secretName: test-pg-server-app
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-client-cert-volume"
+            secret:
+              secretName: test-client-cert
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-server-ca-volume"
+            secret:
+              secretName: test-server-ca-key-pair
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_SSLMODE"
+            value: "verify-cnpg-full"
+
+  - it: "Ensure the external postgres should mount the correct database credential secret"
+    set:
+      storage:
+        database:
+          enableBuiltInCnpg: false
+          externalPostgres:
+            credential: test-external-db-auth
+            tls:
+              mode: mTLS
+              clientCert: test-external-client-cert
+              serverCA: test-external-server-ca-key-pair
+              sslmode: verify-external-full
+    asserts:
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-credential-volume"
+            secret:
+              secretName: test-external-db-auth
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-client-cert-volume"
+            secret:
+              secretName: test-external-client-cert
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-server-ca-volume"
+            secret:
+              secretName: test-external-server-ca-key-pair
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_SSLMODE"
+            value: "verify-external-full"
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_TLS_MODE"
+            value: "mTLS"
+
+  - it: "Ensure the external postgres should mount the correct database credential secret when TLS is enabled"
+    set:
+      storage:
+        database:
+          enableBuiltInCnpg: false
+          externalPostgres:
+            credential: test-external-db-auth
+            tls:
+              mode: TLS
+              clientCert: test-external-client-cert
+              serverCA: test-external-server-ca-key-pair
+              sslmode: verify-external-full
+    asserts:
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-credential-volume"
+            secret:
+              secretName: test-external-db-auth
+              defaultMode: 0444
+      - notContains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-client-cert-volume"
+            secret:
+              secretName: test-external-client-cert
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-server-ca-volume"
+            secret:
+              secretName: test-external-server-ca-key-pair
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_SSLMODE"
+            value: "verify-external-full"
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_TLS_MODE"
+            value: "TLS"
+
+  - it: "Ensure the external postgres should mount the correct database credential secret when no TLS is enabled"
+    set:
+      storage:
+        database:
+          enableBuiltInCnpg: false
+          externalPostgres:
+            credential: test-external-db-auth
+            tls:
+              mode: disable
+              serverCA: test-external-server-ca-key-pair
+              clientCert: test-external-client-cert
+    asserts:
+      - contains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-credential-volume"
+            secret:
+              secretName: test-external-db-auth
+              defaultMode: 0444
+      - notContains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-client-cert-volume"
+            secret:
+              secretName: test-external-client-cert
+              defaultMode: 0444
+      - notContains:
+          path: "spec.template.spec.volumes"
+          content:
+            name: "database-server-ca-volume"
+            secret:
+              secretName: test-external-server-ca-key-pair
+              defaultMode: 0444
+      - contains:
+          path: "spec.template.spec.containers[0].env"
+          content:
+            name: "DATABASE_TLS_MODE"
+            value: "disable"

@@ -74,6 +74,7 @@ Create the name of the service account to use
 Security Contexts
 */}}
 {{- define "sbombastic.securityContext" -}}
+{{- if .Values.security.harden_deployment }}
 readOnlyRootFilesystem: true
 runAsNonRoot: true
 runAsUser: 65532
@@ -83,4 +84,10 @@ allowPrivilegeEscalation: false
 capabilities:
     drop:
     - "ALL"
+{{- else }}
+allowPrivilegeEscalation: false
+capabilities:
+    drop:
+    - "ALL"
+{{- end }}
 {{- end}}

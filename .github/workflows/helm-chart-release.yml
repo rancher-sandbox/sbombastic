@@ -48,6 +48,7 @@ jobs:
       - name: Add Helm dependency repos
         run: |
           helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+          helm repo add cnpg https://cloudnative-pg.io/charts/
 
       - name: Release Helm charts
         shell: bash
