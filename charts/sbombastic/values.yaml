@@ -26,7 +26,7 @@ storage:
 worker:
   image:
     repository: rancher-sandbox/sbombastic/worker
-    tag: "v0.1.0-alpha1"
+    tag: v0.1.0-alpha1
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
@@ -45,8 +45,6 @@ persistence:
     # existingClaim:
     accessMode: ReadWriteOnce
     size: 1Gi
-
-
 
 # NOTE: This section is used to configure the NATS server and its components
 # deployed by the NATS chart dependency.
