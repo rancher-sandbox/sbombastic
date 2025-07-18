@@ -96,11 +96,20 @@ metadata:
   namespace: default
 spec:
   url: https://vexhub.vendor.com
+  enabled: true
   credentials:
     secretRef:
       name: vendor-vexhub-secret
       key: access-token
 ```
+
+There are few attributes to keep in mind when configuring the `VexHub` CRD:
+
+* `url`: is the url of the VexHub repository (this is mandatory)
+
+* `enabled`: to enable/disable the VexHub repo (`true` by default)
+
+* `credentials`: used to store auth credentials to get access to the repo
 
 As you can see, the VexHub CRD has a `secretRef` field, which means that you 
 need to provide a Secret to configure the credentials (if any):
