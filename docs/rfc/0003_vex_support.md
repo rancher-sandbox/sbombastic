@@ -16,24 +16,24 @@ Support VEX (Vulnerability Exploitability Exchange) documents to filter or provi
 
 [motivation]: #motivation
 
-Currently we scan SBOMs without the use of VEX documents. VEX is a format used 
+Currently, we scan SBOMs without the use of VEX documents. VEX is a format used 
 to convey information about the exploitability of vulnerabilities in software 
-products and share it with scanning tools.
+products and share them with scanning tools.
 
 The use of this format can sensitively reduce the number of vulnerabilities 
-in the final vulnerability report, which more often is full of false positive
+in the final vulnerability report, which is more often full of false positives
 entries.
 
-In order to reduce the noise, VEX is the right choise if you are dealing with
-SBOMs and OCI images.
+To reduce the noise, VEX is the right choice if you are dealing with SBOMs and 
+OCI images.
 
 That said, we want to add support for:
 
-* keeping configuration of multiple VexHub repositories
+* Keeping the configuration of multiple VexHub repositories
 
-* support private VexHub repos with credentials and auth tokens
+* Support private VexHub repos with credentials and auth tokens
 
-* use VEX docuements to scan images
+* Use VEX documents to scan images
 
 ## Examples / User Stories
 
@@ -47,13 +47,13 @@ and the response. When appropriate, provide user stories in the form of "As a
 
 ### User story #1
 
-As a user, I want to scan registries on my infrastracture filtering out the 
+As a user, I want to scan registries on my infrastructure filtering out the 
 number of CVEs detected by SBOMbastic, removing false positives as much as possible.
 
 ### User story #2
 
-As a user, I want to configure the registries scan with appropriate VEX files 
-depending on the content of the registry (eg. test, staging or prod images), 
+As a user, I want to configure the registry scan with appropriate VEX files 
+depending on the content of the registry (eg. test, staging, prod images), 
 so that the vulnerability report will have an accurate result.
 
 # Detailed design
@@ -70,14 +70,14 @@ disruptive technical decisions (when applicable), as well as corner-cases and
 warnings.
 --->
 
-This RFC introduces support for VEX files when scanning registries.
-From now on, the Registry CRD will have an additional field to refer the VexHub
-resources we want to use to scan it.
+This RFC introduces support for VEX files during registry scanning.
+From now on, the Registry CRD will have an additional field to refer to the 
+VexHub resources we want to use to scan it.
 
 Suppose you are scanning the registry of a dedicated department in your company.
-This registry will host specific kind of images depending on the scope of the 
-department. In order to make the scan as much accurate as possible, we are 
-going to provide a new clusterwide CRD called VexHub. This CRD will hold 
+This registry will host a specific kind of images depending on the scope of the 
+department. In order to make the scan as accurate as possible, we are going to 
+provide a new clusterwide CRD called VexHub. This CRD will hold the 
 configuration of the VexHub repositories, so that the Registry CRD will refer 
 to these VexHub resources.
 
@@ -86,7 +86,7 @@ configuration across multiple registries.
 
 ## VexHub CRD
 
-To configure a new VexHub, the user will need to apply a new manifest as follow:
+To configure a new VexHub, the user will need to apply a manifest as follows:
 
 ```yaml
 apiVersion: sbombastic.rancher.io/v1alpha1
@@ -102,7 +102,7 @@ spec:
       key: access-token
 ```
 
-As you can see the VexHub CRD has a `secretRef` field, which means that you 
+As you can see, the VexHub CRD has a `secretRef` field, which means that you 
 need to provide a Secret to configure the credentials (if any):
 
 ```yaml
@@ -113,43 +113,37 @@ metadata:
   namespace: security-team
 type: Opaque
 data:
+  username: <username>
   token: <base64-encoded-token>
-
 ```
 
-## Registry CRD
-
-To configure the Registry to use the VexHub repository, the user will need to 
-update the Registry manifest as follow:
+Or using `username` and `password` as in this example:
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
-kind: Registry
+apiVersion: v1
+kind: Secret
 metadata:
-  name: registry-example
-  namespace: default
-spec:
-  url: "https://registry-1.docker.io"
-  type: "docker"
-  auth:
-    secretName: "registry-secret"
-  discoveryPeriod: "1h"
-  scanPeriod: "1d"
-  repositories:
-    - "repo1"
-    - "repo2"
-  vexHubRefs:
-    - name: vendor-vexhub
-    - name: internal-vexhub # example of multiple VexHub configuration
+  name: vexhub-auth
+  namespace: security-team
+type: Opaque
+data:
+  username: <username>
+  password: <password>
 ```
 
-This way the registry will be scanned with appropriate VEX files.
+This way, the registry will be scanned with VEX files.
+
+In addition to this, we have to consider the fact that VexHub repositories
+can use HTTPS encryption. This means that user might want to use their own 
+certificates to verify the connection of the repository.
 
 ## AirGap
 
 AirGap is available by default for this feature, since the only requirement is
 to provide a self-hosted vexhub repository and change the `repository_url` 
 (if any) whitin the VEX files, to point to the internal registries.
+
+This setup is well described here: https://github.com/aquasecurity/trivy/blob/main/docs/docs/advanced/air-gap.md#vex-hub
 
 # Drawbacks
 
@@ -173,36 +167,12 @@ Why should we **not** do this?
 - What is the impact of not doing this?
 --->
 
-The alternative approach is to allow the VexHub configuration directly into the
-`Registry` CRD as follow:
+The alternative approach is to allow the VexHub configuration to be directly 
+into the `Registry` CRD.
 
-```yaml
-apiVersion: scanner.rancher.io/v1alpha1
-kind: Registry
-metadata:
-  name: registry-example
-  namespace: default
-spec:
-  url: "https://registry-1.docker.io"
-  type: "docker"
-  auth:
-    secretName: "registry-secret"
-  discoveryPeriod: "1h"
-  scanPeriod: "1d"
-  repositories:
-    - "repo1"
-    - "repo2"
-  vexhubConfig:
-    - url: https://vexhub.example.com
-      credentials:
-        secretRef:
-          name: vexhub-secret
-          key: token
-```
+This approach is easier in terms of development but has some critical issues.
 
-This approach is easier in terms of development but has some critical issue:
-
-* Increase complexity of the Registry CRD and its management
+* Increase the complexity of the Registry CRD and its management
 
 * Duplication of configurations across different registries
 
