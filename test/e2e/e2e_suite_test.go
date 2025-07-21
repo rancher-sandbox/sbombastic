@@ -75,6 +75,21 @@ func TestRegistryCreation(t *testing.T) {
 			require.NoError(t, err)
 			return ctx
 		}).
+		Assess("Create a VEXHub", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			vexHub := &v1alpha1.VEXHub{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "rancher-vexhub",
+				},
+				Spec: v1alpha1.VEXHubSpec{
+					URL:     "https://github.com/rancher/vexhub",
+					Enabled: true,
+				},
+			}
+			err := cfg.Client().Resources().Create(ctx, vexHub)
+			require.NoError(t, err)
+
+			return ctx
+		}).
 		Assess("Create a ScanJob", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			scanJob := &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{

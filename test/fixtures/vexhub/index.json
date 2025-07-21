@@ -1,0 +1,9 @@
+{
+   "updated_at": "2025-07-25T12:24:12.789235727Z",
+   "packages": [
+      {
+         "id": "pkg:golang/github.com/rancher/rancher",
+         "location": "pkg/golang/github.com/rancher/rancher/scan.openvex.json"
+      }
+   ]
+}
