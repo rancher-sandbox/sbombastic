@@ -10,6 +10,7 @@ rules:
       - sbombastic.rancher.io
     resources:
       - registries
+      - vexhubs
     verbs:
       - get
       - list

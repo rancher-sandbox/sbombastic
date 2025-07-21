@@ -1,0 +1,7 @@
+apiVersion: sbombastic.rancher.io/v1alpha1
+kind: VEXHub
+metadata:
+  name: rancher-vexhub
+spec:
+  url: "https://github.com/rancher/vexhub"
+  enabled: true
