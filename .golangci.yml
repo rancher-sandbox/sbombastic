@@ -477,3 +477,7 @@ linters:
         linters:
           - revive
         text: "dot-imports"
+      # Disable dupl from api types
+      - path: 'api/.*\.go'
+        linters:
+          - dupl

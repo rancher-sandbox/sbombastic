@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,18 +52,19 @@ func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	scanJob := &sbombasticv1alpha1.ScanJob{}
 	if err := r.Get(ctx, req.NamespacedName, scanJob); err != nil {
 		if errors.IsNotFound(err) {
-			// Object not found, likely already deleted
+			log.V(1).Info("ScanJob not found, skipping reconciliation", "scanJob", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("unable to get ScanJob: %w", err)
 	}
 
-	// Check if resource is being deleted
 	if !scanJob.DeletionTimestamp.IsZero() {
+		log.V(1).Info("ScanJob is being deleted, skipping reconciliation", "scanJob", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
-	if scanJob.IsFailed() || scanJob.IsComplete() || scanJob.IsInProgress() {
+	if !scanJob.IsPending() {
+		log.V(1).Info("ScanJob is not in pending state, skipping reconciliation", "scanJob", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
@@ -74,12 +74,8 @@ func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	reconcileResult, reconcileErr := r.reconcileScanJob(ctx, scanJob)
 
-	// Update status if it changed
-	if !equality.Semantic.DeepEqual(original.Status, scanJob.Status) {
-		log.Info("Updating ScanJob status")
-		if err := r.Status().Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update ScanJob status: %w", err)
-		}
+	if err := r.Status().Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob status: %w", err)
 	}
 
 	return reconcileResult, reconcileErr
@@ -119,8 +115,6 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
 	}
 
-	scanJob.MarkInProgress(sbombasticv1alpha1.ReasonProcessing, "Processing scan job")
-
 	messageID := string(scanJob.UID)
 	message, err := json.Marshal(&handlers.CreateCatalogMessage{
 		ScanJobName:      scanJob.Name,
@@ -133,6 +127,8 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 	if err := r.Publisher.Publish(ctx, handlers.CreateCatalogSubject, messageID, message); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to publish CreateSBOM message: %w", err)
 	}
+
+	scanJob.MarkScheduled(sbombasticv1alpha1.ReasonScheduled, "ScanJob has been scheduled for processing by the controller")
 
 	return ctrl.Result{}, nil
 }

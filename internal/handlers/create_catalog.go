@@ -96,6 +96,15 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
 
+	if !scanJob.IsScheduled() {
+		h.logger.DebugContext(ctx, "ScanJob is not scheduled, skipping catalog creation", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+		return nil
+	}
+	scanJob.MarkInProgress(v1alpha1.ReasonCatalogCreationInProgress, "Catalog creation in progress")
+	if err = h.k8sClient.Status().Update(ctx, scanJob); err != nil {
+		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+	}
+
 	// Retrieve the registry from the scan job annotations.
 	registrData, ok := scanJob.Annotations[v1alpha1.RegistryAnnotation]
 	if !ok {
@@ -181,7 +190,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
 	} else {
 		h.logger.DebugContext(ctx, "Images to process", "count", len(imageToProcess))
-
+		scanJob.MarkInProgress(v1alpha1.ReasonSBOMGenerationInProgress, "SBOM generation in progress")
 		scanJob.Status.ImagesCount = len(imageToProcess)
 		scanJob.Status.ScannedImagesCount = 0
 	}
