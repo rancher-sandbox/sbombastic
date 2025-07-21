@@ -32,17 +32,33 @@ type ScanJobSpec struct {
 }
 
 const (
-	ConditionTypeComplete = "Complete"
-	ConditionTypeFailed   = "Failed"
+	ConditionTypeScheduled  = "Scheduled"
+	ConditionTypeInProgress = "InProgress"
+	ConditionTypeComplete   = "Complete"
+	ConditionTypeFailed     = "Failed"
 )
 
 const (
-	ReasonInitializing     = "Initializing"
-	ReasonProcessing       = "Processing"
-	ReasonNoImagesToScan   = "NoImagesToScan"
-	ReasonAllImagesScanned = "AllImagesScanned"
-	ReasonRegistryNotFound = "RegistryNotFound"
-	ReasonInternalError    = "InternalError"
+	ReasonPending                   = "Pending"
+	ReasonScheduled                 = "Scheduled"
+	ReasonInProgress                = "InProgress"
+	ReasonCatalogCreationInProgress = "CatalogCreationInProgress"
+	ReasonSBOMGenerationInProgress  = "SBOMGenerationInProgress"
+	ReasonImageScanInProgress       = "ImageScanInProgress"
+	ReasonComplete                  = "Complete"
+	ReasonFailed                    = "Failed"
+	ReasonNoImagesToScan            = "NoImagesToScan"
+	ReasonAllImagesScanned          = "AllImagesScanned"
+	ReasonRegistryNotFound          = "RegistryNotFound"
+	ReasonInternalError             = "InternalError"
+)
+
+const (
+	messagePending    = "ScanJob is pending"
+	messageScheduled  = "ScanJob is scheduled"
+	messageInProgress = "ScanJob is in progress"
+	messageCompleted  = "ScanJob completed successfully"
+	messageFailed     = "ScanJob failed"
 )
 
 // ScanJobStatus defines the observed state of ScanJob.
@@ -83,17 +99,63 @@ func (s *ScanJob) InitializeConditions() {
 	s.Status.Conditions = []metav1.Condition{}
 
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeScheduled,
+		Status:             metav1.ConditionUnknown,
+		Reason:             ReasonPending,
+		Message:            messagePending,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeInProgress,
+		Status:             metav1.ConditionUnknown,
+		Reason:             ReasonPending,
+		Message:            messagePending,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeComplete,
+		Status:             metav1.ConditionUnknown,
+		Reason:             ReasonPending,
+		Message:            messagePending,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeFailed,
+		Status:             metav1.ConditionUnknown,
+		Reason:             ReasonPending,
+		Message:            messagePending,
+		ObservedGeneration: s.Generation,
+	})
+}
+
+// MarkScheduled marks the job as scheduled.
+func (s *ScanJob) MarkScheduled(reason, message string) {
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeScheduled,
+		Status:             metav1.ConditionTrue,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeInProgress,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonScheduled,
+		Message:            messageScheduled,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeComplete,
 		Status:             metav1.ConditionFalse,
-		Reason:             ReasonInitializing,
-		Message:            "Scan job created",
+		Reason:             ReasonScheduled,
+		Message:            messageScheduled,
 		ObservedGeneration: s.Generation,
 	})
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeFailed,
 		Status:             metav1.ConditionFalse,
-		Reason:             ReasonInitializing,
-		Message:            "Scan job created",
+		Reason:             ReasonScheduled,
+		Message:            messageScheduled,
 		ObservedGeneration: s.Generation,
 	})
 }
@@ -104,17 +166,31 @@ func (s *ScanJob) MarkInProgress(reason, message string) {
 	s.Status.StartTime = &now
 
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
-		Type:               ConditionTypeComplete,
+		Type:               ConditionTypeScheduled,
 		Status:             metav1.ConditionFalse,
+		Reason:             ReasonInProgress,
+		Message:            messageInProgress,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeInProgress,
+		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: s.Generation,
 	})
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeComplete,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonInProgress,
+		Message:            messageInProgress,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeFailed,
 		Status:             metav1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
+		Reason:             ReasonInProgress,
+		Message:            messageInProgress,
 		ObservedGeneration: s.Generation,
 	})
 }
@@ -125,6 +201,20 @@ func (s *ScanJob) MarkComplete(reason, message string) {
 	s.Status.CompletionTime = &now
 
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeScheduled,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonComplete,
+		Message:            messageCompleted,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeInProgress,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonComplete,
+		Message:            messageCompleted,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeComplete,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
@@ -134,8 +224,8 @@ func (s *ScanJob) MarkComplete(reason, message string) {
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeFailed,
 		Status:             metav1.ConditionFalse,
-		Reason:             reason,
-		Message:            "Job completed successfully",
+		Reason:             ReasonComplete,
+		Message:            messageCompleted,
 		ObservedGeneration: s.Generation,
 	})
 }
@@ -146,10 +236,24 @@ func (s *ScanJob) MarkFailed(reason, message string) {
 	s.Status.CompletionTime = &now
 
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeScheduled,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonFailed,
+		Message:            messageFailed,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
+		Type:               ConditionTypeInProgress,
+		Status:             metav1.ConditionFalse,
+		Reason:             ReasonFailed,
+		Message:            messageFailed,
+		ObservedGeneration: s.Generation,
+	})
+	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 		Type:               ConditionTypeComplete,
 		Status:             metav1.ConditionFalse,
-		Reason:             reason,
-		Message:            "Job failed",
+		Reason:             ReasonFailed,
+		Message:            messageFailed,
 		ObservedGeneration: s.Generation,
 	})
 	meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
@@ -161,9 +265,27 @@ func (s *ScanJob) MarkFailed(reason, message string) {
 	})
 }
 
-// IsInProgress returns true if the job is running.
+// IsPending returns true if the job is not in any other state.
+func (s *ScanJob) IsPending() bool {
+	return !s.IsScheduled() && !s.IsInProgress() && !s.IsComplete() && !s.IsFailed()
+}
+
+// IsScheduled returns true if the job is scheduled.
+func (s *ScanJob) IsScheduled() bool {
+	scheduledCond := meta.FindStatusCondition(s.Status.Conditions, ConditionTypeScheduled)
+	if scheduledCond == nil {
+		return false
+	}
+	return scheduledCond.Status == metav1.ConditionTrue
+}
+
+// IsInProgress returns true if the job is currently in progress.
 func (s *ScanJob) IsInProgress() bool {
-	return !s.IsComplete() && !s.IsFailed() && s.Status.StartTime != nil
+	inProgressCond := meta.FindStatusCondition(s.Status.Conditions, ConditionTypeInProgress)
+	if inProgressCond == nil {
+		return false
+	}
+	return inProgressCond.Status == metav1.ConditionTrue
 }
 
 // IsComplete returns true if the job has completed successfully.
