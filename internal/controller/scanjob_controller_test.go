@@ -109,8 +109,8 @@ var _ = Describe("ScanJob Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(storedRegistry.Name).To(Equal(registry.Name))
 
-			By("Verifying the ScanJob is marked as in progress")
-			Expect(updatedScanJob.IsInProgress()).To(BeTrue())
+			By("Verifying the ScanJob is marked as scheduled")
+			Expect(updatedScanJob.IsScheduled()).To(BeTrue())
 		})
 	})
 

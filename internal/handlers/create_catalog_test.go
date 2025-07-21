@@ -20,6 +20,7 @@ import (
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -161,7 +162,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Registry: registry.Name,
 		},
 	}
-	scanJob.MarkInProgress(v1alpha1.ReasonProcessing, "Processing scan job")
+	scanJob.MarkScheduled(v1alpha1.ReasonScheduled, "ScanJob has been scheduled for processing by the controller")
 
 	scheme := scheme.Scheme
 	err = v1alpha1.AddToScheme(scheme)
@@ -267,6 +268,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, 2, updatedScanJob.Status.ImagesCount)
 	assert.Equal(t, 0, updatedScanJob.Status.ScannedImagesCount)
 	assert.True(t, updatedScanJob.IsInProgress())
+	assert.Equal(t, v1alpha1.ReasonSBOMGenerationInProgress, meta.FindStatusCondition(updatedScanJob.Status.Conditions, v1alpha1.ConditionTypeInProgress).Reason)
 }
 
 func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
@@ -480,4 +482,107 @@ func fakeDigestAndDiffID(layerIndex int) (cranev1.Hash, cranev1.Hash, error) {
 	}
 
 	return digest, diffID, nil
+}
+
+func TestCreateCatalogHandler_Handle_ScanJobNotFound(t *testing.T) {
+	mockRegistryClient := registryMocks.NewClient(t)
+	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+	mockPublisher := messagingMocks.NewMockPublisher(t)
+
+	scheme := scheme.Scheme
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	handler := NewCreateCatalogHandler(
+		mockRegistryClientFactory,
+		k8sClient,
+		scheme,
+		mockPublisher,
+		slog.Default().With("handler", "create_catalog_handler"),
+	)
+
+	message, err := json.Marshal(&CreateCatalogMessage{
+		ScanJobName:      "non-existent-scanjob",
+		ScanJobNamespace: "default",
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
+}
+
+func TestCreateCatalogHandler_Handle_ScanJobNotScheduled(t *testing.T) {
+	mockRegistryClient := registryMocks.NewClient(t)
+	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+	mockPublisher := messagingMocks.NewMockPublisher(t)
+
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:          "registry.test",
+			Repositories: []string{"repo1"},
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scan-job",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.RegistryAnnotation: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: registry.Name,
+		},
+	}
+	scanJob.MarkComplete(v1alpha1.ReasonAllImagesScanned, "Done")
+
+	scheme := scheme.Scheme
+	err = v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(registry, scanJob).
+		WithStatusSubresource(&v1alpha1.ScanJob{}).
+		Build()
+
+	handler := NewCreateCatalogHandler(
+		mockRegistryClientFactory,
+		k8sClient,
+		scheme,
+		mockPublisher,
+		slog.Default().With("handler", "create_catalog_handler"),
+	)
+
+	message, err := json.Marshal(&CreateCatalogMessage{
+		ScanJobName:      scanJob.Name,
+		ScanJobNamespace: scanJob.Namespace,
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
+
+	updatedScanJob := &v1alpha1.ScanJob{}
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Name:      scanJob.Name,
+		Namespace: scanJob.Namespace,
+	}, updatedScanJob)
+	require.NoError(t, err)
+	assert.True(t, updatedScanJob.IsComplete())
 }
