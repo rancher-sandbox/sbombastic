@@ -107,6 +107,7 @@ generate-storage-test-crd: ## Generate CRD used by the controller tests to acces
 
 .PHONY: generate-storage
 generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/generated and DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	go install ./hack/tools.go
 	API_KNOWN_VIOLATIONS_DIR=. UPDATE_API_KNOWN_VIOLATIONS=true ./hack/update-codegen.sh
 
 .PHONY: generate-mocks
