@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -96,12 +97,20 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
 
-	if !scanJob.IsScheduled() {
-		h.logger.DebugContext(ctx, "ScanJob is not scheduled, skipping catalog creation", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
-		return nil
-	}
-	scanJob.MarkInProgress(v1alpha1.ReasonCatalogCreationInProgress, "Catalog creation in progress")
-	if err = h.k8sClient.Status().Update(ctx, scanJob); err != nil {
+	// It is possible that the controller is slow to set the status condition "Scheduled" to true,
+	// so we might encounter conflicts when setting the status condition to "InProgress".
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err = h.k8sClient.Get(ctx, client.ObjectKey{
+			Name:      scanJob.Name,
+			Namespace: scanJob.Namespace,
+		}, scanJob); err != nil {
+			return fmt.Errorf("cannot get scan job %s/%s while updating status: %w", scanJob.Namespace, scanJob.Name, err)
+		}
+
+		scanJob.MarkInProgress(v1alpha1.ReasonCatalogCreationInProgress, "Catalog creation in progress")
+		return h.k8sClient.Status().Update(ctx, scanJob)
+	})
+	if err != nil {
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
 	}
 
@@ -127,14 +136,14 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return fmt.Errorf("cannot discover repositories: %w", err)
 	}
 
-	discoveredImageNames := sets.Set[string]{}
+	discoveredImageReferences := sets.Set[string]{}
 	for _, repository := range repositories {
 		var repoImages []string
 		repoImages, err = h.discoverImages(ctx, registryClient, repository)
 		if err != nil {
 			return fmt.Errorf("cannot discover images in registry %s: %w", registry.Name, err)
 		}
-		discoveredImageNames.Insert(repoImages...)
+		discoveredImageReferences.Insert(repoImages...)
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
@@ -146,9 +155,8 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		existingImageNames.Insert(existingImage.Name)
 	}
 
-	var imageToProcess []storagev1alpha1.Image
-
-	for newImageName := range discoveredImageNames {
+	var discoveredImages []storagev1alpha1.Image
+	for newImageName := range discoveredImageReferences {
 		var ref name.Reference
 		ref, err = name.ParseReference(newImageName)
 		if err != nil {
@@ -166,7 +174,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		}
 
 		for _, image := range images {
-			imageToProcess = append(imageToProcess, image)
+			discoveredImages = append(discoveredImages, image)
 
 			if existingImageNames.Has(image.Name) {
 				continue
@@ -178,42 +186,45 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		}
 	}
 
+	discoveredImageNames := sets.Set[string]{}
+	for _, image := range discoveredImages {
+		discoveredImageNames.Insert(image.Name)
+	}
 	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
 		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
 	}
 
-	originalScanJob := scanJob.DeepCopy()
-
-	if len(imageToProcess) == 0 {
+	if len(discoveredImages) == 0 {
 		h.logger.DebugContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
 
 		scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
 	} else {
-		h.logger.DebugContext(ctx, "Images to process", "count", len(imageToProcess))
+		h.logger.DebugContext(ctx, "Images to process", "count", len(discoveredImages))
 		scanJob.MarkInProgress(v1alpha1.ReasonSBOMGenerationInProgress, "SBOM generation in progress")
-		scanJob.Status.ImagesCount = len(imageToProcess)
+		scanJob.Status.ImagesCount = len(discoveredImages)
 		scanJob.Status.ScannedImagesCount = 0
 	}
 
-	if err = h.k8sClient.Status().Patch(ctx, scanJob, client.MergeFrom(originalScanJob)); err != nil {
+	if err = h.k8sClient.Status().Update(ctx, scanJob); err != nil {
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
 	}
 
-	for _, image := range imageToProcess {
-		h.logger.DebugContext(ctx, "Send sbom message", "image", image.Name, "namespace", image.Namespace)
+	for _, image := range discoveredImages {
+		h.logger.DebugContext(ctx, "Sending generate SBOM  message", "image", image.Name, "namespace", image.Namespace)
 
-		messageID := string(image.UID)
+		messageID := fmt.Sprintf("%s/%s", scanJob.UID, image.Name)
 		message, err := json.Marshal(&GenerateSBOMMessage{
 			ScanJobName:      createCatalogMessage.ScanJobName,
 			ScanJobNamespace: createCatalogMessage.ScanJobNamespace,
 			ImageName:        image.Name,
-			ImageNamespace:   image.Namespace,
+			ImageNamespace:   createCatalogMessage.ScanJobNamespace,
 		})
 		if err != nil {
-			return fmt.Errorf("cannot marshal generate sbom message for image %s in namespace %s: %w", image.Name, image.Namespace, err)
+			return fmt.Errorf("cannot marshal generate sbom message for image %s/%s: %w", image.Namespace, image.Name, err)
 		}
+
 		if err = h.publisher.Publish(ctx, GenerateSBOMSubject, messageID, message); err != nil {
-			return fmt.Errorf("cannot publish generate sbom message for image %s in namespace %s: %w", image.Name, image.Namespace, err)
+			return fmt.Errorf("cannot publish generate sbom message for image %s/%s: %w", image.Namespace, image.Name, err)
 		}
 	}
 
@@ -390,20 +401,24 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(
 	discoveredImageNames sets.Set[string],
 	namespace string,
 ) error {
-	for existingImageName := range existingImageNames {
-		if discoveredImageNames.Has(existingImageName) {
-			continue
-		}
+	obsoleteImageNames := existingImageNames.Difference(discoveredImageNames)
 
+	h.logger.DebugContext(ctx, "Existing images", "names", existingImageNames)
+	h.logger.DebugContext(ctx, "Discovered images", "names", discoveredImageNames)
+	h.logger.DebugContext(ctx, "Obsolete images", "names", obsoleteImageNames)
+
+	for obsoleteImageName := range obsoleteImageNames {
 		existingImage := storagev1alpha1.Image{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      existingImageName,
+				Name:      obsoleteImageName,
 				Namespace: namespace,
 			},
 		}
 
+		h.logger.DebugContext(ctx, "Deleting obsolete image", "name", obsoleteImageName, "namespace", namespace)
+
 		if err := h.k8sClient.Delete(ctx, &existingImage); err != nil {
-			return fmt.Errorf("cannot delete image %s: %w", existingImageName, err)
+			return fmt.Errorf("cannot delete image %s/%s: %w", obsoleteImageName, namespace, err)
 		}
 	}
 
