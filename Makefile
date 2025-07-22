@@ -90,7 +90,7 @@ generate: generate-controller generate-storage generate-mocks
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/v1alpha1"
+	$(CONTROLLER_GEN) object paths="./api/v1alpha1"
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
