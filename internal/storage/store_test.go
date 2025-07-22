@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/utils/ptr"
 
-	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
@@ -25,23 +25,86 @@ import (
 
 const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
 
+// mockWriter implements writer.TableWriter for testing
+type mockWriter struct {
+	objects map[string]string // key: "namespace/name", value: object JSON
+}
+
+func newMockWriter() *mockWriter {
+	return &mockWriter{
+		objects: make(map[string]string),
+	}
+}
+
+func (m *mockWriter) Create(_ context.Context, name, namespace string, raw []byte) (int64, error) {
+	key := namespace + "/" + name
+	if _, exists := m.objects[key]; exists {
+		return 0, nil // Simulate ON CONFLICT DO NOTHING
+	}
+	m.objects[key] = string(raw)
+	return 1, nil
+}
+
+func (m *mockWriter) Delete(_ context.Context, name, namespace string) ([]byte, error) {
+	key := namespace + "/" + name
+	if obj, exists := m.objects[key]; exists {
+		delete(m.objects, key)
+		return []byte(obj), nil
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (m *mockWriter) Get(_ context.Context, name, namespace string) (string, error) {
+	key := namespace + "/" + name
+	if obj, exists := m.objects[key]; exists {
+		return obj, nil
+	}
+	return "", sql.ErrNoRows
+}
+
+func (m *mockWriter) List(_ context.Context, namespace string) ([]string, error) {
+	var objects []string
+	for key, obj := range m.objects {
+		if key[:len(namespace)] == namespace {
+			objects = append(objects, obj)
+		}
+	}
+	return objects, nil
+}
+
+func (m *mockWriter) Update(_ context.Context, name, namespace string, raw []byte) (int64, error) {
+	key := namespace + "/" + name
+	if _, exists := m.objects[key]; !exists {
+		return 0, sql.ErrNoRows
+	}
+	m.objects[key] = string(raw)
+	return 1, nil
+}
+
+func (m *mockWriter) Count(_ context.Context, namespace string) (int64, error) {
+	count := int64(0)
+	for key := range m.objects {
+		if key[:len(namespace)] == namespace {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// mockWriter implem
 type storeTestSuite struct {
 	suite.Suite
 	store       *store
-	db          *sqlx.DB
+	mockWriter  *mockWriter
 	broadcaster *watch.Broadcaster
 }
 
 func (suite *storeTestSuite) SetupTest() {
-	suite.db = sqlx.MustConnect("sqlite", ":memory:")
-
-	suite.db.MustExec(CreateSBOMTableSQL)
-
+	suite.mockWriter = newMockWriter()
 	suite.broadcaster = watch.NewBroadcaster(1000, watch.WaitIfChannelFull)
 	suite.store = &store{
-		db:          suite.db,
 		broadcaster: suite.broadcaster,
-		table:       "sboms",
+		writer:      suite.mockWriter,
 		newFunc:     func() runtime.Object { return &v1alpha1.SBOM{} },
 		newListFunc: func() runtime.Object { return &v1alpha1.SBOMList{} },
 		logger:      slog.Default(),
@@ -49,7 +112,6 @@ func (suite *storeTestSuite) SetupTest() {
 }
 
 func (suite *storeTestSuite) TearDownTest() {
-	suite.db.Close()
 	suite.broadcaster.Shutdown()
 }
 

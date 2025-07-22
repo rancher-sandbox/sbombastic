@@ -2,10 +2,12 @@ CONTROLLER_TOOLS_VERSION := v0.16.5
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
 MOCKERY_VERSION := v3.3.4
+SQLC_VERSION := v1.29.0
 
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 MOCKERY ?= go run github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
+SQLC ?= go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 
 GO_MOD_SRCS := go.mod go.sum
 
@@ -86,7 +88,7 @@ worker-image:
 	@echo "Built $(REGISTRY)/$(REPO)/worker:$(TAG)"
 
 .PHONY: generate
-generate: generate-controller generate-storage generate-mocks
+generate: generate-controller generate-storage generate-mocks generate-sqlc
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -113,6 +115,10 @@ generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/gen
 .PHONY: generate-mocks
 generate-mocks: ## Generate mocks for testing.
 	$(MOCKERY)
+
+.PHONY: generate-sqlc
+generate-sqlc:
+	sqlc generate
 
 ##@ Dependencies
 
