@@ -107,7 +107,6 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		h.logger.DebugContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
 	}
 
-	scanSBOMMessageID := string(sbom.UID)
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
 		SBOMName:      sbom.Name,
 		SBOMNamespace: sbom.Namespace,
@@ -117,7 +116,8 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		return fmt.Errorf("cannot marshal scan SBOM message: %w", err)
 	}
 
-	if err = h.publisher.Publish(ctx, ScanSBOMSubject, scanSBOMMessageID, scanSBOMMessage); err != nil {
+	// TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
+	if err = h.publisher.Publish(ctx, ScanSBOMSubject, "", scanSBOMMessage); err != nil {
 		return fmt.Errorf("failed to publish scan SBOM message: %w", err)
 	}
 
