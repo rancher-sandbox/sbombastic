@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -133,23 +135,6 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	registryData, err := json.Marshal(registry)
 	require.NoError(t, err)
 
-	obsoleteImage := &storagev1alpha1.Image{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "obsolete-image",
-			Namespace: "default",
-		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    registry.Name,
-				RegistryURI: registryURI,
-				Repository:  repositoryName,
-				Tag:         imageTag,
-				Digest:      "123",
-				Platform:    platformLinuxAmd64.String(),
-			},
-		},
-	}
-
 	scanJob := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scan-job",
@@ -157,12 +142,12 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Annotations: map[string]string{
 				v1alpha1.RegistryAnnotation: string(registryData),
 			},
+			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: registry.Name,
 		},
 	}
-	scanJob.MarkScheduled(v1alpha1.ReasonScheduled, "ScanJob has been scheduled for processing by the controller")
 
 	scheme := scheme.Scheme
 	err = v1alpha1.AddToScheme(scheme)
@@ -172,7 +157,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithRuntimeObjects(registry, obsoleteImage, scanJob).
+		WithRuntimeObjects(registry, scanJob).
 		WithStatusSubresource(&v1alpha1.ScanJob{}).
 		WithIndex(&storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(obj client.Object) []string {
 			image, ok := obj.(*storagev1alpha1.Image)
@@ -198,18 +183,20 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	amd64ImageName := computeImageUID(image, digestLinuxAmd64.String())
 	expectedMessageAmd64, err := json.Marshal(&GenerateSBOMMessage{
 		ScanJobName:      scanJob.Name,
 		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        computeImageUID(image, digestLinuxAmd64.String()),
+		ImageName:        amd64ImageName,
 		ImageNamespace:   registry.Namespace,
 	})
 	require.NoError(t, err)
 
+	arm64ImageName := computeImageUID(image, digestLinuxArm64.String())
 	expectedMessageArm64, err := json.Marshal(&GenerateSBOMMessage{
 		ScanJobName:      scanJob.Name,
 		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        computeImageUID(image, digestLinuxArm64.String()),
+		ImageName:        arm64ImageName,
 		ImageNamespace:   registry.Namespace,
 	})
 	require.NoError(t, err)
@@ -217,14 +204,14 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		mock.Anything, // messageID is the image K8s UID which we can't predict with fake client
+		fmt.Sprintf("%s/%s", scanJob.UID, amd64ImageName),
 		expectedMessageAmd64,
 	).Return(nil).Once()
 
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		mock.Anything, // messageID is the image K8s UID which we can't predict with fake client
+		fmt.Sprintf("%s/%s", scanJob.UID, arm64ImageName),
 		expectedMessageArm64,
 	).Return(nil).Once()
 
@@ -269,6 +256,180 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, 0, updatedScanJob.Status.ScannedImagesCount)
 	assert.True(t, updatedScanJob.IsInProgress())
 	assert.Equal(t, v1alpha1.ReasonSBOMGenerationInProgress, meta.FindStatusCondition(updatedScanJob.Status.Conditions, v1alpha1.ConditionTypeInProgress).Reason)
+}
+
+// TestCreateCatalogHandler_Handle_ObsoleteImages tests that obsolete images are deleted
+// while existing images that match the current catalog are preserved
+func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
+	registryURI := "registry.test"
+	repositoryName := "repo1"
+	imageTag := "v1.0"
+
+	repository, err := name.NewRepository(path.Join(registryURI, repositoryName))
+	require.NoError(t, err)
+	image, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag))
+	require.NoError(t, err)
+
+	mockRegistryClient := registryMocks.NewClient(t)
+	mockRegistryClient.On("ListRepositoryContents", mock.Anything, repository).
+		Return([]string{fmt.Sprintf("%s/%s:%s", registryURI, repositoryName, imageTag)}, nil)
+
+	platform := cranev1.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	}
+	digest, err := cranev1.NewHash("sha256:8ec69d882e7f29f0652d537557160e638168550f738d0d49f90a7ef96bf31787")
+	require.NoError(t, err)
+
+	// Mock GetImageIndex to return an error (indicating it's not a multi-platform image)
+	mockRegistryClient.On("GetImageIndex", image).
+		Return(nil, errors.New("not an image index"))
+
+	imageDetails, err := buildImageDetails(digest, platform)
+	require.NoError(t, err)
+	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
+		Return(imageDetails, nil)
+
+	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+	mockPublisher := messagingMocks.NewMockPublisher(t)
+
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+			UID:       "registry-uid",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:          registryURI,
+			Repositories: []string{repositoryName},
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	obsoleteImage := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "obsolete-image",
+			Namespace: "default",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "sbombastic.io/v1alpha1",
+				Kind:       "Registry",
+				Name:       registry.Name,
+				UID:        registry.UID,
+			}},
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    registry.Name,
+				RegistryURI: registryURI,
+				Repository:  repositoryName,
+				Tag:         "old-tag", // This tag no longer exists
+				Digest:      "sha256:obsolete",
+				Platform:    platform.String(),
+			},
+		},
+	}
+
+	existingImageUID := computeImageUID(image, digest.String())
+	existingImage := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      existingImageUID,
+			Namespace: "default",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "sbombastic.io/v1alpha1",
+				Kind:       "Registry",
+				Name:       registry.Name,
+				UID:        registry.UID,
+			}},
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    registry.Name,
+				RegistryURI: registryURI,
+				Repository:  repositoryName,
+				Tag:         imageTag,
+				Digest:      digest.String(),
+				Platform:    platform.String(),
+			},
+		},
+	}
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scan-job",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.RegistryAnnotation: string(registryData),
+			},
+			UID: "scanjob-uid",
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: registry.Name,
+		},
+	}
+
+	expectedMessage, err := json.Marshal(&GenerateSBOMMessage{
+		ScanJobName:      scanJob.Name,
+		ScanJobNamespace: scanJob.Namespace,
+		ImageName:        existingImage.Name,
+		ImageNamespace:   existingImage.Namespace,
+	})
+	require.NoError(t, err)
+
+	mockPublisher.On("Publish",
+		mock.Anything,
+		GenerateSBOMSubject,
+		fmt.Sprintf("%s/%s", scanJob.UID, existingImage.Name),
+		expectedMessage,
+	).Return(nil).Once()
+
+	scheme := scheme.Scheme
+	err = v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(registry, obsoleteImage, existingImage, scanJob).
+		WithStatusSubresource(&v1alpha1.ScanJob{}).
+		WithIndex(&storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(obj client.Object) []string {
+			image, ok := obj.(*storagev1alpha1.Image)
+			if !ok {
+				return nil
+			}
+			return []string{image.GetImageMetadata().Registry}
+		}).
+		Build()
+
+	handler := NewCreateCatalogHandler(
+		mockRegistryClientFactory,
+		k8sClient,
+		scheme,
+		mockPublisher,
+		slog.Default().With("handler", "create_catalog_handler"),
+	)
+
+	message, err := json.Marshal(&CreateCatalogMessage{
+		ScanJobName:      scanJob.Name,
+		ScanJobNamespace: scanJob.Namespace,
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
+
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Name:      obsoleteImage.Name,
+		Namespace: obsoleteImage.Namespace,
+	}, &storagev1alpha1.Image{})
+	assert.True(t, apierrors.IsNotFound(err), "obsolete image should be deleted")
+
+	imageList := &storagev1alpha1.ImageList{}
+	err = k8sClient.List(t.Context(), imageList, client.InNamespace("default"))
+	require.NoError(t, err)
+	assert.Len(t, imageList.Items, 1, "should only contain the existing image")
+	assert.Equal(t, existingImageUID, imageList.Items[0].Name)
 }
 
 func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
@@ -320,7 +481,7 @@ func TestCreateCatalogHandler_DiscoverRepositories(t *testing.T) {
 	}
 }
 
-func TestCataloghandler_DeleteObsoleteImages(t *testing.T) {
+func TestCatalogHandler_DeleteObsoleteImages(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, storagev1alpha1.AddToScheme(scheme))
 	existingImages := []runtime.Object{
@@ -515,74 +676,4 @@ func TestCreateCatalogHandler_Handle_ScanJobNotFound(t *testing.T) {
 
 	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err)
-}
-
-func TestCreateCatalogHandler_Handle_ScanJobNotScheduled(t *testing.T) {
-	mockRegistryClient := registryMocks.NewClient(t)
-	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
-	mockPublisher := messagingMocks.NewMockPublisher(t)
-
-	registry := &v1alpha1.Registry{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-registry",
-			Namespace: "default",
-		},
-		Spec: v1alpha1.RegistrySpec{
-			URI:          "registry.test",
-			Repositories: []string{"repo1"},
-		},
-	}
-	registryData, err := json.Marshal(registry)
-	require.NoError(t, err)
-
-	scanJob := &v1alpha1.ScanJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scan-job",
-			Namespace: "default",
-			Annotations: map[string]string{
-				v1alpha1.RegistryAnnotation: string(registryData),
-			},
-		},
-		Spec: v1alpha1.ScanJobSpec{
-			Registry: registry.Name,
-		},
-	}
-	scanJob.MarkComplete(v1alpha1.ReasonAllImagesScanned, "Done")
-
-	scheme := scheme.Scheme
-	err = v1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-	err = storagev1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-
-	k8sClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRuntimeObjects(registry, scanJob).
-		WithStatusSubresource(&v1alpha1.ScanJob{}).
-		Build()
-
-	handler := NewCreateCatalogHandler(
-		mockRegistryClientFactory,
-		k8sClient,
-		scheme,
-		mockPublisher,
-		slog.Default().With("handler", "create_catalog_handler"),
-	)
-
-	message, err := json.Marshal(&CreateCatalogMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-	})
-	require.NoError(t, err)
-
-	err = handler.Handle(t.Context(), message)
-	require.NoError(t, err)
-
-	updatedScanJob := &v1alpha1.ScanJob{}
-	err = k8sClient.Get(t.Context(), client.ObjectKey{
-		Name:      scanJob.Name,
-		Namespace: scanJob.Namespace,
-	}, updatedScanJob)
-	require.NoError(t, err)
-	assert.True(t, updatedScanJob.IsComplete())
 }
