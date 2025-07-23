@@ -57,20 +57,12 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 			s.logger.DebugContext(ctx, "Processing message", "subject", msg.Subject())
 
 			if err := s.processMessage(ctx, msg.Subject(), msg.Data()); err != nil {
+				// TODO: impelement error handling
 				s.logger.ErrorContext(ctx, "Failed to process message",
 					"subject", msg.Subject(),
 					"headers", msg.Headers(),
 					"error", err,
 				)
-
-				if err := msg.Nak(); err != nil {
-					s.logger.ErrorContext(ctx, "Failed to nak message",
-						"subject", msg.Subject(),
-						"error", err,
-					)
-				}
-
-				return
 			}
 
 			if err := msg.Ack(); err != nil {

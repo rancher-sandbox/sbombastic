@@ -205,7 +205,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		string(existingSBOM.UID),
+		"", // TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
 		expectedScanMessage,
 	).Return(nil).Once()
 
