@@ -42,6 +42,7 @@ import (
 	"github.com/rancher/sbombastic/internal/cmdutil"
 	"github.com/rancher/sbombastic/internal/controller"
 	"github.com/rancher/sbombastic/internal/messaging"
+	webhookv1alpha1 "github.com/rancher/sbombastic/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -218,6 +219,11 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VulnerabilityReport")
+		os.Exit(1)
+	}
+
+	if err = webhookv1alpha1.SetupScanJobWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ScanJob")
 		os.Exit(1)
 	}
 
