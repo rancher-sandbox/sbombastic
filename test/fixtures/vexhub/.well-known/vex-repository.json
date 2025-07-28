@@ -1,0 +1,22 @@
+{
+  "name": "VEX Hub",
+  "description": "VEX Repository by Sbombastic",
+  "versions": [
+    {
+      "spec_version": "0.1",
+      "locations": [
+        {
+          "url": "http://127.0.0.1:1337/main.tar.gz"
+        }
+      ],
+      "update_interval": "24h",
+      "repository_specific": {
+        "location": {
+          "repository_type": "db",
+          "db_type": "bbolt",
+          "url": "oci://ghcr.io/example.com/vex-db:0"
+        }
+      }
+    }
+  ]
+}

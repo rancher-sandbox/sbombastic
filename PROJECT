@@ -36,4 +36,12 @@ resources:
   kind: VulnerabilityReport
   path: github.com/rancher/sbombastic/api/storage/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: false
+  domain: sbombastic.rancher.io
+  group: sbombastic
+  kind: VEXHub
+  path: github.com/rancher/sbombastic/api/v1alpha1
+  version: v1alpha1
 version: "3"
