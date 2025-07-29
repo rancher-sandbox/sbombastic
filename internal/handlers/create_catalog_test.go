@@ -178,26 +178,42 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	)
 
 	message, err := json.Marshal(&CreateCatalogMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
 	})
 	require.NoError(t, err)
 
 	amd64ImageName := computeImageUID(image, digestLinuxAmd64.String())
 	expectedMessageAmd64, err := json.Marshal(&GenerateSBOMMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        amd64ImageName,
-		ImageNamespace:   registry.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      amd64ImageName,
+			Namespace: registry.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
 	arm64ImageName := computeImageUID(image, digestLinuxArm64.String())
 	expectedMessageArm64, err := json.Marshal(&GenerateSBOMMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        arm64ImageName,
-		ImageNamespace:   registry.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      arm64ImageName,
+			Namespace: registry.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
@@ -369,10 +385,16 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 	}
 
 	expectedMessage, err := json.Marshal(&GenerateSBOMMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
-		ImageName:        existingImage.Name,
-		ImageNamespace:   existingImage.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      existingImage.Name,
+			Namespace: registry.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
@@ -411,8 +433,12 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 	)
 
 	message, err := json.Marshal(&CreateCatalogMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
 	})
 	require.NoError(t, err)
 
@@ -669,8 +695,12 @@ func TestCreateCatalogHandler_Handle_ScanJobNotFound(t *testing.T) {
 	)
 
 	message, err := json.Marshal(&CreateCatalogMessage{
-		ScanJobName:      "non-existent-scanjob",
-		ScanJobNamespace: "default",
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      "non-existent-scan-job",
+				Namespace: "default",
+			},
+		},
 	})
 	require.NoError(t, err)
 

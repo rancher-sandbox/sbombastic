@@ -107,8 +107,10 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	publisher := messagingMocks.NewMockPublisher(t)
 
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
-		SBOMName:      image.Name,
-		SBOMNamespace: image.Namespace,
+		SBOM: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
@@ -122,8 +124,10 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
-		ImageName:      image.Name,
-		ImageNamespace: image.Namespace,
+		Image: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
@@ -196,9 +200,15 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	publisher := messagingMocks.NewMockPublisher(t)
 
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
-		SBOMName:      existingSBOM.Name,
-		SBOMNamespace: existingSBOM.Namespace,
-		ScanJobName:   "test-scanjob",
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name: "test-scanjob",
+			},
+		},
+		SBOM: ObjectRef{
+			Name:      existingSBOM.Name,
+			Namespace: existingSBOM.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
@@ -212,9 +222,15 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
-		ImageName:      image.Name,
-		ImageNamespace: image.Namespace,
-		ScanJobName:    "test-scanjob",
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name: "test-scanjob",
+			},
+		},
+		Image: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
+		},
 	})
 	require.NoError(t, err)
 
