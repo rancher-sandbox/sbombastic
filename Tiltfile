@@ -18,7 +18,7 @@ k8s_resource(
 # Note: We are not using the tilt cert-manager extension, since it creates a namespace to test cert-manager,
 # which takes a long time to delete when running `tilt down`.
 # We Install the cert-manager CRDs separately, so we are sure they will be avalable before the sbombastic Helm chart is installed.
-cert_manager_version = "v1.17.2"
+cert_manager_version = "v1.18.2"
 local_resource(
     "cert-manager-crds",
     cmd="kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/{}/cert-manager.crds.yaml".format(

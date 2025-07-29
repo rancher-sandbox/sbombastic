@@ -21,7 +21,7 @@ var (
 	controllerImage      = "ghcr.io/rancher-sandbox/sbombastic/controller:latest"
 	storageImage         = "ghcr.io/rancher-sandbox/sbombastic/storage:latest"
 	certManagerNamespace = "cert-manager"
-	certManagerVersion   = "v1.17.2"
+	certManagerVersion   = "v1.18.2"
 )
 
 func TestMain(m *testing.M) {
