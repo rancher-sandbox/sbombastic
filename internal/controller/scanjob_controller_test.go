@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
@@ -184,6 +187,101 @@ var _ = Describe("ScanJob Controller", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	When("There are more than scanJobsHistoryLimit ScanJobs for a registry", func() {
+		var reconciler ScanJobReconciler
+		var mockPublisher *messagingMocks.MockPublisher
+		var registry sbombasticv1alpha1.Registry
+		var scanJobs []sbombasticv1alpha1.ScanJob
+		var newScanJob sbombasticv1alpha1.ScanJob
+
+		BeforeEach(func(ctx context.Context) {
+			By("Creating a new ScanJobReconciler")
+			mockPublisher = messagingMocks.NewMockPublisher(GinkgoT())
+			reconciler = ScanJobReconciler{
+				Client:    k8sClient,
+				Publisher: mockPublisher,
+			}
+			By("Creating a Registry")
+			registry = sbombasticv1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cleanup-test-registry",
+					Namespace: "default",
+				},
+				Spec: sbombasticv1alpha1.RegistrySpec{
+					URI: "https://registry.example.com",
+				},
+			}
+			Expect(k8sClient.Create(ctx, &registry)).To(Succeed())
+
+			By("Creating scanJobsHistoryLimit existing ScanJobs")
+			scanJobs = make([]sbombasticv1alpha1.ScanJob, 12)
+			for i := range scanJobsHistoryLimit {
+				creationTimestamp := time.Now().Add(-time.Duration(i) * time.Hour).UTC().Format(time.RFC3339Nano)
+
+				scanJob := sbombasticv1alpha1.ScanJob{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("old-scanjob-%d", i),
+						Namespace: "default",
+						Annotations: map[string]string{
+							sbombasticv1alpha1.CreationTimestampAnnotation: creationTimestamp,
+						},
+					},
+					Spec: sbombasticv1alpha1.ScanJobSpec{
+						Registry: registry.Name,
+					},
+				}
+				Expect(k8sClient.Create(ctx, &scanJob)).To(Succeed())
+				scanJobs[i] = scanJob
+			}
+
+			By("Creating a new ScanJob that will trigger cleanup")
+			newScanJob = sbombasticv1alpha1.ScanJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "new-scanjob",
+					Namespace: "default",
+				},
+				Spec: sbombasticv1alpha1.ScanJobSpec{
+					Registry: registry.Name,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &newScanJob)).To(Succeed())
+		})
+
+		It("should cleanup old ScanJobs during reconciliation", func(ctx context.Context) {
+			By("Setting up the expected message publication")
+			message, err := json.Marshal(&handlers.CreateCatalogMessage{
+				ScanJobName:      newScanJob.Name,
+				ScanJobNamespace: newScanJob.Namespace,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(newScanJob.GetUID()), message).Return(nil)
+
+			By("Reconciling the new ScanJob")
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      newScanJob.Name,
+					Namespace: newScanJob.Namespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Verifying that only 10 ScanJobs remain for this registry")
+			scanJobList := &sbombasticv1alpha1.ScanJobList{}
+			err = k8sClient.List(ctx, scanJobList, client.InNamespace("default"), client.MatchingFields{"spec.registry": registry.Name})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scanJobList.Items).To(HaveLen(scanJobsHistoryLimit))
+
+			By("Verifying the new ScanJob still exists and is scheduled")
+			updatedScanJob := &sbombasticv1alpha1.ScanJob{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      newScanJob.Name,
+				Namespace: newScanJob.Namespace,
+			}, updatedScanJob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updatedScanJob.IsScheduled()).To(BeTrue())
 		})
 	})
 })

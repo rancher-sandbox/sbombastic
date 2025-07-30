@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +16,11 @@ import (
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/handlers"
 	"github.com/rancher/sbombastic/internal/messaging"
+)
+
+const (
+	maxConcurrentReconciles = 10
+	scanJobsHistoryLimit    = 10
 )
 
 // ScanJobReconciler reconciles a ScanJob object
@@ -69,6 +75,10 @@ func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbombasticv1alpha1.ScanJob) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
+	if err := r.cleanupOldScanJobs(ctx, scanJob); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to cleanup old ScanJobs: %w", err)
+	}
+
 	registry := &sbombasticv1alpha1.Registry{}
 	if err := r.Get(ctx, client.ObjectKey{
 		Name:      scanJob.Spec.Registry,
@@ -117,12 +127,65 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 	return ctrl.Result{}, nil
 }
 
+// cleanupOldScanJobs ensures we don't have more than scanJobsHistoryLimit for any registry
+func (r *ScanJobReconciler) cleanupOldScanJobs(ctx context.Context, currentScanJob *sbombasticv1alpha1.ScanJob) error {
+	log := logf.FromContext(ctx)
+
+	scanJobList := &sbombasticv1alpha1.ScanJobList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(currentScanJob.Namespace),
+		client.MatchingFields{"spec.registry": currentScanJob.Spec.Registry},
+	}
+
+	if err := r.List(ctx, scanJobList, listOpts...); err != nil {
+		return fmt.Errorf("failed to list ScanJobs for registry %s: %w", currentScanJob.Spec.Registry, err)
+	}
+
+	if len(scanJobList.Items) <= scanJobsHistoryLimit {
+		return nil
+	}
+
+	sort.Slice(scanJobList.Items, func(i, j int) bool {
+		ti := scanJobList.Items[i].GetCreationTimestampFromAnnotation()
+		tj := scanJobList.Items[j].GetCreationTimestampFromAnnotation()
+
+		return ti.Before(tj)
+	})
+
+	log.V(1).Info("Sorting ScanJobs by creation timestamp for cleanup2",
+		"registry", currentScanJob.Spec.Registry,
+		"scanjobs", scanJobList.Items)
+
+	scanJobsToDelete := len(scanJobList.Items) - scanJobsHistoryLimit
+	for _, scanJob := range scanJobList.Items[:scanJobsToDelete] {
+		if err := r.Delete(ctx, &scanJob); err != nil {
+			return fmt.Errorf("failed to delete old ScanJob %s: %w", scanJob.Name, err)
+		}
+		log.Info("cleaned up old ScanJob",
+			"name", scanJob.Name,
+			"registry", scanJob.Spec.Registry,
+			"creationTimestamp", scanJob.CreationTimestamp)
+	}
+
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ScanJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &sbombasticv1alpha1.ScanJob{}, "spec.registry", func(rawObj client.Object) []string {
+		scanJob, ok := rawObj.(*sbombasticv1alpha1.ScanJob)
+		if !ok {
+			panic(fmt.Sprintf("Expected ScanJob, got %T", rawObj))
+		}
+		return []string{scanJob.Spec.Registry}
+	}); err != nil {
+		return fmt.Errorf("failed to setup field indexer for spec.registry: %w", err)
+	}
+
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&sbombasticv1alpha1.ScanJob{}).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 10,
+			MaxConcurrentReconciles: maxConcurrentReconciles,
 		}).
 		Complete(r)
 	if err != nil {
