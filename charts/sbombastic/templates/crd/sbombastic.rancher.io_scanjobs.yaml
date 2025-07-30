@@ -124,6 +124,8 @@ spec:
                 type: string
             type: object
         type: object
+    selectableFields:
+    - jsonPath: .spec.registry
     served: true
     storage: true
     subresources:
