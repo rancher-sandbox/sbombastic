@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,29 @@ import (
 
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
 )
+
+func TestScanJobDefaulter_Default(t *testing.T) {
+	scanJob := &sbombasticv1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scan-job",
+			Namespace: "default",
+		},
+		Spec: sbombasticv1alpha1.ScanJobSpec{
+			Registry: "registry.example.com",
+		},
+	}
+
+	defaulter := &ScanJobCustomDefaulter{}
+
+	err := defaulter.Default(t.Context(), scanJob)
+	require.NoError(t, err)
+
+	timestampStr := scanJob.Annotations[sbombasticv1alpha1.CreationTimestampAnnotation]
+	assert.NotEmpty(t, timestampStr)
+
+	_, err = time.Parse(time.RFC3339Nano, timestampStr)
+	require.NoError(t, err)
+}
 
 func TestScanJobCustomValidator_ValidateCreate(t *testing.T) {
 	tests := []struct {
