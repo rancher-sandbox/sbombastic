@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/internal/storage/writer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sboms (
 func NewSBOMStore(
 	scheme *runtime.Scheme,
 	optsGetter generic.RESTOptionsGetter,
-	db *sqlx.DB,
+	db *pgxpool.Pool,
 	logger *slog.Logger,
 ) (*registry.Store, error) {
 	strategy := newSBOMStrategy(scheme)
@@ -43,9 +44,8 @@ func NewSBOMStore(
 		SingularQualifiedResource: v1alpha1.Resource("sbom"),
 		Storage: registry.DryRunnableStorage{
 			Storage: &store{
-				db:          db,
 				broadcaster: watch.NewBroadcaster(1000, watch.WaitIfChannelFull),
-				table:       "sboms",
+				writer:      writer.NewSbomWriter(db),
 				newFunc:     newFunc,
 				newListFunc: newListFunc,
 				logger:      logger.With("store", "sbom"),

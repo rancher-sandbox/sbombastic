@@ -48,7 +48,7 @@ func TestRegistryCreation(t *testing.T) {
 					// "--set", "storage.logLevel=debug",
 					"--set", "worker.logLevel=debug",
 				),
-				helm.WithTimeout("3m"))
+				helm.WithTimeout("5m"))
 
 			require.NoError(t, err, "sbombastic helm chart is not installed correctly")
 

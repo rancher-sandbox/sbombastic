@@ -19,25 +19,14 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 
-	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx"
+	"github.com/rancher/sbombastic/internal/storage/writer"
 )
-
-// objectSchema is the schema of an object in the database.
-// Note: the struct fields must be exported in order to work.
-type objectSchema struct {
-	ID        int    `db:"id"`
-	Name      string `db:"name"`
-	Namespace string `db:"namespace"`
-	Object    []byte `db:"object"`
-}
 
 var _ storage.Interface = &store{}
 
 type store struct {
-	db          *sqlx.DB
 	broadcaster *watch.Broadcaster
-	table       string
+	writer      writer.TableWriter
 	newFunc     func() runtime.Object
 	newListFunc func() runtime.Object
 	logger      *slog.Logger
@@ -68,21 +57,7 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		return storage.NewInternalError(err)
 	}
 
-	query, args, err := sq.Insert(s.table).
-		Columns("name", "namespace", "object").
-		Values(name, namespace, bytes).
-		Suffix("ON CONFLICT DO NOTHING").
-		ToSql()
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	result, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
+	rowsAffected, err := s.writer.Create(ctx, name, namespace, bytes)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -120,45 +95,34 @@ func (s *store) Delete(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, err := s.db.BeginTxx(ctx, nil)
+	objData, err := s.writer.Get(ctx, name, namespace)
 	if err != nil {
-		return storage.NewInternalError(err)
-	}
-	defer func() {
-		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
-		}
-	}()
-
-	query, args, err := sq.Delete(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		Suffix("RETURNING *").
-		ToSql()
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	objectRecord := &objectSchema{}
-	if err = tx.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.NewKeyNotFoundError(key, 0)
 		}
 		return storage.NewInternalError(err)
 	}
 
-	if err = json.Unmarshal(objectRecord.Object, out); err != nil {
+	obj := s.newFunc()
+	if err = json.Unmarshal([]byte(objData), obj); err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	if err = preconditions.Check(key, out); err != nil {
+	if err = preconditions.Check(key, obj); err != nil {
 		return err
 	}
 
-	if err = validateDeletion(ctx, out); err != nil {
+	if err = validateDeletion(ctx, obj); err != nil {
 		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	// Delete the object from the database
+	deletedData, err := s.writer.Delete(ctx, name, namespace)
+	if err != nil {
+		return storage.NewInternalError(err)
+	}
+
+	if err = json.Unmarshal(deletedData, out); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -256,16 +220,8 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
-	query, args, err := sq.Select("*").
-		From(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		ToSql()
+	objData, err := s.writer.Get(ctx, name, namespace)
 	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	objectRecord := &objectSchema{}
-	if err = s.db.GetContext(ctx, objectRecord, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if opts.IgnoreNotFound {
 				return nil
@@ -276,7 +232,7 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(err)
 	}
 
-	err = json.Unmarshal(objectRecord.Object, objPtr)
+	err = json.Unmarshal([]byte(objData), objPtr)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -298,18 +254,9 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		"continue", opts.Predicate.Continue,
 	)
 
-	queryBuilder := sq.Select("*").From(s.table)
 	namespace := extractNamespace(key)
-	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
-	}
-	query, args, err := queryBuilder.ToSql()
+	objectStrings, err := s.writer.List(ctx, namespace)
 	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	var objectRecords []objectSchema
-	if err = s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -318,9 +265,9 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		return err
 	}
 
-	for _, objectRecord := range objectRecords {
+	for _, objData := range objectStrings {
 		obj := s.newFunc()
-		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
+		if err = json.Unmarshal([]byte(objData), obj); err != nil {
 			return storage.NewInternalError(err)
 		}
 
@@ -380,7 +327,7 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 //
 // )
 //
-//nolint:gocognit,funlen // This functions can't be easily split into smaller parts.
+//nolint:gocognit // This functions can't be easily split into smaller parts.
 func (s *store) GuaranteedUpdate(
 	ctx context.Context,
 	key string,
@@ -397,34 +344,12 @@ func (s *store) GuaranteedUpdate(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
-		}
-	}()
-
 	for {
-		var query string
-		var args []interface{}
-		query, args, err = sq.Select("*").
-			From(s.table).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			ToSql()
-		if err != nil {
-			return storage.NewInternalError(err)
-		}
-
-		if err = runtime.SetZeroValue(destination); err != nil {
+		if err := runtime.SetZeroValue(destination); err != nil {
 			return storage.NewInternalError(fmt.Errorf("unable to set destination to zero value: %w", err))
 		}
 
-		objectRecord := &objectSchema{}
-		err = tx.GetContext(ctx, objectRecord, query, args...)
+		objData, err := s.writer.Get(ctx, name, namespace)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				if !ignoreNotFound {
@@ -435,9 +360,8 @@ func (s *store) GuaranteedUpdate(
 			}
 			return err
 		}
-
 		obj := s.newFunc()
-		err = json.Unmarshal(objectRecord.Object, obj)
+		err = json.Unmarshal([]byte(objData), obj)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -469,26 +393,13 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		var bytes []byte
-		bytes, err = json.Marshal(updatedObj)
+		bytes, err := json.Marshal(updatedObj)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		query, args, err = sq.Update(s.table).
-			Set("object", bytes).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			ToSql()
+		_, err = s.writer.Update(ctx, name, namespace, bytes)
 		if err != nil {
-			return storage.NewInternalError(err)
-		}
-
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return storage.NewInternalError(err)
-		}
-
-		if err = tx.Commit(); err != nil {
 			return storage.NewInternalError(err)
 		}
 
@@ -509,25 +420,7 @@ func (s *store) GuaranteedUpdate(
 // Count returns number of different entries under the key (generally being path prefix).
 func (s *store) Count(key string) (int64, error) {
 	s.logger.Debug("Counting objects", "key", key)
-
-	namespace := extractNamespace(key)
-
-	queryBuilder := sq.Select("COUNT(*)").From(s.table)
-	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
-	}
-
-	query, args, err := queryBuilder.ToSql()
-	if err != nil {
-		return 0, storage.NewInternalError(err)
-	}
-
-	var count int64
-	if err = s.db.Get(&count, query, args...); err != nil {
-		return 0, storage.NewInternalError(err)
-	}
-
-	return count, nil
+	return s.writer.Count(context.Background(), extractNamespace(key))
 }
 
 // ReadinessCheck checks if the storage is ready for accepting requests.
