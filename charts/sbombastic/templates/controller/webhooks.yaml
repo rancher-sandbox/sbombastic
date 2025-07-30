@@ -1,9 +1,41 @@
 apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
+kind: MutatingWebhookConfiguration
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "sbombastic.fullname" . }}-controller-webhook-tls
   name: {{ include "sbombastic.fullname" . }}-controller-webhook
+  labels:
+    {{ include "sbombastic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "sbombastic.fullname" . }}-controller-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-sbombastic-rancher-io-v1alpha1-scanjob
+  failurePolicy: Fail
+  name: mscanjob.sbombastic.rancher.io
+  rules:
+  - apiGroups:
+    - sbombastic.rancher.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - scanjobs
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "sbombastic.fullname" . }}-controller-webhook-tls
+  name: {{ include "sbombastic.fullname" . }}-controller-webhook-validating
   labels:
     {{ include "sbombastic.labels" . | nindent 4 }}
     app.kubernetes.io/component: controller
