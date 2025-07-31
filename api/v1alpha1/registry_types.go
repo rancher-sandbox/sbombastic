@@ -13,6 +13,8 @@ type RegistrySpec struct {
 	Repositories []string `json:"repositories,omitempty"`
 	// AuthSecret is the name of the secret in the same namespace that contains the credentials to access the registry.
 	AuthSecret string `json:"authSecret,omitempty"`
+	// ScanInterval is the interval at which the registry is scanned. Set to 0 to disable automatic scanning.
+	ScanInterval metav1.Duration `json:"scanInterval"`
 	// CABundle is the CA bundle to use when connecting to the registry.
 	CABundle string `json:"caBundle,omitempty"`
 	// Insecure allows insecure connections to the registry when set to true.
