@@ -4,11 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	RegistryLastDiscoveredAtAnnotation = "sbombastic.rancher.io/last-discovered-at"
-	RegistryLastScannedAtAnnotation    = "sbombastic.rancher.io/last-scanned-at"
-)
-
 // RegistrySpec defines the desired state of Registry
 type RegistrySpec struct {
 	// URI is the URI of the container registry
@@ -23,16 +18,6 @@ type RegistrySpec struct {
 	// Insecure allows insecure connections to the registry when set to true.
 	Insecure bool `json:"insecure,omitempty"`
 }
-
-const (
-	RegistryDiscoveringCondition = "Discovering"
-	RegistryDiscoveredCondition  = "Discovered"
-)
-
-const (
-	RegistryDiscoveryRequestedReason       = "DiscoveryRequested"
-	RegistryFailedToRequestDiscoveryReason = "FailedToRequestDiscovery"
-)
 
 // RegistryStatus defines the observed state of Registry
 type RegistryStatus struct {
