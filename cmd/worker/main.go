@@ -98,13 +98,14 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 		os.Exit(1)
 	}
 
-	handlers := messaging.HandlerRegistry{
+	registry := messaging.HandlerRegistry{
 		handlers.CreateCatalogSubject: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, publisher, logger),
 		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, publisher, logger),
 		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
 	}
+	failureHandler := handlers.NewScanJobFailureHandler(k8sClient, logger)
 
-	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", handlers, logger)
+	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", registry, failureHandler, logger)
 	if err != nil {
 		logger.Error("Error creating NATS subscriber", "error", err)
 		os.Exit(1)

@@ -26,20 +26,11 @@ import (
 )
 
 const (
-	// ScanSBOMSubject is the subject for messages that trigger SBOM scanning.
-	ScanSBOMSubject = "sbombastic.sbom.scan"
 	// trivyVEXSubPath is the directory used by trivy to hold VEX repositories.
 	trivyVEXSubPath = ".trivy/vex"
 	// trivyVEXRepoFile is the file used by trivy to hold VEX repositories.
 	trivyVEXRepoFile = "repository.yaml"
 )
-
-// ScanSBOMMessage represents the request message for scanning a SBOM.
-type ScanSBOMMessage struct {
-	SBOMName      string `json:"sbomName"`
-	SBOMNamespace string `json:"sbomNamespace"`
-	ScanJobName   string `json:"scanJobName"`
-}
 
 // ScanSBOMHandler is responsible for handling SBOM scan requests.
 type ScanSBOMHandler struct {
@@ -72,14 +63,14 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	}
 
 	h.logger.DebugContext(ctx, "SBOM scan requested",
-		"sbom", scanSBOMMessage.SBOMName,
-		"namespace", scanSBOMMessage.SBOMNamespace,
+		"sbom", scanSBOMMessage.SBOM.Name,
+		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
 
 	sbom := &storagev1alpha1.SBOM{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      scanSBOMMessage.SBOMName,
-		Namespace: scanSBOMMessage.SBOMNamespace,
+		Name:      scanSBOMMessage.SBOM.Name,
+		Namespace: scanSBOMMessage.SBOM.Namespace,
 	}, sbom)
 	if err != nil {
 		return fmt.Errorf("failed to get SBOM: %w", err)
@@ -181,8 +172,8 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	}
 
 	h.logger.DebugContext(ctx, "SBOM scanned",
-		"sbom", scanSBOMMessage.SBOMName,
-		"namespace", scanSBOMMessage.SBOMNamespace,
+		"sbom", scanSBOMMessage.SBOM.Name,
+		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
 
 	reportBytes, err := io.ReadAll(reportFile)
@@ -202,7 +193,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Labels = map[string]string{
-			api.LabelScanJob:      scanSBOMMessage.ScanJobName,
+			api.LabelScanJob:      scanSBOMMessage.ScanJob.Name,
 			api.LabelManagedByKey: api.LabelManagedByValue,
 			api.LabelPartOfKey:    api.LabelPartOfValue,
 		}
@@ -241,13 +232,13 @@ func (h *ScanSBOMHandler) setupVEXHubRepositories(vexHubList *v1alpha1.VEXHubLis
 	}
 
 	h.logger.Debug("Creating VEX repository directory", "vexhub", trivyVEXPath)
-	err = os.MkdirAll(trivyVEXPath, 0750)
+	err = os.MkdirAll(trivyVEXPath, 0o750)
 	if err != nil {
 		return fmt.Errorf("failed to create VEX configuration directory: %w", err)
 	}
 
 	h.logger.Debug("Creating VEX repository file", "vexhub", vexRepoPath)
-	err = os.WriteFile(vexRepoPath, repositories, 0600)
+	err = os.WriteFile(vexRepoPath, repositories, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to create VEX repository file: %w", err)
 	}

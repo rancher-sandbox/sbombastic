@@ -33,15 +33,6 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
-// CreateCatalogSubject is the subject for the create catalog message.
-const CreateCatalogSubject = "sbombastic.catalog.create"
-
-// CreateCatalogMessage represents a request to create a catalog of images in a registry.
-type CreateCatalogMessage struct {
-	ScanJobName      string `json:"scanJobName"`
-	ScanJobNamespace string `json:"scanJobNamespace"`
-}
-
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.
 type CreateCatalogHandler struct {
 	registryClientFactory registryclient.ClientFactory
@@ -77,23 +68,23 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	h.logger.DebugContext(ctx, "Catalog creation requested",
-		"scanjob", createCatalogMessage.ScanJobName,
-		"namespace", createCatalogMessage.ScanJobNamespace,
+		"scanjob", createCatalogMessage.ScanJob.Name,
+		"namespace", createCatalogMessage.ScanJob.Namespace,
 	)
 
 	scanJob := &v1alpha1.ScanJob{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      createCatalogMessage.ScanJobName,
-		Namespace: createCatalogMessage.ScanJobNamespace,
+		Name:      createCatalogMessage.ScanJob.Name,
+		Namespace: createCatalogMessage.ScanJob.Namespace,
 	}, scanJob)
 	if err != nil {
 		// If the scan job is not found, we skip the catalog creation since it might have been deleted.
 		if apierrors.IsNotFound(err) {
-			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", createCatalogMessage.ScanJobName, "namespace", createCatalogMessage.ScanJobNamespace)
+			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
 			return nil
 		}
 
-		return fmt.Errorf("cannot get scan job %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+		return fmt.Errorf("cannot get scan job %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
 
@@ -111,17 +102,17 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return h.k8sClient.Status().Update(ctx, scanJob)
 	})
 	if err != nil {
-		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
 	// Retrieve the registry from the scan job annotations.
 	registrData, ok := scanJob.Annotations[v1alpha1.RegistryAnnotation]
 	if !ok {
-		return fmt.Errorf("scan job %s/%s does not have a registry annotation", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName)
+		return fmt.Errorf("scan job %s/%s does not have a registry annotation", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name)
 	}
 	registry := &v1alpha1.Registry{}
 	if err = json.Unmarshal([]byte(registrData), registry); err != nil {
-		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 	h.logger.DebugContext(ctx, "Registry found", "registry", registry.Name, "namespace", registry.Namespace)
 
@@ -206,7 +197,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	if err = h.k8sClient.Status().Update(ctx, scanJob); err != nil {
-		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJobNamespace, createCatalogMessage.ScanJobName, err)
+		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
 	for _, image := range discoveredImages {
@@ -214,10 +205,13 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 
 		messageID := fmt.Sprintf("%s/%s", scanJob.UID, image.Name)
 		message, err := json.Marshal(&GenerateSBOMMessage{
-			ScanJobName:      createCatalogMessage.ScanJobName,
-			ScanJobNamespace: createCatalogMessage.ScanJobNamespace,
-			ImageName:        image.Name,
-			ImageNamespace:   createCatalogMessage.ScanJobNamespace,
+			BaseMessage: BaseMessage{
+				ScanJob: createCatalogMessage.ScanJob,
+			},
+			Image: ObjectRef{
+				Name:      image.Name,
+				Namespace: image.Namespace,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("cannot marshal generate sbom message for image %s/%s: %w", image.Namespace, image.Name, err)

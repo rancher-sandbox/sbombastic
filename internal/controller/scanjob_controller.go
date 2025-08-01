@@ -111,8 +111,12 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *sbomb
 
 	messageID := string(scanJob.UID)
 	message, err := json.Marshal(&handlers.CreateCatalogMessage{
-		ScanJobName:      scanJob.Name,
-		ScanJobNamespace: scanJob.Namespace,
+		BaseMessage: handlers.BaseMessage{
+			ScanJob: handlers.ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to marshal CreateCatalog message: %w", err)

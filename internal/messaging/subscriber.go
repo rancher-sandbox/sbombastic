@@ -14,13 +14,14 @@ type HandlerRegistry map[string]Handler
 
 // NatsSubscriber is an implementation of a message subscriber that uses NATS JetStream to receive messages.
 type NatsSubscriber struct {
-	cons     jetstream.Consumer
-	handlers HandlerRegistry
-	logger   *slog.Logger
+	cons           jetstream.Consumer
+	handlers       HandlerRegistry
+	failureHandler FailureHandler
+	logger         *slog.Logger
 }
 
 // NewNatsSubscriber creates a new NatsSubscriber instance with the provided NATS connection and durable subscription name.
-func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handlers HandlerRegistry, logger *slog.Logger) (*NatsSubscriber, error) {
+func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handlers HandlerRegistry, failureHandler FailureHandler, logger *slog.Logger) (*NatsSubscriber, error) {
 	js, err := jetstream.New(nc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
@@ -42,9 +43,10 @@ func NewNatsSubscriber(ctx context.Context, nc *nats.Conn, durable string, handl
 	}
 
 	subscriber := &NatsSubscriber{
-		cons:     cons,
-		handlers: handlers,
-		logger:   logger.With("component", "subscriber"),
+		cons:           cons,
+		handlers:       handlers,
+		failureHandler: failureHandler,
+		logger:         logger.With("component", "subscriber"),
 	}
 
 	return subscriber, nil
@@ -56,13 +58,31 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 		func(msg jetstream.Msg) {
 			s.logger.DebugContext(ctx, "Processing message", "subject", msg.Subject())
 
-			if err := s.processMessage(ctx, msg.Subject(), msg.Data()); err != nil {
-				// TODO: impelement error handling
+			if err := s.handleMessage(ctx, msg.Subject(), msg.Data()); err != nil {
 				s.logger.ErrorContext(ctx, "Failed to process message",
 					"subject", msg.Subject(),
 					"headers", msg.Headers(),
 					"error", err,
 				)
+
+				if err = s.failureHandler.HandleFailure(ctx, msg.Data(), err.Error()); err != nil {
+					s.logger.ErrorContext(ctx, "Failed to handle failure",
+						"subject", msg.Subject(),
+						"error", err,
+					)
+
+					// Nak the message if failure handling fails.
+					if err := msg.Nak(); err != nil {
+						s.logger.ErrorContext(ctx, "Failed to nak message",
+							"subject", msg.Subject(),
+							"error", err,
+						)
+					}
+				}
+
+				// Return early to avoid acking a message that failed processing.
+				// This allows the message to be retried later even if the nak fails.
+				return
 			}
 
 			if err := msg.Ack(); err != nil {
@@ -88,8 +108,8 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 	return nil
 }
 
-// processMessage handles individual message processing.
-func (s *NatsSubscriber) processMessage(ctx context.Context, subject string, message []byte) error {
+// handleMessage handles individual message processing.
+func (s *NatsSubscriber) handleMessage(ctx context.Context, subject string, message []byte) error {
 	handler, found := s.handlers[subject]
 	if !found {
 		return fmt.Errorf("no handler found for subject: %s", subject)
