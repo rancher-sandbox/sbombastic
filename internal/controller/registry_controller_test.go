@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -22,15 +21,11 @@ var _ = Describe("Registry Controller", func() {
 		var registry v1alpha1.Registry
 
 		BeforeEach(func(ctx context.Context) {
-			By("Creating a new Registry that has been discovered and scanned")
+			By("Creating a new Registry")
 			registry = v1alpha1.Registry{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.New().String(),
 					Namespace: "default",
-					Annotations: map[string]string{
-						v1alpha1.RegistryLastDiscoveredAtAnnotation: time.Now().Format(time.RFC3339),
-						v1alpha1.RegistryLastScannedAtAnnotation:    time.Now().Format(time.RFC3339),
-					},
 				},
 				Spec: v1alpha1.RegistrySpec{
 					URI:          "ghcr.io/rancher",

@@ -4,11 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	RegistryLastDiscoveredAtAnnotation = "sbombastic.rancher.io/last-discovered-at"
-	RegistryLastScannedAtAnnotation    = "sbombastic.rancher.io/last-scanned-at"
-)
-
 // RegistrySpec defines the desired state of Registry
 type RegistrySpec struct {
 	// URI is the URI of the container registry
@@ -18,21 +13,13 @@ type RegistrySpec struct {
 	Repositories []string `json:"repositories,omitempty"`
 	// AuthSecret is the name of the secret in the same namespace that contains the credentials to access the registry.
 	AuthSecret string `json:"authSecret,omitempty"`
+	// ScanInterval is the interval at which the registry is scanned. Set to 0 to disable automatic scanning.
+	ScanInterval metav1.Duration `json:"scanInterval"`
 	// CABundle is the CA bundle to use when connecting to the registry.
 	CABundle string `json:"caBundle,omitempty"`
 	// Insecure allows insecure connections to the registry when set to true.
 	Insecure bool `json:"insecure,omitempty"`
 }
-
-const (
-	RegistryDiscoveringCondition = "Discovering"
-	RegistryDiscoveredCondition  = "Discovered"
-)
-
-const (
-	RegistryDiscoveryRequestedReason       = "DiscoveryRequested"
-	RegistryFailedToRequestDiscoveryReason = "FailedToRequestDiscovery"
-)
 
 // RegistryStatus defines the observed state of Registry
 type RegistryStatus struct {
