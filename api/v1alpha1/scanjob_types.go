@@ -1,12 +1,17 @@
 package v1alpha1
 
 import (
+	"time"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
-const RegistryAnnotation = "sbombastic.rancher.io/registry"
+const (
+	RegistryAnnotation          = "sbombastic.rancher.io/registry"
+	CreationTimestampAnnotation = "sbombastic.rancher.io/creation-timestamp"
+)
 
 // ScanJobSpec defines the desired state of ScanJob.
 type ScanJobSpec struct {
@@ -68,6 +73,7 @@ type ScanJobStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:selectablefield:JSONPath=`.spec.registry`
 
 // ScanJob is the Schema for the scanjobs API.
 type ScanJob struct {
@@ -76,6 +82,20 @@ type ScanJob struct {
 
 	Spec   ScanJobSpec   `json:"spec,omitempty"`
 	Status ScanJobStatus `json:"status,omitempty"`
+}
+
+// GetCreationTimestampFromAnnotation returns the creation timestamp of the ScanJob.
+// It first attempts to parse the timestamp from the CreationTimestampAnnotation.
+// If the annotation is missing or malformed, it falls back to the Kubernetes object's
+// standard metadata.CreationTimestamp.
+func (s *ScanJob) GetCreationTimestampFromAnnotation() time.Time {
+	if timestampStr, ok := s.Annotations[CreationTimestampAnnotation]; ok {
+		if timestamp, err := time.Parse(time.RFC3339Nano, timestampStr); err == nil {
+			return timestamp
+		}
+	}
+
+	return s.CreationTimestamp.Time
 }
 
 // InitializeConditions initializes status fields and conditions.
