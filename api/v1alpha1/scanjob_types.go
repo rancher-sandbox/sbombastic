@@ -9,8 +9,12 @@ import (
 
 // RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
 const (
-	RegistryAnnotation          = "sbombastic.rancher.io/registry"
+	// RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
+	RegistryAnnotation = "sbombastic.rancher.io/registry"
+	// CreationTimestampAnnotation is used to store the creation timestamp of the ScanJob.
 	CreationTimestampAnnotation = "sbombastic.rancher.io/creation-timestamp"
+	// TriggerAnnotation is used to identify the source of the ScanJob trigger.
+	TriggerAnnotation = "sbombastic.rancher.io/trigger"
 )
 
 // ScanJobSpec defines the desired state of ScanJob.
