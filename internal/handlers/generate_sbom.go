@@ -22,17 +22,6 @@ import (
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
-// GenerateSBOMSubject is the subject for messages that trigger SBOM generation.
-const GenerateSBOMSubject = "sbombastic.sbom.generate"
-
-// GenerateSBOMMessage represents the request message for generating a SBOM.
-type GenerateSBOMMessage struct {
-	ScanJobName      string `json:"scanJobName"`
-	ScanJobNamespace string `json:"scanJobNamespace"`
-	ImageName        string `json:"imageName"`
-	ImageNamespace   string `json:"imageNamespace"`
-}
-
 // GenerateSBOMHandler is responsible for handling SBOM generation requests.
 type GenerateSBOMHandler struct {
 	k8sClient client.Client
@@ -67,20 +56,20 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	}
 
 	h.logger.DebugContext(ctx, "SBOM generation requested",
-		"image", generateSBOMMessage.ImageName,
-		"namespace", generateSBOMMessage.ImageNamespace,
+		"image", generateSBOMMessage.Image.Name,
+		"namespace", generateSBOMMessage.Image.Namespace,
 	)
 
 	image := &storagev1alpha1.Image{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      generateSBOMMessage.ImageName,
-		Namespace: generateSBOMMessage.ImageNamespace,
+		Name:      generateSBOMMessage.Image.Name,
+		Namespace: generateSBOMMessage.Image.Namespace,
 	}, image)
 	if err != nil {
 		return fmt.Errorf(
 			"cannot get image %s/%s: %w",
-			generateSBOMMessage.ImageNamespace,
-			generateSBOMMessage.ImageName,
+			generateSBOMMessage.Image.Namespace,
+			generateSBOMMessage.Image.Name,
 			err,
 		)
 	}
@@ -89,28 +78,30 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 
 	sbom := &storagev1alpha1.SBOM{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      generateSBOMMessage.ImageName,
-		Namespace: generateSBOMMessage.ImageNamespace,
+		Name:      generateSBOMMessage.Image.Name,
+		Namespace: generateSBOMMessage.Image.Namespace,
 	}, sbom)
 
 	// Check if the SBOM already exists.
 	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
 	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
-		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.ImageName, "namespace", generateSBOMMessage.ImageNamespace)
+		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
 		sbom, err = h.generateSBOM(ctx, image, generateSBOMMessage)
 		if err != nil {
 			return err
 		}
 	} else if err != nil {
-		return fmt.Errorf("failed to check if SBOM %s in namespace %s exists: %w", generateSBOMMessage.ImageName, generateSBOMMessage.ImageNamespace, err)
+		return fmt.Errorf("failed to check if SBOM %s in namespace %s exists: %w", generateSBOMMessage.Image.Name, generateSBOMMessage.Image.Namespace, err)
 	} else {
 		h.logger.DebugContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
 	}
 
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
-		SBOMName:      sbom.Name,
-		SBOMNamespace: sbom.Namespace,
-		ScanJobName:   generateSBOMMessage.ScanJobName,
+		BaseMessage: generateSBOMMessage.BaseMessage,
+		SBOM: ObjectRef{
+			Name:      sbom.Name,
+			Namespace: sbom.Namespace,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("cannot marshal scan SBOM message: %w", err)
@@ -170,8 +161,8 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 
 	sbom := &storagev1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      message.ImageName,
-			Namespace: message.ImageNamespace,
+			Name:      message.Image.Name,
+			Namespace: message.Image.Namespace,
 			Labels: map[string]string{
 				api.LabelManagedByKey: api.LabelManagedByValue,
 				api.LabelPartOfKey:    api.LabelPartOfValue,

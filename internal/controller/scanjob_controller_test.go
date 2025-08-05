@@ -64,8 +64,12 @@ var _ = Describe("ScanJob Controller", func() {
 		It("should successfully reconcile and publish CreateCatalog message", func(ctx context.Context) {
 			By("Setting up the expected message publication")
 			message, err := json.Marshal(&handlers.CreateCatalogMessage{
-				ScanJobName:      scanJob.Name,
-				ScanJobNamespace: scanJob.Namespace,
+				BaseMessage: handlers.BaseMessage{
+					ScanJob: handlers.ObjectRef{
+						Name:      scanJob.Name,
+						Namespace: scanJob.Namespace,
+					},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(scanJob.GetUID()), message).Return(nil)
