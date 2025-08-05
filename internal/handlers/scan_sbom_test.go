@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	_ "modernc.org/sqlite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -184,8 +185,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	assert.Equal(t, "test-scanjob", vulnerabilityReport.Labels[api.LabelScanJob])
 
 	report := &sarif.Report{}
-	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)
-	require.NoError(t, err, "failed to unmarshal vulnerability report, with platform %s", platform)
+	require.NotEmpty(t, vulnerabilityReport.Spec.Report.Results)
 
 	// Filter out fields containing the file path from the comparison
 	filter := cmp.FilterPath(func(path cmp.Path) bool {
