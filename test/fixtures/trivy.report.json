@@ -1,0 +1,294 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2025-07-31T14:53:25.858814446+02:00",
+  "ArtifactName": "../sbom-merger/trivy.sbom.cyclonedx.json",
+  "ArtifactType": "cyclonedx",
+  "Metadata": {
+    "OS": {
+      "Family": "alpine",
+      "Name": "3.21.0"
+    },
+    "ImageConfig": {
+      "architecture": "",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "",
+      "rootfs": {
+        "type": "",
+        "diff_ids": null
+      },
+      "config": {}
+    }
+  },
+  "Results": [
+    {
+      "Target": "nginx-ingress-controller",
+      "Class": "lang-pkgs",
+      "Type": "gobinary",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-45336",
+          "PkgID": "stdlib@v1.23.4",
+          "PkgName": "stdlib",
+          "PkgIdentifier": {
+            "PURL": "pkg:golang/stdlib@v1.23.4",
+            "UID": "2bca77bcd818cca7",
+            "BOMRef": "0afa1885-c67c-476f-b213-0b750afc0d4a"
+          },
+          "InstalledVersion": "v1.23.4",
+          "FixedVersion": "1.22.11, 1.23.5, 1.24.0-rc.2",
+          "Status": "fixed",
+          "Layer": {
+            "DiffID": "sha256:d37a3e42d123ca619ceab4bbe3c1e9a96d0a837e5e0e3052b33dbd0e842c5661"
+          },
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-45336",
+          "DataSource": {
+            "ID": "govulndb",
+            "Name": "The Go Vulnerability Database",
+            "URL": "https://pkg.go.dev/vuln/"
+          },
+          "Title": "golang: net/http: net/http: sensitive headers incorrectly sent after cross-domain redirect",
+          "Description": "The HTTP client drops sensitive headers after following a cross-domain redirect. For example, a request to a.com/ containing an Authorization header which is redirected to b.com/ will not send that header to b.com. In the event that the client received a subsequent same-domain redirect, however, the sensitive headers would be restored. For example, a chain of redirects from a.com/, to b.com/1, and finally to b.com/2 would incorrectly send the Authorization header to b.com/2.",
+          "Severity": "MEDIUM",
+          "VendorSeverity": {
+            "alma": 2,
+            "amazon": 2,
+            "azure": 3,
+            "bitnami": 2,
+            "cbl-mariner": 3,
+            "oracle-oval": 3,
+            "redhat": 2,
+            "ubuntu": 2
+          },
+          "CVSS": {
+            "bitnami": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+              "V3Score": 6.1
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+              "V3Score": 5.9
+            }
+          },
+          "References": [
+            "https://access.redhat.com/errata/RHSA-2025:3772",
+            "https://access.redhat.com/security/cve/CVE-2024-45336",
+            "https://bugzilla.redhat.com/2341750",
+            "https://bugzilla.redhat.com/2341751",
+            "https://errata.almalinux.org/8/ALSA-2025-3772.html",
+            "https://go.dev/cl/643100",
+            "https://go.dev/issue/70530",
+            "https://groups.google.com/g/golang-announce/c/sSaUhLA-2SI",
+            "https://groups.google.com/g/golang-dev/c/CAWXhan3Jww/m/bk9LAa-lCgAJ",
+            "https://groups.google.com/g/golang-dev/c/bG8cv1muIBM/m/G461hA6lCgAJ",
+            "https://linux.oracle.com/cve/CVE-2024-45336.html",
+            "https://linux.oracle.com/errata/ELSA-2025-7592.html",
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-45336",
+            "https://pkg.go.dev/vuln/GO-2025-3420",
+            "https://security.netapp.com/advisory/ntap-20250221-0003/",
+            "https://ubuntu.com/security/notices/USN-7574-1",
+            "https://www.cve.org/CVERecord?id=CVE-2024-45336"
+          ],
+          "PublishedDate": "2025-01-28T02:15:28.807Z",
+          "LastModifiedDate": "2025-02-21T18:15:17.4Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2025-22866",
+          "PkgID": "stdlib@v1.23.4",
+          "PkgName": "stdlib",
+          "PkgIdentifier": {
+            "PURL": "pkg:golang/stdlib@v1.23.4",
+            "UID": "2bca77bcd818cca7",
+            "BOMRef": "0afa1885-c67c-476f-b213-0b750afc0d4a"
+          },
+          "InstalledVersion": "v1.23.4",
+          "FixedVersion": "1.22.12, 1.23.6, 1.24.0-rc.3",
+          "Status": "fixed",
+          "Layer": {
+            "DiffID": "sha256:d37a3e42d123ca619ceab4bbe3c1e9a96d0a837e5e0e3052b33dbd0e842c5661"
+          },
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2025-22866",
+          "DataSource": {
+            "ID": "govulndb",
+            "Name": "The Go Vulnerability Database",
+            "URL": "https://pkg.go.dev/vuln/"
+          },
+          "Title": "crypto/internal/nistec: golang: Timing sidechannel for P-256 on ppc64le in crypto/internal/nistec",
+          "Description": "Due to the usage of a variable time instruction in the assembly implementation of an internal function, a small number of bits of secret scalars are leaked on the ppc64le architecture. Due to the way this function is used, we do not believe this leakage is enough to allow recovery of the private key when P-256 is used in any well known protocols.",
+          "Severity": "MEDIUM",
+          "VendorSeverity": {
+            "alma": 2,
+            "bitnami": 2,
+            "oracle-oval": 2,
+            "redhat": 2,
+            "ubuntu": 2
+          },
+          "CVSS": {
+            "bitnami": {
+              "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+              "V3Score": 4
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+              "V3Score": 5.3
+            }
+          },
+          "References": [
+            "https://access.redhat.com/errata/RHSA-2025:7466",
+            "https://access.redhat.com/security/cve/CVE-2025-22866",
+            "https://bugzilla.redhat.com/2341750",
+            "https://bugzilla.redhat.com/2341751",
+            "https://bugzilla.redhat.com/2344219",
+            "https://errata.almalinux.org/10/ALSA-2025-7466.html",
+            "https://github.com/golang/go/commit/0cc45e7ca668b103c1055ae84402ad3f3425dd56 (go1.22.12)",
+            "https://github.com/golang/go/commit/6644ed63b1e6ccc129647ef6b0d4647fdbe14056 (go1.23.6)",
+            "https://github.com/golang/go/commit/6fc23a3cff5e38ff72923fee50f51254dcdc6e93 (go1.24rc3)",
+            "https://github.com/golang/go/issues/71383",
+            "https://go.dev/cl/643735",
+            "https://go.dev/issue/71383",
+            "https://groups.google.com/g/golang-announce/c/xU1ZCHUZw3k",
+            "https://linux.oracle.com/cve/CVE-2025-22866.html",
+            "https://linux.oracle.com/errata/ELSA-2025-7466.html",
+            "https://nvd.nist.gov/vuln/detail/CVE-2025-22866",
+            "https://pkg.go.dev/vuln/GO-2025-3447",
+            "https://security.netapp.com/advisory/ntap-20250221-0002/",
+            "https://ubuntu.com/security/notices/USN-7574-1",
+            "https://www.cve.org/CVERecord?id=CVE-2025-22866"
+          ],
+          "PublishedDate": "2025-02-06T17:15:21.41Z",
+          "LastModifiedDate": "2025-02-21T18:15:32.243Z"
+        }
+      ],
+      "ExperimentalModifiedFindings": [
+        {
+          "Type": "vulnerability",
+          "Status": "not_affected",
+          "Statement": "vulnerable_code_not_present",
+          "Source": "VEX Repository:  (https://github.com/rancher/vexhub)",
+          "Finding": {
+            "VulnerabilityID": "CVE-2025-22870",
+            "PkgID": "golang.org/x/net@v0.33.0",
+            "PkgName": "golang.org/x/net",
+            "PkgIdentifier": {
+              "PURL": "pkg:golang/golang.org/x/net@v0.33.0",
+              "UID": "6c7e541015620056",
+              "BOMRef": "pkg:golang/golang.org/x/net@v0.33.0"
+            },
+            "InstalledVersion": "v0.33.0",
+            "FixedVersion": "0.36.0",
+            "Status": "fixed",
+            "Layer": {
+              "DiffID": "sha256:d37a3e42d123ca619ceab4bbe3c1e9a96d0a837e5e0e3052b33dbd0e842c5661"
+            },
+            "SeveritySource": "ghsa",
+            "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2025-22870",
+            "DataSource": {
+              "ID": "ghsa",
+              "Name": "GitHub Security Advisory Go",
+              "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Ago"
+            },
+            "Title": "golang.org/x/net/proxy: golang.org/x/net/http/httpproxy: HTTP Proxy bypass using IPv6 Zone IDs in golang.org/x/net",
+            "Description": "Matching of hosts against proxy patterns can improperly treat an IPv6 zone ID as a hostname component. For example, when the NO_PROXY environment variable is set to \"*.example.com\", a request to \"[::1%25.example.com]:80` will incorrectly match and not be proxied.",
+            "Severity": "MEDIUM",
+            "CweIDs": [
+              "CWE-115"
+            ],
+            "VendorSeverity": {
+              "amazon": 2,
+              "azure": 2,
+              "cbl-mariner": 2,
+              "ghsa": 2,
+              "redhat": 2,
+              "ubuntu": 2
+            },
+            "CVSS": {
+              "ghsa": {
+                "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:L",
+                "V3Score": 4.4
+              },
+              "redhat": {
+                "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:L",
+                "V3Score": 4.4
+              }
+            },
+            "References": [
+              "http://www.openwall.com/lists/oss-security/2025/03/07/2",
+              "https://access.redhat.com/security/cve/CVE-2025-22870",
+              "https://github.com/golang/go/issues/71984",
+              "https://go-review.googlesource.com/q/project:net",
+              "https://go.dev/cl/654697",
+              "https://go.dev/issue/71984",
+              "https://groups.google.com/g/golang-announce/c/4t3lzH3I0eI/m/b42ImqrBAQAJ",
+              "https://nvd.nist.gov/vuln/detail/CVE-2025-22870",
+              "https://pkg.go.dev/vuln/GO-2025-3503",
+              "https://security.netapp.com/advisory/ntap-20250509-0007",
+              "https://security.netapp.com/advisory/ntap-20250509-0007/",
+              "https://ubuntu.com/security/notices/USN-7574-1",
+              "https://www.cve.org/CVERecord?id=CVE-2025-22870"
+            ],
+            "PublishedDate": "2025-03-12T19:15:38.31Z",
+            "LastModifiedDate": "2025-05-09T20:15:38.727Z"
+          }
+        },
+        {
+          "Type": "vulnerability",
+          "Status": "not_affected",
+          "Statement": "vulnerable_code_not_present",
+          "Source": "VEX Repository:  (https://github.com/rancher/vexhub)",
+          "Finding": {
+            "VulnerabilityID": "CVE-2025-22872",
+            "PkgID": "golang.org/x/net@v0.33.0",
+            "PkgName": "golang.org/x/net",
+            "PkgIdentifier": {
+              "PURL": "pkg:golang/golang.org/x/net@v0.33.0",
+              "UID": "6c7e541015620056",
+              "BOMRef": "pkg:golang/golang.org/x/net@v0.33.0"
+            },
+            "InstalledVersion": "v0.33.0",
+            "FixedVersion": "0.38.0",
+            "Status": "fixed",
+            "Layer": {
+              "DiffID": "sha256:d37a3e42d123ca619ceab4bbe3c1e9a96d0a837e5e0e3052b33dbd0e842c5661"
+            },
+            "SeveritySource": "ghsa",
+            "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2025-22872",
+            "DataSource": {
+              "ID": "ghsa",
+              "Name": "GitHub Security Advisory Go",
+              "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Ago"
+            },
+            "Title": "golang.org/x/net/html: Incorrect Neutralization of Input During Web Page Generation in x/net in golang.org/x/net",
+            "Description": "The tokenizer incorrectly interprets tags with unquoted attribute values that end with a solidus character (/) as self-closing. When directly using Tokenizer, this can result in such tags incorrectly being marked as self-closing, and when using the Parse functions, this can result in content following such tags as being placed in the wrong scope during DOM construction, but only when tags are in foreign content (e.g. \u003cmath\u003e, \u003csvg\u003e, etc contexts).",
+            "Severity": "MEDIUM",
+            "VendorSeverity": {
+              "amazon": 2,
+              "azure": 2,
+              "cbl-mariner": 2,
+              "ghsa": 2,
+              "redhat": 2
+            },
+            "CVSS": {
+              "redhat": {
+                "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:L/I:L/A:L",
+                "V3Score": 6.5
+              }
+            },
+            "References": [
+              "https://access.redhat.com/security/cve/CVE-2025-22872",
+              "https://github.com/advisories/GHSA-vvgc-356p-c3xw",
+              "https://go.dev/cl/662715",
+              "https://go.dev/issue/73070",
+              "https://groups.google.com/g/golang-announce/c/ezSKR9vqbqA",
+              "https://nvd.nist.gov/vuln/detail/CVE-2025-22872",
+              "https://pkg.go.dev/vuln/GO-2025-3595",
+              "https://security.netapp.com/advisory/ntap-20250516-0007",
+              "https://security.netapp.com/advisory/ntap-20250516-0007/",
+              "https://www.cve.org/CVERecord?id=CVE-2025-22872"
+            ],
+            "PublishedDate": "2025-04-16T18:16:04.183Z",
+            "LastModifiedDate": "2025-05-16T23:15:19.707Z"
+          }
+        }
+      ]
+    }
+  ]
+}
