@@ -256,12 +256,16 @@ var _ = Describe("ScanJob Controller", func() {
 
 		It("should cleanup old ScanJobs during reconciliation", func(ctx context.Context) {
 			By("Setting up the expected message publication")
-			message, err := json.Marshal(&handlers.CreateCatalogMessage{
-				ScanJobName:      newScanJob.Name,
-				ScanJobNamespace: newScanJob.Namespace,
+			expectedMessage, err := json.Marshal(&handlers.CreateCatalogMessage{
+				BaseMessage: handlers.BaseMessage{
+					ScanJob: handlers.ObjectRef{
+						Name:      newScanJob.Name,
+						Namespace: newScanJob.Namespace,
+					},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(newScanJob.GetUID()), message).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(newScanJob.GetUID()), expectedMessage).Return(nil)
 
 			By("Reconciling the new ScanJob")
 			_, err = reconciler.Reconcile(ctx, reconcile.Request{
