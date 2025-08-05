@@ -11,8 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/owenrumney/go-sarif/v2/sarif"
+	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
@@ -20,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	_ "modernc.org/sqlite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -196,23 +196,12 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	assert.Equal(t, string(scanJob.UID), vulnerabilityReport.Labels[v1alpha1.LabelScanJobUIDKey])
 
 	report := &sarif.Report{}
-	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)
-	require.NoError(t, err, "failed to unmarshal vulnerability report, with platform %s", platform)
+	require.NotEmpty(t, vulnerabilityReport.Spec.Report.Results)
 
-	// Filter out fields containing the file path from the comparison
-	filter := cmp.FilterPath(func(path cmp.Path) bool {
-		lastField := path.Last().String()
-		return lastField == ".URI" || lastField == ".Text"
-	}, cmp.Comparer(func(a, b *string) bool {
-		if strings.Contains(*a, ".json") && strings.Contains(*b, ".json") {
-			return true
-		}
-
-		return cmp.Equal(a, b)
-	}))
-	diff := cmp.Diff(expectedReport, report, filter)
-
-	assert.Empty(t, diff, "diff mismatch on platform %s\nDiff:\n%s", platform, diff)
+	// override report field since trivy uses the sbom name as Target,
+	// which changes at every test run.
+	report.Results[0].Target = expectedReport.Results[0].Target
+	assert.Equal(t, expectedReport, report)
 }
 
 func fakeVEXHubRepository(t *testing.T) *httptest.Server {
