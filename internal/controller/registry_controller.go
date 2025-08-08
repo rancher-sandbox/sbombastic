@@ -46,7 +46,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
 
 		fieldSelector := client.MatchingFields{
-			"spec.imageMetadata.registry": registry.Name,
+			storagev1alpha1.IndexImageMetadataRegistry: registry.Name,
 		}
 
 		var images storagev1alpha1.ImageList
@@ -71,18 +71,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := mgr.GetFieldIndexer().IndexField(context.Background(), &storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(rawObj client.Object) []string {
-		image, ok := rawObj.(*storagev1alpha1.Image)
-		if !ok {
-			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
-		}
-		return []string{image.Spec.Registry}
-	})
-	if err != nil {
-		return fmt.Errorf("unable to create field indexer: %w", err)
-	}
-
-	err = ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Registry{}).
 		Complete(r)
 	if err != nil {

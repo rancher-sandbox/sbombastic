@@ -1,5 +1,8 @@
 package v1alpha1
 
+// IndexImageMetadataRegistry is the field index for the registry of an image.
+const IndexImageMetadataRegistry = "spec.imageMetadata.registry"
+
 // ImageMetadata contains the metadata details of an image.
 type ImageMetadata struct {
 	// Registry specifies the name of the Registry object in the same namespace where the image is stored.
