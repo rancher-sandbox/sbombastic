@@ -222,6 +222,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controller.RegistryScanRunner{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create runner", "runner", "RegistryScanRunner")
+		os.Exit(1)
+	}
+
 	if err = webhookv1alpha1.SetupScanJobWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ScanJob")
 		os.Exit(1)
