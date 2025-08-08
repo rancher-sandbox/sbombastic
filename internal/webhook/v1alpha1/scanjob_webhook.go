@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/controller"
 )
 
 func SetupScanJobWebhookWithManager(mgr ctrl.Manager) error {
@@ -80,20 +80,18 @@ func (v *ScanJobCustomValidator) ValidateCreate(ctx context.Context, obj runtime
 	v.logger.Info("Validation for ScanJob upon creation", "name", scanJob.GetName())
 
 	var allErrs field.ErrorList
-	fieldPath := field.NewPath("metadata").Child("name")
-	// ScanJob names are limited to 63 characters because they are used as labels to identify VulnerabilityReports updated by the ScanJob.
-	if len(scanJob.Name) > validation.LabelValueMaxLength {
-		allErrs = append(allErrs, field.TooLong(fieldPath, scanJob.Name, validation.LabelValueMaxLength))
-	}
 
 	scanJobList := &sbombasticv1alpha1.ScanJobList{}
-	if err := v.client.List(ctx, scanJobList, client.InNamespace(scanJob.GetNamespace())); err != nil {
+
+	if err := v.client.List(ctx, scanJobList,
+		client.InNamespace(scanJob.GetNamespace()),
+		client.MatchingFields{controller.IndexSpecRegistry: scanJob.Spec.Registry}); err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("listing ScanJobs: %w", err))
 	}
 
 	for _, existingScanJob := range scanJobList.Items {
 		// Check if the a ScanJob with the same registry is already running
-		if existingScanJob.Spec.Registry == scanJob.Spec.Registry && (!existingScanJob.IsComplete() && !existingScanJob.IsFailed()) {
+		if !existingScanJob.IsComplete() && !existingScanJob.IsFailed() {
 			fieldPath := field.NewPath("spec").Child("registry")
 			allErrs = append(allErrs, field.Forbidden(fieldPath, fmt.Sprintf("a ScanJob for the registry %q is already running", scanJob.Spec.Registry)))
 			break
@@ -122,15 +120,17 @@ func (v *ScanJobCustomValidator) ValidateUpdate(_ context.Context, oldObj, newOb
 	}
 	v.logger.Info("Validation for ScanJob upon update", "name", newJob.GetName())
 
+	var allErrs field.ErrorList
 	if oldJob.Spec.Registry != newJob.Spec.Registry {
-		fieldErr := field.Invalid(
-			field.NewPath("spec").Child("registry"),
-			newJob.Spec.Registry,
-			"field is immutable")
+		fieldPath := field.NewPath("spec").Child("registry")
+		allErrs = append(allErrs, field.Invalid(fieldPath, newJob.Spec.Registry, "field is immutable"))
+	}
+
+	if len(allErrs) > 0 {
 		return nil, apierrors.NewInvalid(
 			sbombasticv1alpha1.GroupVersion.WithKind("ScanJob").GroupKind(),
 			newJob.Name,
-			field.ErrorList{fieldErr},
+			allErrs,
 		)
 	}
 	return nil, nil

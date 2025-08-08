@@ -12,6 +12,7 @@ import (
 	"go.yaml.in/yaml/v3"
 	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -67,8 +68,21 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
 
-	sbom := &storagev1alpha1.SBOM{}
+	scanJob := &v1alpha1.ScanJob{}
 	err := h.k8sClient.Get(ctx, client.ObjectKey{
+		Name:      scanSBOMMessage.ScanJob.Name,
+		Namespace: scanSBOMMessage.ScanJob.Namespace,
+	}, scanJob)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Stop processing if the ScanJob is not found.
+			h.logger.ErrorContext(ctx, "ScanJob not found, skipping SBOM scan", "scanJob", scanSBOMMessage.ScanJob.Name, "namespace", scanSBOMMessage.ScanJob.Namespace)
+		}
+		return fmt.Errorf("failed to get ScanJob: %w", err)
+	}
+
+	sbom := &storagev1alpha1.SBOM{}
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      scanSBOMMessage.SBOM.Name,
 		Namespace: scanSBOMMessage.SBOM.Namespace,
 	}, sbom)
@@ -193,9 +207,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Labels = map[string]string{
-			api.LabelScanJob:      scanSBOMMessage.ScanJob.Name,
-			api.LabelManagedByKey: api.LabelManagedByValue,
-			api.LabelPartOfKey:    api.LabelPartOfValue,
+			api.LabelScanJobUIDKey: string(scanJob.UID),
+			api.LabelManagedByKey:  api.LabelManagedByValue,
+			api.LabelPartOfKey:     api.LabelPartOfValue,
 		}
 
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{

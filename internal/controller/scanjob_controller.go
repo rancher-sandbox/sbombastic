@@ -138,7 +138,7 @@ func (r *ScanJobReconciler) cleanupOldScanJobs(ctx context.Context, currentScanJ
 	scanJobList := &sbombasticv1alpha1.ScanJobList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(currentScanJob.Namespace),
-		client.MatchingFields{"spec.registry": currentScanJob.Spec.Registry},
+		client.MatchingFields{IndexSpecRegistry: currentScanJob.Spec.Registry},
 	}
 
 	if err := r.List(ctx, scanJobList, listOpts...); err != nil {
@@ -176,16 +176,6 @@ func (r *ScanJobReconciler) cleanupOldScanJobs(ctx context.Context, currentScanJ
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ScanJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &sbombasticv1alpha1.ScanJob{}, "spec.registry", func(rawObj client.Object) []string {
-		scanJob, ok := rawObj.(*sbombasticv1alpha1.ScanJob)
-		if !ok {
-			panic(fmt.Sprintf("Expected ScanJob, got %T", rawObj))
-		}
-		return []string{scanJob.Spec.Registry}
-	}); err != nil {
-		return fmt.Errorf("failed to setup field indexer for spec.registry: %w", err)
-	}
-
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&sbombasticv1alpha1.ScanJob{}).
 		WithOptions(controller.Options{

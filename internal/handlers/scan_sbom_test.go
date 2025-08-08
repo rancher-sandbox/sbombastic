@@ -123,6 +123,17 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	spdxData, err := os.ReadFile(sourceSBOMJSON)
 	require.NoError(t, err, "failed to read source SBOM file %s", sourceSBOMJSON)
 
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			UID:       "test-scanjob-uid",
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
 	sbom := &storagev1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-sbom",
@@ -143,6 +154,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	require.NoError(t, err)
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
+		WithRuntimeObjects(scanJob).
 		WithRuntimeObjects(sbom).
 		WithRuntimeObjects(vexHubs).
 		Build()
@@ -159,7 +171,8 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	message, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name: "test-scanjob",
+				Name:      "test-scanjob",
+				Namespace: "default",
 			},
 		},
 		SBOM: ObjectRef{
@@ -181,7 +194,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 
 	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
 	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
-	assert.Equal(t, "test-scanjob", vulnerabilityReport.Labels[api.LabelScanJob])
+	assert.Equal(t, string(scanJob.UID), vulnerabilityReport.Labels[api.LabelScanJobUIDKey])
 
 	report := &sarif.Report{}
 	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)

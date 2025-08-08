@@ -278,7 +278,7 @@ var _ = Describe("ScanJob Controller", func() {
 
 			By("Verifying that only 10 ScanJobs remain for this registry")
 			scanJobList := &sbombasticv1alpha1.ScanJobList{}
-			err = k8sClient.List(ctx, scanJobList, client.InNamespace("default"), client.MatchingFields{"spec.registry": registry.Name})
+			err = k8sClient.List(ctx, scanJobList, client.InNamespace("default"), client.MatchingFields{IndexSpecRegistry: registry.Name})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scanJobList.Items).To(HaveLen(scanJobsHistoryLimit))
 
