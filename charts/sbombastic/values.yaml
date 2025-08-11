@@ -10,7 +10,7 @@ global:
 controller:
   image:
     repository: rancher-sandbox/sbombastic/controller
-    tag: v0.1.0
+    tag: v0.2.0
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
@@ -18,7 +18,7 @@ controller:
 storage:
   image:
     repository: rancher-sandbox/sbombastic/storage
-    tag: v0.1.0
+    tag: v0.2.0
     pullPolicy: IfNotPresent
   replicas: 1
   # logLevel: "debug" //TODO: uncomment this, when the log parser in storage is implemented
@@ -26,7 +26,7 @@ storage:
 worker:
   image:
     repository: rancher-sandbox/sbombastic/worker
-    tag: v0.1.0
+    tag: v0.2.0
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
