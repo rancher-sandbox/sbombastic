@@ -149,7 +149,7 @@ func (r *RegistryScanRunner) createScanJob(ctx context.Context, registry *v1alph
 			GenerateName: fmt.Sprintf("%s-", registry.Name),
 			Namespace:    registry.Namespace,
 			Annotations: map[string]string{
-				v1alpha1.TriggerAnnotation: "runner",
+				v1alpha1.AnnotationScanJobTriggerKey: "runner",
 			},
 		},
 		Spec: v1alpha1.ScanJobSpec{

@@ -64,7 +64,7 @@ var _ = Describe("RegistryScanRunner", func() {
 
 				By("Checking the scan job has correct registry and trigger annotation")
 				Expect(scanJobs.Items[0].Spec.Registry).To(Equal(registry.Name))
-				Expect(scanJobs.Items[0].Annotations).To(HaveKeyWithValue(v1alpha1.TriggerAnnotation, "runner"))
+				Expect(scanJobs.Items[0].Annotations).To(HaveKeyWithValue(v1alpha1.AnnotationScanJobTriggerKey, "runner"))
 			})
 
 			It("Should not create a new job when one is already running", func(ctx context.Context) {

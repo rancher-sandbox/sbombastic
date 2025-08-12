@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/owenrumney/go-sarif/v2/sarif"
-	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
@@ -194,7 +193,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 
 	assert.Equal(t, sbom.GetImageMetadata(), vulnerabilityReport.GetImageMetadata())
 	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
-	assert.Equal(t, string(scanJob.UID), vulnerabilityReport.Labels[api.LabelScanJobUIDKey])
+	assert.Equal(t, string(scanJob.UID), vulnerabilityReport.Labels[v1alpha1.LabelScanJobUIDKey])
 
 	report := &sarif.Report{}
 	err = json.Unmarshal(vulnerabilityReport.Spec.SARIF.Raw, report)

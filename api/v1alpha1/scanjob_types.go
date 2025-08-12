@@ -7,6 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const LabelScanJobUIDKey = "sbombastic.rancher.io/scanjob-uid"
+
 const (
 	// IndexScanJobSpecRegistry is the field index for the registry of a ScanJob.
 	IndexScanJobSpecRegistry = "spec.registry"
@@ -16,12 +18,12 @@ const (
 
 // RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
 const (
-	// RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
-	RegistryAnnotation = "sbombastic.rancher.io/registry"
-	// CreationTimestampAnnotation is used to store the creation timestamp of the ScanJob.
-	CreationTimestampAnnotation = "sbombastic.rancher.io/creation-timestamp"
-	// TriggerAnnotation is used to identify the source of the ScanJob trigger.
-	TriggerAnnotation = "sbombastic.rancher.io/trigger"
+	// AnnotationScanJobRegistryKey stores a snapshot of the Registry targeted by the ScanJob.
+	AnnotationScanJobRegistryKey = "sbombastic.rancher.io/registry"
+	// AnnotationScanJobCreationTimestampKey is used to store the creation timestamp of the ScanJob.
+	AnnotationScanJobCreationTimestampKey = "sbombastic.rancher.io/creation-timestamp"
+	// AnnotationScanJobTriggerKey is used to identify the source of the ScanJob trigger.
+	AnnotationScanJobTriggerKey = "sbombastic.rancher.io/trigger"
 )
 
 // ScanJobSpec defines the desired state of ScanJob.
@@ -100,7 +102,7 @@ type ScanJob struct {
 // If the annotation is missing or malformed, it falls back to the Kubernetes object's
 // standard metadata.CreationTimestamp.
 func (s *ScanJob) GetCreationTimestampFromAnnotation() time.Time {
-	if timestampStr, ok := s.Annotations[CreationTimestampAnnotation]; ok {
+	if timestampStr, ok := s.Annotations[AnnotationScanJobCreationTimestampKey]; ok {
 		if timestamp, err := time.Parse(time.RFC3339Nano, timestampStr); err == nil {
 			return timestamp
 		}

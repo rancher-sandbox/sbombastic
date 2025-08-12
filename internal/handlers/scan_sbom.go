@@ -207,9 +207,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 	_, err = controllerutil.CreateOrUpdate(ctx, h.k8sClient, vulnerabilityReport, func() error {
 		vulnerabilityReport.Labels = map[string]string{
-			api.LabelScanJobUIDKey: string(scanJob.UID),
-			api.LabelManagedByKey:  api.LabelManagedByValue,
-			api.LabelPartOfKey:     api.LabelPartOfValue,
+			v1alpha1.LabelScanJobUIDKey: string(scanJob.UID),
+			api.LabelManagedByKey:       api.LabelManagedByValue,
+			api.LabelPartOfKey:          api.LabelPartOfValue,
 		}
 
 		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{

@@ -106,7 +106,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	// Retrieve the registry from the scan job annotations.
-	registrData, ok := scanJob.Annotations[v1alpha1.RegistryAnnotation]
+	registrData, ok := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
 	if !ok {
 		return fmt.Errorf("scan job %s/%s does not have a registry annotation", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name)
 	}

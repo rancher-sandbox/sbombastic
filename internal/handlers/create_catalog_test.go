@@ -140,7 +140,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Name:      "test-scan-job",
 			Namespace: "default",
 			Annotations: map[string]string{
-				v1alpha1.RegistryAnnotation: string(registryData),
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
 			UID: "scanjob-uid",
 		},
@@ -375,7 +375,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			Name:      "test-scan-job",
 			Namespace: "default",
 			Annotations: map[string]string{
-				v1alpha1.RegistryAnnotation: string(registryData),
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
 			UID: "scanjob-uid",
 		},

@@ -32,7 +32,7 @@ func TestScanJobDefaulter_Default(t *testing.T) {
 	err := defaulter.Default(t.Context(), scanJob)
 	require.NoError(t, err)
 
-	timestampStr := scanJob.Annotations[v1alpha1.CreationTimestampAnnotation]
+	timestampStr := scanJob.Annotations[v1alpha1.AnnotationScanJobCreationTimestampKey]
 	assert.NotEmpty(t, timestampStr)
 
 	_, err = time.Parse(time.RFC3339Nano, timestampStr)
