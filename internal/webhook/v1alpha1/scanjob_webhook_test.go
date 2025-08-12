@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,18 +10,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
 )
 
 func TestScanJobDefaulter_Default(t *testing.T) {
-	scanJob := &sbombasticv1alpha1.ScanJob{
+	scanJob := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scan-job",
 			Namespace: "default",
 		},
-		Spec: sbombasticv1alpha1.ScanJobSpec{
+		Spec: v1alpha1.ScanJobSpec{
 			Registry: "registry.example.com",
 		},
 	}
@@ -30,7 +32,7 @@ func TestScanJobDefaulter_Default(t *testing.T) {
 	err := defaulter.Default(t.Context(), scanJob)
 	require.NoError(t, err)
 
-	timestampStr := scanJob.Annotations[sbombasticv1alpha1.CreationTimestampAnnotation]
+	timestampStr := scanJob.Annotations[v1alpha1.CreationTimestampAnnotation]
 	assert.NotEmpty(t, timestampStr)
 
 	_, err = time.Parse(time.RFC3339Nano, timestampStr)
@@ -40,45 +42,45 @@ func TestScanJobDefaulter_Default(t *testing.T) {
 func TestScanJobCustomValidator_ValidateCreate(t *testing.T) {
 	tests := []struct {
 		name            string
-		existingScanJob *sbombasticv1alpha1.ScanJob
-		scanJob         *sbombasticv1alpha1.ScanJob
+		existingScanJob *v1alpha1.ScanJob
+		scanJob         *v1alpha1.ScanJob
 		expectedError   string
 		expectedField   string
 	}{
 		{
 			name:            "should admit creation when no existing jobs with same registry",
 			existingScanJob: nil,
-			scanJob: &sbombasticv1alpha1.ScanJob{
+			scanJob: &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-scan-job",
 					Namespace: "default",
 				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
+				Spec: v1alpha1.ScanJobSpec{
 					Registry: "registry.example.com",
 				},
 			},
 		},
 		{
 			name: "should deny creation when existing job with same registry is pending",
-			existingScanJob: func() *sbombasticv1alpha1.ScanJob {
-				job := &sbombasticv1alpha1.ScanJob{
+			existingScanJob: func() *v1alpha1.ScanJob {
+				job := &v1alpha1.ScanJob{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-job",
 						Namespace: "default",
 					},
-					Spec: sbombasticv1alpha1.ScanJobSpec{
+					Spec: v1alpha1.ScanJobSpec{
 						Registry: "registry.example.com",
 					},
 				}
 				job.InitializeConditions()
 				return job
 			}(),
-			scanJob: &sbombasticv1alpha1.ScanJob{
+			scanJob: &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-scan-job",
 					Namespace: "default",
 				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
+				Spec: v1alpha1.ScanJobSpec{
 					Registry: "registry.example.com",
 				},
 			},
@@ -87,26 +89,26 @@ func TestScanJobCustomValidator_ValidateCreate(t *testing.T) {
 		},
 		{
 			name: "should deny creation when existing job with same registry is in progress",
-			existingScanJob: func() *sbombasticv1alpha1.ScanJob {
-				job := &sbombasticv1alpha1.ScanJob{
+			existingScanJob: func() *v1alpha1.ScanJob {
+				job := &v1alpha1.ScanJob{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-job",
 						Namespace: "default",
 					},
-					Spec: sbombasticv1alpha1.ScanJobSpec{
+					Spec: v1alpha1.ScanJobSpec{
 						Registry: "registry.example.com",
 					},
 				}
 				job.InitializeConditions()
-				job.MarkInProgress(sbombasticv1alpha1.ReasonImageScanInProgress, "Image scan in progress")
+				job.MarkInProgress(v1alpha1.ReasonImageScanInProgress, "Image scan in progress")
 				return job
 			}(),
-			scanJob: &sbombasticv1alpha1.ScanJob{
+			scanJob: &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-scan-job",
 					Namespace: "default",
 				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
+				Spec: v1alpha1.ScanJobSpec{
 					Registry: "registry.example.com",
 				},
 			},
@@ -115,78 +117,74 @@ func TestScanJobCustomValidator_ValidateCreate(t *testing.T) {
 		},
 		{
 			name: "should admit creation when existing job with same registry is completed",
-			existingScanJob: func() *sbombasticv1alpha1.ScanJob {
-				job := &sbombasticv1alpha1.ScanJob{
+			existingScanJob: func() *v1alpha1.ScanJob {
+				job := &v1alpha1.ScanJob{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-job",
 						Namespace: "default",
 					},
-					Spec: sbombasticv1alpha1.ScanJobSpec{
+					Spec: v1alpha1.ScanJobSpec{
 						Registry: "registry.example.com",
 					},
 				}
 				job.InitializeConditions()
-				job.MarkComplete(sbombasticv1alpha1.ReasonAllImagesScanned, "Done")
+				job.MarkComplete(v1alpha1.ReasonAllImagesScanned, "Done")
 				return job
 			}(),
-			scanJob: &sbombasticv1alpha1.ScanJob{
+			scanJob: &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-scan-job",
 					Namespace: "default",
 				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
+				Spec: v1alpha1.ScanJobSpec{
 					Registry: "registry.example.com",
 				},
 			},
 		},
 		{
 			name: "should admit creation when existing job with same registry failed",
-			existingScanJob: func() *sbombasticv1alpha1.ScanJob {
-				job := &sbombasticv1alpha1.ScanJob{
+			existingScanJob: func() *v1alpha1.ScanJob {
+				job := &v1alpha1.ScanJob{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-job",
 						Namespace: "default",
 					},
-					Spec: sbombasticv1alpha1.ScanJobSpec{
+					Spec: v1alpha1.ScanJobSpec{
 						Registry: "registry.example.com",
 					},
 				}
 				job.InitializeConditions()
-				job.MarkFailed(sbombasticv1alpha1.ReasonInternalError, "Failed")
+				job.MarkFailed(v1alpha1.ReasonInternalError, "Failed")
 				return job
 			}(),
-			scanJob: &sbombasticv1alpha1.ScanJob{
+			scanJob: &v1alpha1.ScanJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-scan-job",
 					Namespace: "default",
 				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
+				Spec: v1alpha1.ScanJobSpec{
 					Registry: "registry.example.com",
 				},
 			},
-		},
-		{
-			name: "should deny creation when name exceeds max length",
-			scanJob: &sbombasticv1alpha1.ScanJob{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "this-name-is-way-too-long-and-exceeds-the-sixty-three-character-limit-that-is-set-for-kubernetes-labels",
-					Namespace: "default",
-				},
-				Spec: sbombasticv1alpha1.ScanJobSpec{
-					Registry: "registry.example.com",
-				},
-			},
-			expectedField: "metadata.name",
-			expectedError: "Too long: may not be more than 63 bytes",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
-			require.NoError(t, sbombasticv1alpha1.AddToScheme(scheme))
+			require.NoError(t, v1alpha1.AddToScheme(scheme))
 
-			client := fake.NewClientBuilder().WithScheme(scheme).Build()
+			client := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithIndex(&v1alpha1.ScanJob{}, v1alpha1.IndexScanJobSpecRegistry, func(obj client.Object) []string {
+					scanJob, ok := obj.(*v1alpha1.ScanJob)
+					if !ok {
+						panic(fmt.Sprintf("expected a ScanJob object but got %T", obj))
+					}
+
+					return []string{scanJob.Spec.Registry}
+				}).
+				Build()
 			validator := ScanJobCustomValidator{client: client}
 
 			if test.existingScanJob != nil {
@@ -214,28 +212,28 @@ func TestScanJobCustomValidator_ValidateCreate(t *testing.T) {
 }
 
 func TestScanJobCustomValidator_ValidateUpdate(t *testing.T) {
-	oldObj := &sbombasticv1alpha1.ScanJob{
+	oldObj := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scan-job",
 			Namespace: "default",
 		},
-		Spec: sbombasticv1alpha1.ScanJobSpec{
+		Spec: v1alpha1.ScanJobSpec{
 			Registry: "registry.example.com",
 		},
 	}
 
-	newObj := &sbombasticv1alpha1.ScanJob{
+	newObj := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scan-job",
 			Namespace: "default",
 		},
-		Spec: sbombasticv1alpha1.ScanJobSpec{
+		Spec: v1alpha1.ScanJobSpec{
 			Registry: "new-registry.example.com",
 		},
 	}
 
 	scheme := runtime.NewScheme()
-	require.NoError(t, sbombasticv1alpha1.AddToScheme(scheme))
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
 	client := fake.NewClientBuilder().WithScheme(scheme).Build()
 	validator := ScanJobCustomValidator{client: client}
 

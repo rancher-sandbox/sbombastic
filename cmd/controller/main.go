@@ -197,6 +197,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = controller.SetupIndexer(signalHandler, mgr); err != nil {
+		setupLog.Error(err, "unable to set up indexer")
+		os.Exit(1)
+	}
+
 	if err = (&controller.RegistryReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

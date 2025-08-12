@@ -5,3 +5,4 @@ metadata:
   namespace: default
 spec:
   uri: dev-registry.default.svc.cluster.local:5000
+  scanInterval: 1h

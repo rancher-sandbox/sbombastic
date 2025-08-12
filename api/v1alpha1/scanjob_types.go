@@ -7,6 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// IndexScanJobSpecRegistry is the field index for the registry of a ScanJob.
+	IndexScanJobSpecRegistry = "spec.registry"
+	// IndexScanJobMetadataUID is the field index for the UID of a ScanJob.
+	IndexScanJobMetadataUID = "metadata.uid"
+)
+
 // RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
 const (
 	// RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.

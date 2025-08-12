@@ -5,5 +5,5 @@ const (
 	LabelManagedByValue = "sbombastic"
 	LabelPartOfKey      = "app.kubernetes.io/part-of"
 	LabelPartOfValue    = "sbombastic"
-	LabelScanJob        = "sbombastic.rancher.io/scanjob"
+	LabelScanJobUIDKey  = "sbombastic.rancher.io/scanjob-uid"
 )

@@ -93,7 +93,7 @@ var _ = Describe("Registry Controller", func() {
 			var images storagev1alpha1.ImageList
 			Expect(k8sClient.List(ctx, &images, &client.ListOptions{
 				Namespace:     "default",
-				FieldSelector: fields.SelectorFromSet(fields.Set{"spec.imageMetadata.registry": registry.Name}),
+				FieldSelector: fields.SelectorFromSet(fields.Set{storagev1alpha1.IndexImageMetadataRegistry: registry.Name}),
 			})).To(Succeed())
 
 			Expect(images.Items).To(HaveLen(1))
