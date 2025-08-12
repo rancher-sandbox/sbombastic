@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -48,7 +47,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				scanJobs := &v1alpha1.ScanJobList{}
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(BeEmpty())
 
@@ -59,7 +58,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				By("Verifying a new scan job was created")
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(HaveLen(1))
 
@@ -89,7 +88,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				scanJobs := &v1alpha1.ScanJobList{}
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(HaveLen(1))
 			})
@@ -118,7 +117,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				scanJobs := &v1alpha1.ScanJobList{}
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(HaveLen(2))
 			})
@@ -148,7 +147,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				scanJobs := &v1alpha1.ScanJobList{}
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(HaveLen(1))
 			})
@@ -178,7 +177,7 @@ var _ = Describe("RegistryScanRunner", func() {
 				scanJobs := &v1alpha1.ScanJobList{}
 				Expect(k8sClient.List(ctx, scanJobs,
 					client.InNamespace("default"),
-					client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector("spec.registry", registry.Name)},
+					client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 				)).To(Succeed())
 				Expect(scanJobs.Items).To(BeEmpty())
 			})

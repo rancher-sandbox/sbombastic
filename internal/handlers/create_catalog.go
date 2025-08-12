@@ -138,7 +138,11 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	}
 
 	existingImageList := &storagev1alpha1.ImageList{}
-	if err = h.k8sClient.List(ctx, existingImageList, client.InNamespace(registry.Namespace), client.MatchingFields{"spec.imageMetadata.registry": registry.Name}); err != nil {
+	listOpts := []client.ListOption{
+		client.InNamespace(registry.Namespace),
+		client.MatchingFields{storagev1alpha1.IndexImageMetadataRegistry: registry.Name},
+	}
+	if err = h.k8sClient.List(ctx, existingImageList, listOpts...); err != nil {
 		return fmt.Errorf("cannot list existing images in registry %s: %w", registry.Name, err)
 	}
 	existingImageNames := sets.Set[string]{}

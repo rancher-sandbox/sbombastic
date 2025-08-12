@@ -121,9 +121,8 @@ func (r *RegistryScanRunner) getLastScanJob(ctx context.Context, registry *v1alp
 
 	listOpts := []client.ListOption{
 		client.InNamespace(registry.Namespace),
-		client.MatchingFields{"spec.registry": registry.Name},
+		client.MatchingFields{v1alpha1.IndexScanJobSpecRegistry: registry.Name},
 	}
-
 	if err := r.List(ctx, &scanJobs, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list scan jobs: %w", err)
 	}
