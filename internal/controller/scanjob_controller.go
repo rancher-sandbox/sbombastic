@@ -102,7 +102,7 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *v1alp
 	original := scanJob.DeepCopy()
 
 	scanJob.Annotations = map[string]string{
-		v1alpha1.RegistryAnnotation: string(registryData),
+		v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 	}
 
 	if err = r.Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {

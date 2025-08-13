@@ -92,7 +92,7 @@ var _ = Describe("ScanJob Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking that registry data was stored in annotations")
-			registryData, exists := updatedScanJob.Annotations[v1alpha1.RegistryAnnotation]
+			registryData, exists := updatedScanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
 			Expect(exists).To(BeTrue())
 
 			var storedRegistry v1alpha1.Registry
@@ -230,7 +230,7 @@ var _ = Describe("ScanJob Controller", func() {
 						Name:      fmt.Sprintf("old-scanjob-%d", i),
 						Namespace: "default",
 						Annotations: map[string]string{
-							v1alpha1.CreationTimestampAnnotation: creationTimestamp,
+							v1alpha1.AnnotationScanJobCreationTimestampKey: creationTimestamp,
 						},
 					},
 					Spec: v1alpha1.ScanJobSpec{

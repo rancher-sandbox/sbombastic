@@ -56,7 +56,7 @@ func (d *ScanJobCustomDefaulter) Default(_ context.Context, obj runtime.Object) 
 	}
 
 	// Add creation timestamp annotation with nanosecond precision
-	scanJob.Annotations[v1alpha1.CreationTimestampAnnotation] = time.Now().Format(time.RFC3339Nano)
+	scanJob.Annotations[v1alpha1.AnnotationScanJobCreationTimestampKey] = time.Now().Format(time.RFC3339Nano)
 
 	return nil
 }

@@ -45,12 +45,14 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.V(1).
 			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
 
-		fieldSelector := client.MatchingFields{
-			storagev1alpha1.IndexImageMetadataRegistry: registry.Name,
+		images := &storagev1alpha1.ImageList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(req.Namespace),
+			client.MatchingFields{
+				storagev1alpha1.IndexImageMetadataRegistry: registry.Name,
+			},
 		}
-
-		var images storagev1alpha1.ImageList
-		if err := r.List(ctx, &images, client.InNamespace(req.Namespace), fieldSelector); err != nil {
+		if err := r.List(ctx, images, listOpts...); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
 		}
 

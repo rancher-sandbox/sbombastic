@@ -140,7 +140,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			Name:      "test-scan-job",
 			Namespace: "default",
 			Annotations: map[string]string{
-				v1alpha1.RegistryAnnotation: string(registryData),
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
 			UID: "scanjob-uid",
 		},
@@ -159,7 +159,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		WithScheme(scheme).
 		WithRuntimeObjects(registry, scanJob).
 		WithStatusSubresource(&v1alpha1.ScanJob{}).
-		WithIndex(&storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(obj client.Object) []string {
+		WithIndex(&storagev1alpha1.Image{}, storagev1alpha1.IndexImageMetadataRegistry, func(obj client.Object) []string {
 			image, ok := obj.(*storagev1alpha1.Image)
 			if !ok {
 				return nil
@@ -375,7 +375,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			Name:      "test-scan-job",
 			Namespace: "default",
 			Annotations: map[string]string{
-				v1alpha1.RegistryAnnotation: string(registryData),
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
 			UID: "scanjob-uid",
 		},
