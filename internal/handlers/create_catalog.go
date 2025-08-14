@@ -176,6 +176,10 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 			}
 
 			if err = h.k8sClient.Create(ctx, &image); err != nil {
+				if apierrors.IsAlreadyExists(err) {
+					h.logger.DebugContext(ctx, "Image already exists, skipping creation", "image", image.Name, "namespace", image.Namespace)
+					continue
+				}
 				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
 			}
 		}
