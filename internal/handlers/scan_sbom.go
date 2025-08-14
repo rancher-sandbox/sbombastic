@@ -16,14 +16,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	vexrepo "github.com/aquasecurity/trivy/pkg/vex/repo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
+	trivyTypes "github.com/aquasecurity/trivy/pkg/types"
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	vulnReport "github.com/rancher/sbombastic/internal/handlers/vulnerabilityreport"
 )
 
 const (
@@ -133,7 +135,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		"--skip-version-check",
 		"--disable-telemetry",
 		"--cache-dir", h.workDir,
-		"--format", "sarif",
+		"--format", "json",
 		// Use the public ECR repository to bypass GitHub's rate limits.
 		// Refer to https://github.com/orgs/community/discussions/139074 for details.
 		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
@@ -195,6 +197,17 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		return fmt.Errorf("failed to read SBOM output: %w", err)
 	}
 
+	reportOrig := trivyTypes.Report{}
+	err = json.Unmarshal(reportBytes, &reportOrig)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal report: %w", err)
+	}
+
+	results, err := vulnReport.NewFromTrivyResults(reportOrig)
+	if err != nil {
+		return fmt.Errorf("failed to convert from trivy results: %w", err)
+	}
+
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      sbom.Name,
@@ -212,9 +225,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 			api.LabelPartOfKey:          api.LabelPartOfValue,
 		}
 
-		vulnerabilityReport.Spec = storagev1alpha1.VulnerabilityReportSpec{
-			ImageMetadata: sbom.GetImageMetadata(),
-			SARIF:         runtime.RawExtension{Raw: reportBytes},
+		vulnerabilityReport.Spec.ImageMetadata = sbom.GetImageMetadata()
+		vulnerabilityReport.Spec.Report = storagev1alpha1.Report{
+			Results: results,
 		}
 		return nil
 	})
