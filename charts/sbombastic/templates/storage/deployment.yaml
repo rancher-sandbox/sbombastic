@@ -24,6 +24,19 @@ spec:
           image: '{{ template "system_default_registry" . }}{{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag }}'
           securityContext:
             {{ include "sbombastic.securityContext" . | nindent 12 }}
+          env:
+            - name: DATABASE_SSLMODE
+              {{- if .Values.storage.database.enableBuiltInCnpg }}
+              value: {{ .Values.storage.database.cnpg.tls.sslmode }}
+              {{- else }}
+              value: {{ .Values.storage.database.externalPostgres.tls.sslmode }}
+              {{- end }}
+            - name: DATABASE_TLS_MODE
+               {{- if .Values.storage.database.enableBuiltInCnpg }}
+              value: mTLS
+              {{- else }}
+              value: {{ .Values.storage.database.externalPostgres.tls.mode }}
+              {{- end }}
           args:
             - --cert-dir=/certs
           {{- if .Values.storage.logLevel }}
@@ -35,9 +48,61 @@ spec:
               mountPath: /data/sqlite/
             - name: cert-volume
               mountPath: /certs
+            - name: database-credential-volume
+              mountPath: /database/credential
+            {{- if .Values.storage.database.enableBuiltInCnpg }}
+            - name: database-client-cert-volume
+              mountPath: /database/client-cert
+            - name: database-server-ca-volume
+              mountPath: /database/server-ca
+            {{- else if eq .Values.storage.database.externalPostgres.tls.mode "mTLS" }}
+            - name: database-client-cert-volume
+              mountPath: /database/client-cert
+            - name: database-server-ca-volume
+              mountPath: /database/server-ca
+            {{- else if eq .Values.storage.database.externalPostgres.tls.mode "TLS" }}
+            - name: database-server-ca-volume
+              mountPath: /database/server-ca
+            {{- end }}
       volumes:
         - name: sqlite-pvc
           persistentVolumeClaim:
             claimName: {{ if .Values.persistence.storageData.existingClaim }}{{ .Values.persistence.storageData.existingClaim }}{{- else }}{{ template "sbombastic.fullname" . }}-storage-data{{- end }}
         - name: cert-volume
           emptyDir: {}
+        {{- if .Values.storage.database.enableBuiltInCnpg }}
+        - name: database-credential-volume
+          secret:
+            secretName: {{ .Values.storage.database.cnpg.credential }}
+            defaultMode: 0444
+        {{- else }}
+        - name: database-credential-volume
+          secret:
+            secretName: {{ .Values.storage.database.externalPostgres.credential }}
+            defaultMode: 0444
+        {{- end }}
+
+        {{- if .Values.storage.database.enableBuiltInCnpg }}
+        - name: database-client-cert-volume
+          secret:
+            secretName: {{ .Values.storage.database.cnpg.tls.clientCert }}
+            defaultMode: 0444
+        - name: database-server-ca-volume
+          secret:
+            secretName: {{ .Values.storage.database.cnpg.tls.serverCA }}
+            defaultMode: 0444
+        {{- else if eq .Values.storage.database.externalPostgres.tls.mode "mTLS" }}
+        - name: database-client-cert-volume
+          secret:
+            secretName: {{ .Values.storage.database.externalPostgres.tls.clientCert }}
+            defaultMode: 0444
+        - name: database-server-ca-volume
+          secret:
+            secretName: {{ .Values.storage.database.externalPostgres.tls.serverCA }}
+            defaultMode: 0444
+        {{- else if eq .Values.storage.database.externalPostgres.tls.mode "TLS" }}
+        - name: database-server-ca-volume
+          secret:
+            secretName: {{ .Values.storage.database.externalPostgres.tls.serverCA }}
+            defaultMode: 0444
+        {{- end }}
