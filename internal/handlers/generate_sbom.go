@@ -19,6 +19,8 @@ import (
 
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers/dockerauth"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
 
@@ -73,8 +75,32 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 			err,
 		)
 	}
-
 	h.logger.DebugContext(ctx, "Image found", "image", image)
+
+	scanJob := &v1alpha1.ScanJob{}
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
+		Name:      generateSBOMMessage.ScanJob.Name,
+		Namespace: generateSBOMMessage.ScanJob.Namespace,
+	}, scanJob)
+	if err != nil {
+		return fmt.Errorf(
+			"cannot get ScanJob %s/%s: %w",
+			generateSBOMMessage.ScanJob.Name,
+			generateSBOMMessage.ScanJob.Namespace,
+			err,
+		)
+	}
+	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
+
+	// Retrieve the registry from the scan job annotations.
+	registryData, ok := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
+	if !ok {
+		return fmt.Errorf("scan job %s/%s does not have a registry annotation", scanJob.Namespace, scanJob.Name)
+	}
+	registry := &v1alpha1.Registry{}
+	if err = json.Unmarshal([]byte(registryData), registry); err != nil {
+		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
+	}
 
 	sbom := &storagev1alpha1.SBOM{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
@@ -86,7 +112,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
 	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
 		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
-		sbom, err = h.generateSBOM(ctx, image, generateSBOMMessage)
+		sbom, err = h.generateSBOM(ctx, image, registry, generateSBOMMessage)
 		if err != nil {
 			return err
 		}
@@ -116,7 +142,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 }
 
 // generateSBOM creates a new SBOM using Trivy and stores it in a SBOM resource.
-func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1alpha1.Image, message *GenerateSBOMMessage) (*storagev1alpha1.SBOM, error) {
+func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1alpha1.Image, registry *v1alpha1.Registry, message *GenerateSBOMMessage) (*storagev1alpha1.SBOM, error) {
 	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary SBOM file: %w", err)
@@ -129,6 +155,27 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
+
+	// if authSecret value is set, then setup Docker
+	// authentication to get access to the registry
+	if registry.IsPrivate() {
+		var dockerConfig string
+		dockerConfig, err = dockerauth.BuildDockerConfigForRegistry(ctx, h.k8sClient, registry)
+		if err != nil {
+			return nil, fmt.Errorf("cannot setup docker auth for registry %s: %w", registry.Name, err)
+		}
+		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
+		defer func() {
+			if err = os.RemoveAll(dockerConfig); err != nil {
+				h.logger.Error("failed to remove dockerconfig directory", "error", err)
+			}
+			// uset the DOCKER_CONFIG variable so at every run
+			// we start from a clean environment.
+			if err = os.Unsetenv("DOCKER_CONFIG"); err != nil {
+				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
+			}
+		}()
+	}
 
 	app := trivyCommands.NewApp()
 	app.SetArgs([]string{

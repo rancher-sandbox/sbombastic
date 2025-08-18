@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,6 +30,7 @@ import (
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers/dockerauth"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
@@ -60,7 +62,7 @@ func NewCreateCatalogHandler(
 }
 
 // Handle processes the create catalog message and creates Image resources.
-func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit,funlen // We are a bit more tolerant for the handler.
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit,funlen,gocyclo,cyclop // We are a bit more tolerant for the handler.
 	createCatalogMessage := &CreateCatalogMessage{}
 	err := json.Unmarshal(message, createCatalogMessage)
 	if err != nil {
@@ -121,6 +123,26 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return fmt.Errorf("cannot create transport for registry %s: %w", registry.Name, err)
 	}
 	registryClient := h.registryClientFactory(transport)
+	// if authSecret value is set, then setup Docker
+	// authentication to get access to the registry
+	if registry.IsPrivate() {
+		var dockerConfig string
+		dockerConfig, err = dockerauth.BuildDockerConfigForRegistry(ctx, h.k8sClient, registry)
+		if err != nil {
+			return fmt.Errorf("cannot setup docker auth: %w", err)
+		}
+		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
+		defer func() {
+			if err = os.RemoveAll(dockerConfig); err != nil {
+				h.logger.Error("failed to remove dockerconfig directory", "error", err)
+			}
+			// uset the DOCKER_CONFIG variable so at every run
+			// we start from a clean environment.
+			if err = os.Unsetenv("DOCKER_CONFIG"); err != nil {
+				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
+			}
+		}()
+	}
 
 	repositories, err := h.discoverRepositories(ctx, registryClient, registry)
 	if err != nil {
