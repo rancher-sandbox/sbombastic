@@ -48,6 +48,9 @@ spec:
                 description: CABundle is the CA bundle to use when connecting to the
                   registry.
                 type: string
+              description:
+                description: Description tells more about the Registry.
+                type: string
               insecure:
                 description: Insecure allows insecure connections to the registry
                   when set to true.
