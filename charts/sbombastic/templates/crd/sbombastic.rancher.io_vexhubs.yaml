@@ -40,6 +40,9 @@ spec:
           spec:
             description: spec defines the desired state of VEXHub
             properties:
+              description:
+                description: Description tells more about the VEX Hub repository
+                type: string
               enabled:
                 description: Enabled tells if the VEX Hub is enabled for processing
                 type: boolean
