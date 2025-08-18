@@ -2,24 +2,38 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 
 	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
+)
+
+const (
+	SecretTypeDockerConfigJSON = "kubernetes.io/dockerconfigjson"
+
+	DockerConfigJSONKey = ".dockerconfigjson"
 )
 
 // GenerateSBOMHandler is responsible for handling SBOM generation requests.
@@ -73,8 +87,49 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 			err,
 		)
 	}
-
 	h.logger.DebugContext(ctx, "Image found", "image", image)
+
+	scanJob := &v1alpha1.ScanJob{}
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
+		Name:      generateSBOMMessage.ScanJob.Name,
+		Namespace: generateSBOMMessage.ScanJob.Namespace,
+	}, scanJob)
+	if err != nil {
+		return fmt.Errorf(
+			"cannot get ScanJob %s/%s: %w",
+			generateSBOMMessage.ScanJob.Name,
+			generateSBOMMessage.ScanJob.Namespace,
+			err,
+		)
+	}
+	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
+
+	// Retrieve the registry from the scan job annotations.
+	registryData, ok := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
+	if !ok {
+		return fmt.Errorf("scan job %s/%s does not have a registry annotation", scanJob.Namespace, scanJob.Name)
+	}
+	registry := &v1alpha1.Registry{}
+	if err = json.Unmarshal([]byte(registryData), registry); err != nil {
+		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
+	}
+	// if authsecret is preset then setup Docker authentication
+	if registry.Spec.AuthSecret != "" {
+		dockerConfig, err := h.setupDockerAuth(ctx, registry)
+		if err != nil {
+			return fmt.Errorf("cannot setup docker auth: %w", err)
+		}
+		err = os.Setenv("DOCKER_CONFIG", dockerConfig)
+		if err != nil {
+			return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
+		}
+		defer func() {
+			err := os.Unsetenv("DOCKER_CONFIG")
+			if err != nil {
+				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
+			}
+		}()
+	}
 
 	sbom := &storagev1alpha1.SBOM{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
@@ -181,4 +236,56 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 	}
 
 	return sbom, nil
+}
+
+// createDockerConfigJSON creates the config.json file used by docker / trivy to
+// get credentials to connect to the registry.
+func createDockerConfigJSON(serverAddress, username, password string) (string, error) {
+	dockerConfig, err := os.MkdirTemp("/tmp", "dockerconfig-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary dockerconfig dir: %w", err)
+	}
+	cf, err := config.Load(dockerConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to load docker config: %w", err)
+	}
+	creds := cf.GetCredentialsStore(serverAddress)
+	if serverAddress == name.DefaultRegistry {
+		serverAddress = authn.DefaultAuthKey
+	}
+	if err := creds.Store(types.AuthConfig{
+		ServerAddress: serverAddress,
+		Username:      username,
+		Password:      password,
+	}); err != nil {
+		return "", fmt.Errorf("failed to store credentials: %w", err)
+	}
+
+	if err := cf.Save(); err != nil {
+		return "", fmt.Errorf("failed to save docker config: %w", err)
+	}
+	return dockerConfig, nil
+}
+
+// setupDockerAuth retrieve the Secret listed in the Registry resource
+// and creates the dockerconfig file.
+func (h *GenerateSBOMHandler) setupDockerAuth(ctx context.Context, registry *v1alpha1.Registry) (string, error) {
+	authSecret := &v1.Secret{}
+	h.k8sClient.Get(ctx, client.ObjectKey{
+		Name:      registry.Spec.AuthSecret,
+		Namespace: registry.Namespace,
+	}, authSecret)
+
+	secretData := authSecret.Data[DockerConfigJSONKey]
+	authData, err := base64.StdEncoding.DecodeString(string(secretData))
+	if err != nil {
+		return "", fmt.Errorf("cannot decode data from Secret %s: %w", authSecret.Name, err)
+	}
+	credentials := strings.Split(string(authData), ":")
+	fmt.Println(credentials)
+	if len(credentials) != 2 {
+		return "", fmt.Errorf("cannot get credentials from Secret %s: not enough values", authSecret.Name)
+	}
+	username, password := credentials[0], credentials[1]
+	return createDockerConfigJSON(registry.Spec.URI, username, password)
 }

@@ -9,18 +9,17 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-
-	"github.com/spdx/tools-golang/spdx"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	"github.com/spdx/tools-golang/spdx"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	_ "modernc.org/sqlite"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
