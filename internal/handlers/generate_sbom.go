@@ -114,25 +114,6 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	if err = json.Unmarshal([]byte(registryData), registry); err != nil {
 		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
 	}
-	// if authsecret is preset then setup Docker authentication
-	if registry.Spec.AuthSecret != "" {
-		h.logger.DebugContext(ctx, "Registry with authSecret found", "registry", registry.Spec.AuthSecret)
-		dockerConfig, err := h.setupDockerAuth(ctx, registry)
-		if err != nil {
-			return fmt.Errorf("cannot setup docker auth: %w", err)
-		}
-		h.logger.DebugContext(ctx, "Dockerconfig ready", "dockerconfig", dockerConfig)
-		err = os.Setenv("DOCKER_CONFIG", dockerConfig)
-		if err != nil {
-			return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
-		}
-		defer func() {
-			err := os.Unsetenv("DOCKER_CONFIG")
-			if err != nil {
-				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
-			}
-		}()
-	}
 
 	sbom := &storagev1alpha1.SBOM{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
@@ -144,7 +125,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
 	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
 		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
-		sbom, err = h.generateSBOM(ctx, image, generateSBOMMessage)
+		sbom, err = h.generateSBOM(ctx, image, registry, generateSBOMMessage)
 		if err != nil {
 			return err
 		}
@@ -174,7 +155,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 }
 
 // generateSBOM creates a new SBOM using Trivy and stores it in a SBOM resource.
-func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1alpha1.Image, message *GenerateSBOMMessage) (*storagev1alpha1.SBOM, error) {
+func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1alpha1.Image, registry *v1alpha1.Registry, message *GenerateSBOMMessage) (*storagev1alpha1.SBOM, error) {
 	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary SBOM file: %w", err)
@@ -187,6 +168,20 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 			h.logger.Error("failed to remove temporary SBOM file", "error", err)
 		}
 	}()
+
+	// if authsecret is set, then setup Docker authentication
+	// to get access to the registry
+	if registry.Spec.AuthSecret != "" {
+		err := h.setupDockerAuthForRegistry(ctx, registry)
+		if err != nil {
+			return nil, fmt.Errorf("cannot setup docker auth: %w", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("DOCKER_CONFIG"); err != nil {
+				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
+			}
+		}()
+	}
 
 	app := trivyCommands.NewApp()
 	app.SetArgs([]string{
@@ -274,9 +269,9 @@ func createDockerConfigJSON(serverAddress, data string) (string, error) {
 	return dockerConfig, nil
 }
 
-// setupDockerAuth retrieve the Secret listed in the Registry resource
+// setupDockerAuthForRegistry retrieve the Secret listed in the Registry resource
 // and creates the dockerconfig file.
-func (h *GenerateSBOMHandler) setupDockerAuth(ctx context.Context, registry *v1alpha1.Registry) (string, error) {
+func (h *GenerateSBOMHandler) setupDockerAuthForRegistry(ctx context.Context, registry *v1alpha1.Registry) error {
 	authSecret := &corev1.Secret{}
 	key := k8sTypes.NamespacedName{
 		Name:      registry.Spec.AuthSecret,
@@ -284,11 +279,18 @@ func (h *GenerateSBOMHandler) setupDockerAuth(ctx context.Context, registry *v1a
 	}
 	err := h.k8sClient.Get(ctx, key, authSecret)
 	if err != nil {
-		return "", fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
+		return fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
 	}
-	h.logger.DebugContext(ctx, "Secret found", "secret", registry.Spec.AuthSecret)
 
 	secretData := authSecret.Data[DockerConfigJSONKey]
-	h.logger.DebugContext(ctx, "SecretData found in Secret", "data", string(secretData))
-	return createDockerConfigJSON(registry.Spec.URI, string(secretData))
+	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, string(secretData))
+	if err != nil {
+		return fmt.Errorf("cannot create dockerconfig file: %w", err)
+	}
+
+	err = os.Setenv("DOCKER_CONFIG", dockerConfig)
+	if err != nil {
+		return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
+	}
+	return nil
 }
