@@ -20,6 +20,7 @@ import (
 	"github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func main() { //nolint:funlen // This function is intentionally long to keep the main logic together.
@@ -71,6 +72,10 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 	}
 	if err = storagev1alpha1.AddToScheme(scheme); err != nil {
 		logger.Error("Error adding storagev1alpha1 to scheme", "error", err)
+		os.Exit(1)
+	}
+	if err = clientgoscheme.AddToScheme(scheme); err != nil {
+		logger.Error("Error adding client-go to scheme", "error", err)
 		os.Exit(1)
 	}
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})

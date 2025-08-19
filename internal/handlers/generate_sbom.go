@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"path"
 	"strings"
 
 	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
@@ -15,7 +15,7 @@ import (
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +28,7 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	"github.com/rancher/sbombastic/internal/messaging"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -115,10 +116,12 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	}
 	// if authsecret is preset then setup Docker authentication
 	if registry.Spec.AuthSecret != "" {
+		h.logger.DebugContext(ctx, "Registry with authSecret found", "registry", registry.Spec.AuthSecret)
 		dockerConfig, err := h.setupDockerAuth(ctx, registry)
 		if err != nil {
 			return fmt.Errorf("cannot setup docker auth: %w", err)
 		}
+		h.logger.DebugContext(ctx, "Dockerconfig ready", "dockerconfig", dockerConfig)
 		err = os.Setenv("DOCKER_CONFIG", dockerConfig)
 		if err != nil {
 			return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
@@ -240,12 +243,8 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 
 // createDockerConfigJSON creates the config.json file used by docker / trivy to
 // get credentials to connect to the registry.
-func createDockerConfigJSON(serverAddress, username, password string) (string, error) {
-	dockerConfig, err := os.MkdirTemp("/tmp", "dockerconfig-")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary dockerconfig dir: %w", err)
-	}
-	cf, err := config.Load(dockerConfig)
+func createDockerConfigJSON(serverAddress, data string) (string, error) {
+	cf, err := config.LoadFromReader(strings.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to load docker config: %w", err)
 	}
@@ -253,14 +252,22 @@ func createDockerConfigJSON(serverAddress, username, password string) (string, e
 	if serverAddress == name.DefaultRegistry {
 		serverAddress = authn.DefaultAuthKey
 	}
+	authConfig, err := creds.Get(serverAddress)
+	if err != nil {
+		return "", fmt.Errorf("failed to get credentials from store: %w", err)
+	}
+	dockerConfig, err := os.MkdirTemp("/tmp", "dockerconfig-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary dockerconfig dir: %w", err)
+	}
+	cf.Filename = path.Join(dockerConfig, "config.json")
 	if err := creds.Store(types.AuthConfig{
 		ServerAddress: serverAddress,
-		Username:      username,
-		Password:      password,
+		Username:      authConfig.Username,
+		Password:      authConfig.Password,
 	}); err != nil {
 		return "", fmt.Errorf("failed to store credentials: %w", err)
 	}
-
 	if err := cf.Save(); err != nil {
 		return "", fmt.Errorf("failed to save docker config: %w", err)
 	}
@@ -270,22 +277,18 @@ func createDockerConfigJSON(serverAddress, username, password string) (string, e
 // setupDockerAuth retrieve the Secret listed in the Registry resource
 // and creates the dockerconfig file.
 func (h *GenerateSBOMHandler) setupDockerAuth(ctx context.Context, registry *v1alpha1.Registry) (string, error) {
-	authSecret := &v1.Secret{}
-	h.k8sClient.Get(ctx, client.ObjectKey{
+	authSecret := &corev1.Secret{}
+	key := k8sTypes.NamespacedName{
 		Name:      registry.Spec.AuthSecret,
 		Namespace: registry.Namespace,
-	}, authSecret)
+	}
+	err := h.k8sClient.Get(ctx, key, authSecret)
+	if err != nil {
+		return "", fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
+	}
+	h.logger.DebugContext(ctx, "Secret found", "secret", registry.Spec.AuthSecret)
 
 	secretData := authSecret.Data[DockerConfigJSONKey]
-	authData, err := base64.StdEncoding.DecodeString(string(secretData))
-	if err != nil {
-		return "", fmt.Errorf("cannot decode data from Secret %s: %w", authSecret.Name, err)
-	}
-	credentials := strings.Split(string(authData), ":")
-	fmt.Println(credentials)
-	if len(credentials) != 2 {
-		return "", fmt.Errorf("cannot get credentials from Secret %s: not enough values", authSecret.Name)
-	}
-	username, password := credentials[0], credentials[1]
-	return createDockerConfigJSON(registry.Spec.URI, username, password)
+	h.logger.DebugContext(ctx, "SecretData found in Secret", "data", string(secretData))
+	return createDockerConfigJSON(registry.Spec.URI, string(secretData))
 }
