@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/nats-io/nats-server/v2 v2.11.7
-	github.com/nats-io/nats.go v1.44.0
+	github.com/nats-io/nats.go v1.45.0
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
 	github.com/spdx/tools-golang v0.5.5
