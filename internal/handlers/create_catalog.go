@@ -258,7 +258,6 @@ func (h *CreateCatalogHandler) discoverRepositories(
 	registryClient registryclient.Client,
 	registry *v1alpha1.Registry,
 ) ([]string, error) {
-	h.logger.DebugContext(ctx, "Discovering repositories", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 	reg, err := name.NewRegistry(registry.Spec.URI)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse registry %s %s: %w", registry.Name, registry.Namespace, err)

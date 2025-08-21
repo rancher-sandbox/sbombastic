@@ -18,8 +18,13 @@ import (
 )
 
 const (
+	// SecretTypeDockerConfigJSON contains a dockercfg file that follows the
+	// same format rules as ~/.docker/config.json
+	// https://github.com/kubernetes/kubernetes/blob/091f87c10bc3532041b77a783a5f832de5506dc8/pkg/apis/core/types.go#L6545
 	SecretTypeDockerConfigJSON = "kubernetes.io/dockerconfigjson"
-
+	// DockerConfigJSONKey is the key of the required data for
+	// SecretTypeDockerConfigJson secrets
+	// https://github.com/kubernetes/kubernetes/blob/091f87c10bc3532041b77a783a5f832de5506dc8/pkg/apis/core/types.go#L6547
 	DockerConfigJSONKey = ".dockerconfigjson"
 )
 
