@@ -47,6 +47,10 @@ type Registry struct {
 	Status RegistryStatus `json:"status,omitempty"`
 }
 
+func (r *Registry) IsPrivateRegistry() bool {
+	return r.Spec.AuthSecret != ""
+}
+
 // +kubebuilder:object:root=true
 
 // RegistryList contains a list of Registry

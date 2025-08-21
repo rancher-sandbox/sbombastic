@@ -7,34 +7,21 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
-	"strings"
 
 	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/types"
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers/dockerauth"
 	"github.com/rancher/sbombastic/internal/messaging"
-	k8sTypes "k8s.io/apimachinery/pkg/types"
-)
-
-const (
-	SecretTypeDockerConfigJSON = "kubernetes.io/dockerconfigjson"
-
-	DockerConfigJSONKey = ".dockerconfigjson"
 )
 
 // GenerateSBOMHandler is responsible for handling SBOM generation requests.
@@ -169,14 +156,17 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 		}
 	}()
 
-	// if authsecret is set, then setup Docker authentication
-	// to get access to the registry
-	if registry.Spec.AuthSecret != "" {
-		err := h.setupDockerAuthForRegistry(ctx, registry)
+	// if authSecret value is set, then setup Docker
+	// authentication to get access to the registry
+	if registry.IsPrivateRegistry() {
+		err := dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
 		if err != nil {
 			return nil, fmt.Errorf("cannot setup docker auth: %w", err)
 		}
+		h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 		defer func() {
+			// uset the DOCKER_CONFIG variable so at every run
+			// we start from a clean environment.
 			if err := os.Unsetenv("DOCKER_CONFIG"); err != nil {
 				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
 			}
@@ -234,63 +224,4 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 	}
 
 	return sbom, nil
-}
-
-// createDockerConfigJSON creates the config.json file used by docker / trivy to
-// get credentials to connect to the registry.
-func createDockerConfigJSON(serverAddress, data string) (string, error) {
-	cf, err := config.LoadFromReader(strings.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("failed to load docker config: %w", err)
-	}
-	creds := cf.GetCredentialsStore(serverAddress)
-	if serverAddress == name.DefaultRegistry {
-		serverAddress = authn.DefaultAuthKey
-	}
-	authConfig, err := creds.Get(serverAddress)
-	if err != nil {
-		return "", fmt.Errorf("failed to get credentials from store: %w", err)
-	}
-	dockerConfig, err := os.MkdirTemp("/tmp", "dockerconfig-*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary dockerconfig dir: %w", err)
-	}
-	cf.Filename = path.Join(dockerConfig, "config.json")
-	if err := creds.Store(types.AuthConfig{
-		ServerAddress: serverAddress,
-		Username:      authConfig.Username,
-		Password:      authConfig.Password,
-	}); err != nil {
-		return "", fmt.Errorf("failed to store credentials: %w", err)
-	}
-	if err := cf.Save(); err != nil {
-		return "", fmt.Errorf("failed to save docker config: %w", err)
-	}
-	return dockerConfig, nil
-}
-
-// setupDockerAuthForRegistry retrieve the Secret listed in the Registry resource
-// and creates the dockerconfig file.
-func (h *GenerateSBOMHandler) setupDockerAuthForRegistry(ctx context.Context, registry *v1alpha1.Registry) error {
-	authSecret := &corev1.Secret{}
-	key := k8sTypes.NamespacedName{
-		Name:      registry.Spec.AuthSecret,
-		Namespace: registry.Namespace,
-	}
-	err := h.k8sClient.Get(ctx, key, authSecret)
-	if err != nil {
-		return fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
-	}
-
-	secretData := authSecret.Data[DockerConfigJSONKey]
-	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, string(secretData))
-	if err != nil {
-		return fmt.Errorf("cannot create dockerconfig file: %w", err)
-	}
-
-	err = os.Setenv("DOCKER_CONFIG", dockerConfig)
-	if err != nil {
-		return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
-	}
-	return nil
 }

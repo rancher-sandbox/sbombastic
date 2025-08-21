@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,6 +30,7 @@ import (
 	"github.com/rancher/sbombastic/api"
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/handlers/dockerauth"
 	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
 	"github.com/rancher/sbombastic/internal/messaging"
 )
@@ -121,6 +123,23 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return fmt.Errorf("cannot create transport for registry %s: %w", registry.Name, err)
 	}
 	registryClient := h.registryClientFactory(transport)
+	// if authSecret value is set, then setup Docker
+	// authentication to get access to the registry
+	if registry.IsPrivateRegistry() {
+		err := dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
+		if err != nil {
+			return fmt.Errorf("cannot setup docker auth: %w", err)
+		}
+		h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
+		defer func() {
+			// uset the DOCKER_CONFIG variable so at every run
+			// we start from a clean environment.
+			if err := os.Unsetenv("DOCKER_CONFIG"); err != nil {
+				h.logger.Error("failed to unset DOCKER_CONFIG variable", "error", err)
+			}
+		}()
+	}
+	h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 
 	repositories, err := h.discoverRepositories(ctx, registryClient, registry)
 	if err != nil {
@@ -240,6 +259,7 @@ func (h *CreateCatalogHandler) discoverRepositories(
 	registryClient registryclient.Client,
 	registry *v1alpha1.Registry,
 ) ([]string, error) {
+	h.logger.DebugContext(ctx, "Discovering repositories", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 	reg, err := name.NewRegistry(registry.Spec.URI)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse registry %s %s: %w", registry.Name, registry.Namespace, err)
