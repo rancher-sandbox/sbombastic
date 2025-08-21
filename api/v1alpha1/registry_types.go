@@ -47,7 +47,8 @@ type Registry struct {
 	Status RegistryStatus `json:"status,omitempty"`
 }
 
-func (r *Registry) IsPrivateRegistry() bool {
+// IsPrivate tells if the registry requires authentication
+func (r *Registry) IsPrivate() bool {
 	return r.Spec.AuthSecret != ""
 }
 
