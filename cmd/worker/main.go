@@ -75,7 +75,7 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 		os.Exit(1)
 	}
 	if err = k8sscheme.AddToScheme(scheme); err != nil {
-		logger.Error("Error adding client-go to scheme", "error", err)
+		logger.Error("Error adding kubernetes to scheme", "error", err)
 		os.Exit(1)
 	}
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme})
