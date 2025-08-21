@@ -1,11 +1,11 @@
 package dockerauth
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/types"
@@ -37,7 +37,7 @@ func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, re
 	}
 
 	secretData := authSecret.Data[DockerConfigJSONKey]
-	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, string(secretData))
+	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, secretData)
 	if err != nil {
 		return fmt.Errorf("cannot create dockerconfig file: %w", err)
 	}
@@ -51,8 +51,8 @@ func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, re
 
 // createDockerConfigJSON creates the config.json file used by docker / trivy to
 // get credentials to connect to the registry.
-func createDockerConfigJSON(serverAddress, data string) (string, error) {
-	cf, err := config.LoadFromReader(strings.NewReader(data))
+func createDockerConfigJSON(serverAddress string, data []byte) (string, error) {
+	cf, err := config.LoadFromReader(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to load docker config: %w", err)
 	}

@@ -163,7 +163,7 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 		if err != nil {
 			return nil, fmt.Errorf("cannot setup docker auth: %w", err)
 		}
-		h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
+		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 		defer func() {
 			// uset the DOCKER_CONFIG variable so at every run
 			// we start from a clean environment.

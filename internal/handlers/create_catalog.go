@@ -130,7 +130,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		if err != nil {
 			return fmt.Errorf("cannot setup docker auth: %w", err)
 		}
-		h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
+		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 		defer func() {
 			// uset the DOCKER_CONFIG variable so at every run
 			// we start from a clean environment.
@@ -139,7 +139,6 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 			}
 		}()
 	}
-	h.logger.DebugContext(ctx, "Setup registry authentication with dockerconfig file", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 
 	repositories, err := h.discoverRepositories(ctx, registryClient, registry)
 	if err != nil {
