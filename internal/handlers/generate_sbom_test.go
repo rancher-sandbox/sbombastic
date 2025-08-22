@@ -19,8 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/rancher/sbombastic/api/v1alpha1"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	corev1 "k8s.io/api/core/v1"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestGenerateSBOMHandler_Handle(t *testing.T) {
@@ -89,12 +92,39 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		},
 	}
 
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI: "test.io",
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
 	scheme := scheme.Scheme
-	err := storagev1alpha1.AddToScheme(scheme)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithRuntimeObjects(image).
+		WithRuntimeObjects(image, registry, scanJob).
 		Build()
 
 	spdxData, err := os.ReadFile(expectedSPDXJSON)
@@ -107,6 +137,12 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	publisher := messagingMocks.NewMockPublisher(t)
 
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      "test-scanjob",
+				Namespace: "default",
+			},
+		},
 		SBOM: ObjectRef{
 			Name:      image.Name,
 			Namespace: image.Namespace,
@@ -127,6 +163,12 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		Image: ObjectRef{
 			Name:      image.Name,
 			Namespace: image.Namespace,
+		},
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -178,6 +220,31 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 		},
 	}
 
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI: "test.io",
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
 	existingSBOM := &storagev1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-image",
@@ -190,11 +257,13 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	}
 
 	scheme := scheme.Scheme
-	err := storagev1alpha1.AddToScheme(scheme)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithRuntimeObjects(image, existingSBOM).
+		WithRuntimeObjects(image, registry, scanJob, existingSBOM).
 		Build()
 
 	publisher := messagingMocks.NewMockPublisher(t)
@@ -202,7 +271,8 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name: "test-scanjob",
+				Name:      "test-scanjob",
+				Namespace: "default",
 			},
 		},
 		SBOM: ObjectRef{
@@ -224,7 +294,127 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name: "test-scanjob",
+				Name:      "test-scanjob",
+				Namespace: "default",
+			},
+		},
+		Image: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
+		},
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
+}
+
+func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
+	image := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-image",
+			Namespace: "default",
+			UID:       "image-uid",
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+				Repository:  "golang",
+				Tag:         "1.12-alpine",
+				Platform:    "linux/amd64",
+				Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
+			},
+		},
+	}
+
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:        "test.io",
+			AuthSecret: "test-io-secret",
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-io-secret",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			// equivalent for:
+			//	{
+			//		"auths": {
+			//			"test.io": {
+			//				"auth": "dXNlcjpwYXNzd29yZA=="
+			//			}
+			//		}
+			//	}
+			corev1.DockerConfigJsonKey: []byte("{\"auths\":{\"test.io\":{\"auth\":\"dXNlcjpwYXNzd29yZA==\"}}}"),
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+	}
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
+	scheme := scheme.Scheme
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = k8sscheme.AddToScheme(scheme)
+	require.NoError(t, err)
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(image, registry, secret, scanJob).
+		Build()
+
+	publisher := messagingMocks.NewMockPublisher(t)
+
+	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      "test-scanjob",
+				Namespace: "default",
+			},
+		},
+		SBOM: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
+		},
+	})
+	require.NoError(t, err)
+
+	publisher.On("Publish",
+		mock.Anything,
+		ScanSBOMSubject,
+		"", // TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
+		expectedScanMessage,
+	).Return(nil).Once()
+
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+
+	message, err := json.Marshal(&GenerateSBOMMessage{
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      "test-scanjob",
+				Namespace: "default",
 			},
 		},
 		Image: ObjectRef{

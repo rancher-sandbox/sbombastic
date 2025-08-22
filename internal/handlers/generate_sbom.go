@@ -161,7 +161,7 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 	if registry.IsPrivate() {
 		err = dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
 		if err != nil {
-			return nil, fmt.Errorf("cannot setup docker auth: %w", err)
+			return nil, fmt.Errorf("cannot setup docker auth for registry %s: %w", registry.Name, err)
 		}
 		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 		defer func() {
