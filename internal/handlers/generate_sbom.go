@@ -159,7 +159,7 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 	// if authSecret value is set, then setup Docker
 	// authentication to get access to the registry
 	if registry.IsPrivate() {
-		err := dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
+		err = dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
 		if err != nil {
 			return nil, fmt.Errorf("cannot setup docker auth: %w", err)
 		}
