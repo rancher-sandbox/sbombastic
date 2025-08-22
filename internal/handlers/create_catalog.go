@@ -126,7 +126,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	// if authSecret value is set, then setup Docker
 	// authentication to get access to the registry
 	if registry.IsPrivate() {
-		err := dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
+		err = dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
 		if err != nil {
 			return fmt.Errorf("cannot setup docker auth: %w", err)
 		}

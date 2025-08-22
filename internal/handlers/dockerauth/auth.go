@@ -18,14 +18,14 @@ import (
 )
 
 const (
-	// SecretTypeDockerConfigJSON contains a dockercfg file that follows the
+	// secretTypeDockerConfigJSON contains a dockercfg file that follows the
 	// same format rules as ~/.docker/config.json
 	// https://github.com/kubernetes/kubernetes/blob/091f87c10bc3532041b77a783a5f832de5506dc8/pkg/apis/core/types.go#L6545
-	SecretTypeDockerConfigJSON = "kubernetes.io/dockerconfigjson"
-	// DockerConfigJSONKey is the key of the required data for
+	secretTypeDockerConfigJSON = "kubernetes.io/dockerconfigjson"
+	// dockerConfigJSONKey is the key of the required data for
 	// SecretTypeDockerConfigJson secrets
 	// https://github.com/kubernetes/kubernetes/blob/091f87c10bc3532041b77a783a5f832de5506dc8/pkg/apis/core/types.go#L6547
-	DockerConfigJSONKey = ".dockerconfigjson"
+	dockerConfigJSONKey = ".dockerconfigjson"
 )
 
 // SetupDockerAuthForRegistry retrieve the Secret listed in the Registry resource
@@ -41,7 +41,7 @@ func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, re
 		return fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
 	}
 
-	secretData := authSecret.Data[DockerConfigJSONKey]
+	secretData := authSecret.Data[dockerConfigJSONKey]
 	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, secretData)
 	if err != nil {
 		return fmt.Errorf("cannot create dockerconfig file: %w", err)
