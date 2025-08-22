@@ -13,7 +13,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	k8sTypes "k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,7 +32,7 @@ const (
 // and creates the dockerconfig file.
 func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, registry *v1alpha1.Registry) error {
 	authSecret := &corev1.Secret{}
-	err := k8sClient.Get(ctx, k8sTypes.NamespacedName{
+	err := k8sClient.Get(ctx, k8stypes.NamespacedName{
 		Name:      registry.Spec.AuthSecret,
 		Namespace: registry.Namespace,
 	}, authSecret)
