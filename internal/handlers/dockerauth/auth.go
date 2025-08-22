@@ -32,11 +32,10 @@ const (
 // and creates the dockerconfig file.
 func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, registry *v1alpha1.Registry) error {
 	authSecret := &corev1.Secret{}
-	key := k8sTypes.NamespacedName{
+	err := k8sClient.Get(ctx, k8sTypes.NamespacedName{
 		Name:      registry.Spec.AuthSecret,
 		Namespace: registry.Namespace,
-	}
-	err := k8sClient.Get(ctx, key, authSecret)
+	}, authSecret)
 	if err != nil {
 		return fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
 	}
