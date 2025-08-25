@@ -47,6 +47,11 @@ type Registry struct {
 	Status RegistryStatus `json:"status,omitempty"`
 }
 
+// IsPrivate tells if the registry requires authentication
+func (r *Registry) IsPrivate() bool {
+	return r.Spec.AuthSecret != ""
+}
+
 // +kubebuilder:object:root=true
 
 // RegistryList contains a list of Registry
