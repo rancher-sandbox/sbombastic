@@ -5,6 +5,9 @@ update_settings(k8s_upsert_timeout_secs=300)
 
 # Setup a development registry so we can push images to it
 # and use them to test the scanner.
+# To setup a private registry use this configuration instead,
+# and use the examples file under examples/private-registry.
+# k8s_yaml("./hack/private-registry.yaml")
 k8s_yaml("./hack/registry.yaml")
 
 k8s_resource(
