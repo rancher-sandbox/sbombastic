@@ -148,9 +148,6 @@ data:
   token: ZXlKaGaU9pSktWMVFpT2c9PQ==
 ```
 
-To ensure the validity of the input, we are going to provide a 
-`ValidatingWebhook` to ensure that the referenced `Secret` has the right form.
-
 ## AirGap
 
 AirGap is available by default for this feature, since the only requirement is
