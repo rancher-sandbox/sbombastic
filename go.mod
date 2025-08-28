@@ -19,7 +19,7 @@ require (
 	github.com/onsi/gomega v1.38.0
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v3 v3.0.4
 	k8s.io/apimachinery v0.33.3
 	k8s.io/apiserver v0.33.3
