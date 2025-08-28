@@ -10,6 +10,8 @@ type VEXHubSpec struct {
 	URL string `json:"url,omitempty"`
 	// Enabled tells if the VEX Hub is enabled for processing
 	Enabled bool `json:"enabled,omitempty"`
+	// Description tells more about the VEX Hub repository
+	Description string `json:"description,omitempty"`
 }
 
 // VEXHubStatus defines the observed state of VEXHub.
