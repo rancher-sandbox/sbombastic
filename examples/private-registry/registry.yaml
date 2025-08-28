@@ -1,0 +1,9 @@
+apiVersion: sbombastic.rancher.io/v1alpha1
+kind: Registry
+metadata:
+  name: my-first-registry
+  namespace: default
+spec:
+  uri: dev-registry.default.svc.cluster.local:5000
+  scanInterval: 1h
+  authSecret: my-auth-secret
