@@ -101,7 +101,7 @@ func pullImage(ctx context.Context, ref string) error {
 		return fmt.Errorf("failed to push image %s: %w", ref, err)
 	}
 
-	_, err = io.ReadAll(pullOutput)
+	_, err = io.Copy(io.Discard, pullOutput)
 	if err != nil {
 		return fmt.Errorf("failed to read output: %w", err)
 	}
