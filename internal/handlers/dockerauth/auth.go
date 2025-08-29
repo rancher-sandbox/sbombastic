@@ -60,7 +60,7 @@ func createDockerConfigJSON(serverAddress string, data []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get credentials from store: %w", err)
 	}
-	dockerConfig, err := os.MkdirTemp("/tmp", "dockerconfig-*")
+	dockerConfig, err := os.MkdirTemp("", "dockerconfig-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary dockerconfig dir: %w", err)
 	}
