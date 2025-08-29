@@ -19,30 +19,30 @@ import (
 
 // SetupDockerAuthForRegistry retrieve the Secret listed in the Registry resource
 // and creates the dockerconfig file.
-func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, registry *v1alpha1.Registry) error {
+func SetupDockerAuthForRegistry(ctx context.Context, k8sClient client.Client, registry *v1alpha1.Registry) (string, error) {
 	authSecret := &corev1.Secret{}
 	err := k8sClient.Get(ctx, k8stypes.NamespacedName{
 		Name:      registry.Spec.AuthSecret,
 		Namespace: registry.Namespace,
 	}, authSecret)
 	if err != nil {
-		return fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
+		return "", fmt.Errorf("cannot get Secret %s: %w", registry.Spec.AuthSecret, err)
 	}
 
 	if authSecret.Type != corev1.SecretTypeDockerConfigJson {
-		return fmt.Errorf("secret is not of type %s", corev1.SecretTypeDockerConfigJson)
+		return "", fmt.Errorf("secret is not of type %s", corev1.SecretTypeDockerConfigJson)
 	}
 	secretData := authSecret.Data[corev1.DockerConfigJsonKey]
 	dockerConfig, err := createDockerConfigJSON(registry.Spec.URI, secretData)
 	if err != nil {
-		return fmt.Errorf("cannot create dockerconfig file: %w", err)
+		return "", fmt.Errorf("cannot create dockerconfig file: %w", err)
 	}
 
 	err = os.Setenv("DOCKER_CONFIG", dockerConfig)
 	if err != nil {
-		return fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
+		return "", fmt.Errorf("cannot set DOCKER_CONFIG env: %w", err)
 	}
-	return nil
+	return dockerConfig, nil
 }
 
 // createDockerConfigJSON creates the config.json file used by docker / trivy to

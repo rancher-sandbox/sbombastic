@@ -126,12 +126,16 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	// if authSecret value is set, then setup Docker
 	// authentication to get access to the registry
 	if registry.IsPrivate() {
-		err = dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
+		var dockerConfig string
+		dockerConfig, err = dockerauth.SetupDockerAuthForRegistry(ctx, h.k8sClient, registry)
 		if err != nil {
 			return fmt.Errorf("cannot setup docker auth: %w", err)
 		}
 		h.logger.DebugContext(ctx, "Setup registry authentication", "dockerconfig", os.Getenv("DOCKER_CONFIG"))
 		defer func() {
+			if err = os.RemoveAll(dockerConfig); err != nil {
+				h.logger.Error("failed to remove dockerconfig directory", "error", err)
+			}
 			// uset the DOCKER_CONFIG variable so at every run
 			// we start from a clean environment.
 			if err = os.Unsetenv("DOCKER_CONFIG"); err != nil {
