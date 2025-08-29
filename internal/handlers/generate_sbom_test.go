@@ -352,14 +352,14 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 		},
 		Data: map[string][]byte{
 			// dXNlcjpwYXNzd29yZA== -> user:password
-			corev1.DockerConfigJsonKey: []byte(fmt.Sprintf(`
-			{
-			    "auths": {
-				    "%s":{
-					    "auth": "dXNlcjpwYXNzd29yZA=="
+			corev1.DockerConfigJsonKey: fmt.Appendf([]byte{},
+				`{
+			    	"auths": {
+				    	"%s":{
+					    	"auth": "dXNlcjpwYXNzd29yZA=="
+						}
 					}
-				}
-			}"`, suite.registryURL)),
+				}`, suite.registryURL),
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 	}
