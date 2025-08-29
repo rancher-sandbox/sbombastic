@@ -5,10 +5,13 @@ update_settings(k8s_upsert_timeout_secs=300)
 
 # Setup a development registry so we can push images to it
 # and use them to test the scanner.
-# To setup a private registry use this configuration instead,
-# and use the examples file under examples/private-registry.
-# k8s_yaml("./hack/private-registry.yaml")
-k8s_yaml("./hack/registry.yaml")
+# To setup a private registry, set `use_private_registry: true`
+# on the configuration file.
+use_private_registry = settings.get("use_private_registry", False)
+if use_private_registry:
+    k8s_yaml("./hack/private-registry.yaml")
+else:
+    k8s_yaml("./hack/registry.yaml")
 
 k8s_resource(
     "dev-registry",
