@@ -60,3 +60,7 @@ spec:
 ```
 
 This will allow SBOMbastic to scan for images from private registries.
+
+**Please, note**:
+
+The `Secret` and the `Registry` must be defined inside of the very same `Namespace`.
