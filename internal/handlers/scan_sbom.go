@@ -37,10 +37,12 @@ const (
 
 // ScanSBOMHandler is responsible for handling SBOM scan requests.
 type ScanSBOMHandler struct {
-	k8sClient client.Client
-	scheme    *runtime.Scheme
-	workDir   string
-	logger    *slog.Logger
+	k8sClient             client.Client
+	scheme                *runtime.Scheme
+	workDir               string
+	trivyDBRepository     string
+	trivyJavaDBRepository string
+	logger                *slog.Logger
 }
 
 // NewScanSBOMHandler creates a new instance of ScanSBOMHandler.
@@ -48,13 +50,17 @@ func NewScanSBOMHandler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
 	workDir string,
+	trivyDBRepository string,
+	trivyJavaDBRepository string,
 	logger *slog.Logger,
 ) *ScanSBOMHandler {
 	return &ScanSBOMHandler{
-		k8sClient: k8sClient,
-		scheme:    scheme,
-		workDir:   workDir,
-		logger:    logger.With("handler", "scan_sbom_handler"),
+		k8sClient:             k8sClient,
+		scheme:                scheme,
+		workDir:               workDir,
+		trivyDBRepository:     trivyDBRepository,
+		trivyJavaDBRepository: trivyJavaDBRepository,
+		logger:                logger.With("handler", "scan_sbom_handler"),
 	}
 }
 
@@ -138,8 +144,8 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		"--format", "json",
 		// Use the public ECR repository to bypass GitHub's rate limits.
 		// Refer to https://github.com/orgs/community/discussions/139074 for details.
-		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
-		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
+		"--db-repository", h.trivyDBRepository,
+		"--java-db-repository", h.trivyJavaDBRepository,
 		"--output", reportFile.Name(),
 	}
 	// Set XDG_DATA_HOME environment variable to /tmp because trivy expects

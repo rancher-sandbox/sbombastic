@@ -28,14 +28,18 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 	var natsKey string
 	var natsCA string
 	var logLevel string
+	var trivyDBRepository string
+	var trivyJavaDBRepository string
 	var runDir string
 
-	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server")
+	flag.StringVar(&natsURL, "nats-url", "localhost:4222", "The URL of the NATS server.")
 	flag.StringVar(&natsCert, "nats-cert", "/nats/tls/tls.crt", "The path to the NATS client certificate.")
 	flag.StringVar(&natsKey, "nats-key", "/nats/tls/tls.key", "The path to the NATS client key.")
 	flag.StringVar(&natsCA, "nats-ca", "/nats/tls/ca.crt", "The path to the NATS CA certificate.")
-	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files")
-	flag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level")
+	flag.StringVar(&runDir, "run-dir", "/var/run/worker", "Directory to store temporary files.")
+	flag.StringVar(&trivyDBRepository, "trivy-db-repository", "public.ecr.aws/aquasecurity/trivy-db", "OCI repository to retrieve trivy-db.")
+	flag.StringVar(&trivyJavaDBRepository, "trivy-java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db", "OCI repository to retrieve trivy-java-db.")
+	flag.StringVar(&logLevel, "log-level", slog.LevelInfo.String(), "Log level.")
 	flag.Parse()
 
 	slogLevel, err := cmdutil.ParseLogLevel(logLevel)
@@ -101,7 +105,7 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 	registry := messaging.HandlerRegistry{
 		handlers.CreateCatalogSubject: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, publisher, logger),
 		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, publisher, logger),
-		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, logger),
+		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, trivyDBRepository, trivyJavaDBRepository, logger),
 	}
 	failureHandler := handlers.NewScanJobFailureHandler(k8sClient, logger)
 
