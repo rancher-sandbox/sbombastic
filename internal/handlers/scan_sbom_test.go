@@ -22,6 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const (
+	testTrivyDBRepository     = "ghcr.io/rancher-sandbox/sbombastic/test-assets/trivy-db:2"
+	testTrivyJavaDBRepository = "ghcr.io/rancher-sandbox/sbombastic/test-assets/trivy-java-db:2"
+)
+
 func TestScanSBOMHandler_Handle(t *testing.T) {
 	vexHubServer := fakeVEXHubRepository(t)
 	vexHubServer.Start()
@@ -163,7 +168,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	err = json.Unmarshal(reportData, expectedReport)
 	require.NoError(t, err, "failed to unmarshal expected report file %s", expectedReportJSON)
 
-	handler := NewScanSBOMHandler(k8sClient, scheme, cacheDir, slog.Default())
+	handler := NewScanSBOMHandler(k8sClient, scheme, cacheDir, testTrivyDBRepository, testTrivyJavaDBRepository, slog.Default())
 
 	message, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
