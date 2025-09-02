@@ -1,8 +1,6 @@
 module github.com/rancher/sbombastic
 
-go 1.24.4
-
-godebug default=go1.23
+go 1.25.0
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
