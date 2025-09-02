@@ -15,8 +15,7 @@ type RegistrySpec struct {
 	AuthSecret string `json:"authSecret,omitempty"`
 	// ScanInterval is the interval at which the registry is scanned.
 	// If not set, automatic scanning is disabled.
-	// +kubebuilder:validation:Optional
-	ScanInterval metav1.Duration `json:"scanInterval"`
+	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
 	// CABundle is the CA bundle to use when connecting to the registry.
 	CABundle string `json:"caBundle,omitempty"`
 	// Insecure allows insecure connections to the registry when set to true.
