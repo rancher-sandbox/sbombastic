@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-auth
+  namespace: default
+type: Opaque
+data:
+  # user:$2y$10$nTQigvLRGGHCBQwZB4MPPe2SA6GYG218uTe1ntHusNcEjLaAfBive -> user:password
+  htpasswd: dXNlcjokMnkkMTAkblRRaWd2TFJHR0hDQlF3WkI0TVBQZTJTQTZHWUcyMTh1VGUxbnRIdXNOY0VqTGFBZkJpdmUK
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-storage-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dev-registry
+  namespace: default
+  labels:
+    app: dev-registry
+spec:
+  containers:
+    - name: registry
+      image: registry:2.8.3
+      ports:
+        - containerPort: 5000
+          name: http
+      env:
+        # Basic authentication configuration
+        - name: REGISTRY_AUTH
+          value: htpasswd
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: /auth/htpasswd
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: Registry Realm
+        # Optional: Enable deletion
+        - name: REGISTRY_STORAGE_DELETE_ENABLED
+          value: "true"
+      volumeMounts:
+        - name: auth-volume
+          mountPath: /auth
+          readOnly: true
+        - name: registry-storage
+          mountPath: /var/lib/registry
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+  volumes:
+    - name: auth-volume
+      secret:
+        secretName: registry-auth
+    - name: registry-storage
+      persistentVolumeClaim:
+        claimName: registry-storage-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dev-registry
+  namespace: default
+spec:
+  selector:
+    app: dev-registry
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: http

@@ -1,0 +1,7 @@
+{
+	"auths": {
+		"myprivateregistry.example": {
+			"auth": "dXNlcjpwYXNzd29yZA=="
+		}
+	}
+}

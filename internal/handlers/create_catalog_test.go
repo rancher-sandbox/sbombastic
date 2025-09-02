@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -35,6 +36,7 @@ import (
 	registryMocks "github.com/rancher/sbombastic/internal/handlers/registry/mocks"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // TestCreateCatalogHandler_Handle tests the create catalog handler with a platform error
@@ -706,4 +708,195 @@ func TestCreateCatalogHandler_Handle_ScanJobNotFound(t *testing.T) {
 
 	err = handler.Handle(t.Context(), message)
 	require.NoError(t, err)
+}
+
+func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
+	r, err := startTestPrivateRegistry(t.Context())
+	require.NoError(t, err)
+	defer require.NoError(t, r.stop(t.Context()))
+
+	repository, err := name.NewRepository(path.Join(r.registryURL, imageName))
+	require.NoError(t, err)
+	image, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", r.registryURL, imageName, tag))
+	require.NoError(t, err)
+
+	mockRegistryClient := registryMocks.NewClient(t)
+	mockRegistryClient.On("ListRepositoryContents", mock.Anything, repository).Return([]string{fmt.Sprintf("%s/%s:%s", r.registryURL, imageName, tag)}, nil)
+
+	platformLinuxAmd64 := cranev1.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	}
+	digestLinuxAmd64, err := cranev1.NewHash(digest)
+	require.NoError(t, err)
+
+	indexManifest := cranev1.IndexManifest{
+		SchemaVersion: 2,
+		MediaType:     types.OCIManifestSchema1,
+		Manifests: []cranev1.Descriptor{
+			{
+				MediaType:    types.OCIManifestSchema1,
+				Size:         100,
+				Digest:       digestLinuxAmd64,
+				Data:         []byte(""),
+				URLs:         []string{},
+				Annotations:  map[string]string{},
+				Platform:     &platformLinuxAmd64,
+				ArtifactType: "",
+			},
+		},
+	}
+
+	imageIndex := registryMocks.NewImageIndex(t)
+	imageIndex.On("IndexManifest").Return(&indexManifest, nil)
+	mockRegistryClient.On("GetImageIndex", image).Return(imageIndex, nil)
+
+	imageDetailsLinuxAmd64, err := buildImageDetails(digestLinuxAmd64, platformLinuxAmd64)
+	require.NoError(t, err)
+
+	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
+	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+
+	mockPublisher := messagingMocks.NewMockPublisher(t)
+
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:          r.registryURL,
+			Repositories: []string{imageName},
+			AuthSecret:   "my-auth-secret",
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-auth-secret",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			// dXNlcjpwYXNzd29yZA== -> user:password
+			corev1.DockerConfigJsonKey: fmt.Appendf([]byte{},
+				`{
+					"auths": {
+						"%s":{
+							"auth": "dXNlcjpwYXNzd29yZA=="
+						}
+					}
+				}`, r.registryURL),
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+	}
+
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scan-job",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+			UID: "scanjob-uid",
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: registry.Name,
+		},
+	}
+
+	scheme := scheme.Scheme
+	err = v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = storagev1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = k8sscheme.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(registry, scanJob, secret).
+		WithStatusSubresource(&v1alpha1.ScanJob{}).
+		WithIndex(&storagev1alpha1.Image{}, storagev1alpha1.IndexImageMetadataRegistry, func(obj client.Object) []string {
+			image, ok := obj.(*storagev1alpha1.Image)
+			if !ok {
+				return nil
+			}
+
+			return []string{image.GetImageMetadata().Registry}
+		}).
+		Build()
+
+	handler := NewCreateCatalogHandler(
+		mockRegistryClientFactory,
+		k8sClient,
+		scheme,
+		mockPublisher,
+		slog.Default().With("handler", "create_catalog_handler"),
+	)
+
+	message, err := json.Marshal(&CreateCatalogMessage{
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	amd64ImageName := computeImageUID(image, digestLinuxAmd64.String())
+	expectedMessageAmd64, err := json.Marshal(&GenerateSBOMMessage{
+		BaseMessage: BaseMessage{
+			ScanJob: ObjectRef{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			},
+		},
+		Image: ObjectRef{
+			Name:      amd64ImageName,
+			Namespace: registry.Namespace,
+		},
+	})
+	require.NoError(t, err)
+
+	mockPublisher.On("Publish",
+		mock.Anything,
+		GenerateSBOMSubject,
+		fmt.Sprintf("%s/%s", scanJob.UID, amd64ImageName),
+		expectedMessageAmd64,
+	).Return(nil).Once()
+
+	err = handler.Handle(t.Context(), message)
+	require.NoError(t, err)
+
+	imageList := &storagev1alpha1.ImageList{}
+	err = k8sClient.List(t.Context(), imageList)
+	require.NoError(t, err)
+	require.Len(t, imageList.Items, 1)
+
+	image1 := imageList.Items[0]
+
+	assert.Equal(t, registry.Namespace, image1.Namespace)
+	assert.Equal(t, registry.Name, image1.GetImageMetadata().Registry)
+	assert.Equal(t, registry.Spec.URI, image1.GetImageMetadata().RegistryURI)
+	assert.Equal(t, imageName, image1.GetImageMetadata().Repository)
+	assert.Equal(t, tag, image1.GetImageMetadata().Tag)
+	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
+	assert.Equal(t, platformLinuxAmd64.String(), image1.GetImageMetadata().Platform)
+	assert.Len(t, image1.Spec.Layers, 8)
+	assert.Equal(t, registry.UID, image1.GetOwnerReferences()[0].UID)
+
+	updatedScanJob := &v1alpha1.ScanJob{}
+	err = k8sClient.Get(t.Context(), client.ObjectKey{
+		Name:      scanJob.Name,
+		Namespace: scanJob.Namespace,
+	}, updatedScanJob)
+	require.NoError(t, err)
+	assert.Equal(t, 1, updatedScanJob.Status.ImagesCount)
+	assert.Equal(t, 0, updatedScanJob.Status.ScannedImagesCount)
+	assert.True(t, updatedScanJob.IsInProgress())
+	assert.Equal(t, v1alpha1.ReasonSBOMGenerationInProgress, meta.FindStatusCondition(updatedScanJob.Status.Conditions, v1alpha1.ConditionTypeInProgress).Reason)
 }

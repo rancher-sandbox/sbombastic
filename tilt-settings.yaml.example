@@ -1,4 +1,5 @@
 registry: ghcr.io
+use_private_registry: false
 storage: 
     image: <username>/sbombastic/storage
 controller: 
