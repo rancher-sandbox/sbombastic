@@ -78,11 +78,11 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 							"error", err,
 						)
 					}
-				}
 
-				// Return early to avoid acking a message that failed processing.
-				// This allows the message to be retried later even if the nak fails.
-				return
+					// Return early to avoid acking a message that failed processing.
+					// This allows the message to be retried later even if the nak fails.
+					return
+				}
 			}
 
 			if err := msg.Ack(); err != nil {
