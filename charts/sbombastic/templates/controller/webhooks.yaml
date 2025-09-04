@@ -8,27 +8,27 @@ metadata:
     {{ include "sbombastic.labels" . | nindent 4 }}
     app.kubernetes.io/component: controller
 webhooks:
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: {{ include "sbombastic.fullname" . }}-controller-webhook
-      namespace: {{ .Release.Namespace }}
-      path: /mutate-sbombastic-rancher-io-v1alpha1-scanjob
-  failurePolicy: Fail
-  name: mscanjob.sbombastic.rancher.io
-  rules:
-  - apiGroups:
-    - sbombastic.rancher.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - scanjobs
-  sideEffects: None
+  - admissionReviewVersions:
+    - v1
+    - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "sbombastic.fullname" . }}-controller-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-sbombastic-rancher-io-v1alpha1-scanjob
+    failurePolicy: Fail
+    name: mscanjob.sbombastic.rancher.io
+    rules:
+    - apiGroups:
+      - sbombastic.rancher.io
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - scanjobs
+    sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -40,24 +40,45 @@ metadata:
     {{ include "sbombastic.labels" . | nindent 4 }}
     app.kubernetes.io/component: controller
 webhooks:
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: {{ include "sbombastic.fullname" . }}-controller-webhook
-      namespace: {{ .Release.Namespace }}
-      path: /validate-sbombastic-rancher-io-v1alpha1-scanjob
-  failurePolicy: Fail
-  name: vscanjob.sbombastic.rancher.io
-  rules:
-  - apiGroups:
-    - sbombastic.rancher.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - scanjobs
-  sideEffects: None
+  - admissionReviewVersions:
+    - v1
+    - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "sbombastic.fullname" . }}-controller-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /validate-sbombastic-rancher-io-v1alpha1-scanjob
+    failurePolicy: Fail
+    name: vscanjob.sbombastic.rancher.io
+    rules:
+    - apiGroups:
+      - sbombastic.rancher.io
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - scanjobs
+    sideEffects: None
+  - admissionReviewVersions:
+    - v1
+    - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "sbombastic.fullname" . }}-controller-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /validate-sbombastic-rancher-io-v1alpha1-registry
+    failurePolicy: Fail
+    name: vregistry.sbombastic.rancher.io
+    rules:
+    - apiGroups:
+      - sbombastic.rancher.io
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - registries
+    sideEffects: None
