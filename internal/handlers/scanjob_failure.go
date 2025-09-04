@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
@@ -34,7 +35,6 @@ func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message []byt
 	if err := json.Unmarshal(message, baseMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal base message: %w", err)
 	}
-
 	h.logger.DebugContext(ctx, "Handling ScanJob failure",
 		"scanjob", baseMessage.ScanJob.Name,
 		"namespace", baseMessage.ScanJob.Namespace,
@@ -42,25 +42,27 @@ func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message []byt
 	)
 
 	scanJob := &sbombasticv1alpha1.ScanJob{}
-	err := h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      baseMessage.ScanJob.Name,
-		Namespace: baseMessage.ScanJob.Namespace,
-	}, scanJob)
+
+	// It is possible that the controller is slow to set the status condition "Scheduled" to true,
+	// so we might encounter conflicts when setting the status conditions.
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := h.k8sClient.Get(ctx, client.ObjectKey{
+			Name:      baseMessage.ScanJob.Name,
+			Namespace: baseMessage.ScanJob.Namespace,
+		}, scanJob); err != nil {
+			return fmt.Errorf("failed to get ScanJob %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
+		}
+
+		scanJob.MarkFailed(sbombasticv1alpha1.ReasonInternalError, errorMessage)
+		return h.k8sClient.Status().Update(ctx, scanJob)
+	})
 	if err != nil {
-		return fmt.Errorf("failed to get ScanJob %s/%s: %w",
-			baseMessage.ScanJob.Namespace, baseMessage.ScanJob.Name, err)
-	}
-
-	original := scanJob.DeepCopy()
-	scanJob.MarkFailed(sbombasticv1alpha1.ReasonInternalError, errorMessage)
-
-	if err := h.k8sClient.Status().Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
 		h.logger.ErrorContext(ctx, "Failed to update ScanJob status with failure",
 			"scanjob", scanJob.Name,
 			"namespace", scanJob.Namespace,
 			"error", err,
 		)
-		return fmt.Errorf("failed to update ScanJob %s/%s status: %w", baseMessage.ScanJob.Namespace, baseMessage.ScanJob.Name, err)
+		return fmt.Errorf("failed to update ScanJob %s/%s status: %w", scanJob.Namespace, scanJob.Name, err)
 	}
 
 	h.logger.DebugContext(ctx, "ScanJob marked as failed",
@@ -68,6 +70,5 @@ func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message []byt
 		"namespace", scanJob.Namespace,
 		"error_message", errorMessage,
 	)
-
 	return nil
 }

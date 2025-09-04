@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -215,18 +216,29 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
 	}
 
-	if len(discoveredImages) == 0 {
-		h.logger.DebugContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+	// It is possible that the controller is slow to set the status condition "Scheduled" to true,
+	// so we might encounter conflicts when setting the status conditions.
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err = h.k8sClient.Get(ctx, types.NamespacedName{
+			Name:      scanJob.Name,
+			Namespace: scanJob.Namespace,
+		}, scanJob); err != nil {
+			return fmt.Errorf("cannot get scan job %s/%s while updating status: %w", scanJob.Namespace, scanJob.Name, err)
+		}
 
-		scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
-	} else {
-		h.logger.DebugContext(ctx, "Images to process", "count", len(discoveredImages))
-		scanJob.MarkInProgress(v1alpha1.ReasonSBOMGenerationInProgress, "SBOM generation in progress")
-		scanJob.Status.ImagesCount = len(discoveredImages)
-		scanJob.Status.ScannedImagesCount = 0
-	}
+		if len(discoveredImages) == 0 {
+			h.logger.DebugContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+			scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
+		} else {
+			h.logger.DebugContext(ctx, "Images to process", "count", len(discoveredImages))
+			scanJob.MarkInProgress(v1alpha1.ReasonSBOMGenerationInProgress, "SBOM generation in progress")
+			scanJob.Status.ImagesCount = len(discoveredImages)
+			scanJob.Status.ScannedImagesCount = 0
+		}
 
-	if err = h.k8sClient.Status().Update(ctx, scanJob); err != nil {
+		return h.k8sClient.Status().Update(ctx, scanJob)
+	})
+	if err != nil {
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
