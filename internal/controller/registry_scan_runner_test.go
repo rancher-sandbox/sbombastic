@@ -36,7 +36,7 @@ var _ = Describe("RegistryScanRunner", func() {
 						Namespace: "default",
 					},
 					Spec: v1alpha1.RegistrySpec{
-						ScanInterval: metav1.Duration{Duration: 1 * time.Hour},
+						ScanInterval: &metav1.Duration{Duration: 1 * time.Hour},
 					},
 				}
 				Expect(k8sClient.Create(ctx, registry)).To(Succeed())
@@ -162,7 +162,7 @@ var _ = Describe("RegistryScanRunner", func() {
 						Namespace: "default",
 					},
 					Spec: v1alpha1.RegistrySpec{
-						ScanInterval: metav1.Duration{Duration: 0},
+						ScanInterval: &metav1.Duration{Duration: 0},
 					},
 				}
 				Expect(k8sClient.Create(ctx, registry)).To(Succeed())

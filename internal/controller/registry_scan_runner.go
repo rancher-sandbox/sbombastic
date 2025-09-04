@@ -70,7 +70,7 @@ func (r *RegistryScanRunner) scanRegistries(ctx context.Context) error {
 func (r *RegistryScanRunner) checkRegistryForScan(ctx context.Context, registry *v1alpha1.Registry) error {
 	log := log.FromContext(ctx)
 
-	if registry.Spec.ScanInterval.Duration == 0 {
+	if registry.Spec.ScanInterval == nil || registry.Spec.ScanInterval.Duration == 0 {
 		log.V(2).Info("Skipping registry with disabled scan interval", "registry", registry.Name)
 
 		return nil

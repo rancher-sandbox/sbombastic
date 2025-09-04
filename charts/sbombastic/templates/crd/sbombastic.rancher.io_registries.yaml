@@ -63,14 +63,13 @@ spec:
                   type: string
                 type: array
               scanInterval:
-                description: ScanInterval is the interval at which the registry is
-                  scanned. Set to 0 to disable automatic scanning.
+                description: |-
+                  ScanInterval is the interval at which the registry is scanned.
+                  If not set, automatic scanning is disabled.
                 type: string
               uri:
                 description: URI is the URI of the container registry
                 type: string
-            required:
-            - scanInterval
             type: object
           status:
             description: RegistryStatus defines the observed state of Registry
