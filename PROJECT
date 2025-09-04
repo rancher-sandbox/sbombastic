@@ -17,6 +17,9 @@ resources:
   kind: Registry
   path: github.com/rancher/sbombastic/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -38,7 +41,6 @@ resources:
   version: v1alpha1
 - api:
     crdVersion: v1
-    namespaced: false
   domain: sbombastic.rancher.io
   group: sbombastic
   kind: VEXHub
