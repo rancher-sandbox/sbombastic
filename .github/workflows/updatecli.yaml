@@ -1,9 +1,19 @@
 name: Updatecli
 on:
+  # Allow to manually trigger Updatecli
   workflow_dispatch:
+  # Trigger Updatecli on main branch changes
+  # To rebase existing PR
+  push:
+    branches: [main]
+  # Trigger Updatecli pullrequest to test potential changes
+  pull_request:
+    branches: [main]
+  # Periodically checks update
   schedule:
     # Run every hour
     - cron: "0 * * * *"
+
 jobs:
   updatecli:
     name: Run Updatecli
