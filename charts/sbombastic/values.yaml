@@ -26,7 +26,7 @@ storage:
 worker:
   image:
     repository: rancher-sandbox/sbombastic/worker
-    tag: v0.3.0
+    tag: v0.4.0
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
