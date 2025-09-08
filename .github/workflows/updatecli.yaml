@@ -28,7 +28,7 @@ jobs:
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@a327da0e796f543b8fa4706e5ed63014852ead0e # v2.91.0
 
-      - name: [DRY-RUN] Run Updatecli
+      - name: Run Updatecli (dryrun)
         if: github.ref != 'refs/heads/main'
         env:
           # Until this repository is under the rancher-sandbox GitHub organisation
