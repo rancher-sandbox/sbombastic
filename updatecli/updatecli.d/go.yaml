@@ -67,7 +67,8 @@ scms:
       username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitmessage:
-        type: "deps"
+        type: "chore"
+        scope: deps
         title: "update Golang version"
         hidecredit: true
         footers: "Signed-off-by: SBOMbastic bot <sbombastic-bot@users.noreply.github.com>"
