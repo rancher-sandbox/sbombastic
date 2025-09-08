@@ -54,27 +54,204 @@ spec:
 
 ### ScanJob status
 
-The `ScanJob` resource will include a status field to reflect the scan's progress and outcome. This status will contain:
+The `ScanJob` resource includes a status field to track the scan's lifecycle and progress. The status contains:
 
-- `conditions`: Represents detailed job conditions, similar to those used in Kubernetes Jobs, showing whether the scan completed successfully or encountered issues (`Complete`, `Failed`).
-- `imagesCount`: The number of images found in the registry during the scan.
+- `conditions`: Four condition types that track the job's state progression:
+  - `Scheduled`: Indicates the job has been accepted and scheduled for execution
+  - `InProgress`: Shows the job is actively running
+  - `Complete`: Indicates successful completion
+  - `Failed`: Indicates the job encountered an error and failed
+- `imagesCount`: Total number of images discovered in the target registry
+- `scannedImagesCount`: Number of images that have been successfully scanned
+- `startTime`: Timestamp when the job began processing (set when transitioning to InProgress)
+- `completionTime`: Timestamp when the job finished (either successfully or with failure)
 
-Please refer to the [Kubernetes API conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties) for more information about the status conditions.
+Please refer to the [Kubernetes API conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties) for more information about status conditions.
 
-Example status:
+#### Example status progression
+
+Job scheduled but not yet started:
+
+```yaml
+status:
+  imagesCount: 0
+  scannedImagesCount: 0
+  conditions:
+    - type: Scheduled
+      status: "True"
+      reason: "Scheduled"
+      message: "ScanJob is scheduled"
+    - type: InProgress
+      status: "False"
+      reason: "Scheduled"
+      message: "ScanJob is scheduled"
+    - type: Complete
+      status: "False"
+      reason: "Scheduled"
+      message: "ScanJob is scheduled"
+    - type: Failed
+      status: "False"
+      reason: "Scheduled"
+      message: "ScanJob is scheduled"
+```
+
+Job creating catalog:
+
+```yaml
+status:
+  imagesCount: 0
+  scannedImagesCount: 0
+  startTime: "2024-01-15T10:30:00Z"
+  conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+    - type: InProgress
+      status: "True"
+      reason: "CatalogCreationInProgress"
+      message: "Catalog creation in progress"
+    - type: Complete
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+    - type: Failed
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+```
+
+Job generating SBOMs
 
 ```yaml
 status:
   imagesCount: 100
+  scannedImagesCount: 0
+  startTime: "2024-01-15T10:30:00Z"
   conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+    - type: InProgress
+      status: "True"
+      reason: "SBOMGenerationInProgress"
+      message: "SBOM generation in progress"
     - type: Complete
       status: "False"
-      reason: "Processing"
-      message: "Job in progress"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
     - type: Failed
       status: "False"
-      reason: "Processing
-      message: "Job in progress"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+```
+
+Job scanning images
+
+```yaml
+status:
+  imagesCount: 100
+  scannedImagesCount: 45
+  startTime: "2024-01-15T10:30:00Z"
+  conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+    - type: InProgress
+      status: "True"
+      reason: "ImageScanInProgress"
+      message: "Image scan in progress"
+    - type: Complete
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+    - type: Failed
+      status: "False"
+      reason: "InProgress"
+      message: "ScanJob is in progress"
+```
+
+Job completed successfully:
+
+```yaml
+status:
+  imagesCount: 100
+  scannedImagesCount: 100
+  startTime: "2024-01-15T10:30:00Z"
+  completionTime: "2024-01-15T11:45:00Z"
+  conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+    - type: InProgress
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+    - type: Complete
+      status: "True"
+      reason: "AllImagesScanned"
+      message: "All images scanned successfully"
+    - type: Failed
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+```
+
+Job completed with no images to scan:
+
+```yaml
+status:
+  imagesCount: 0
+  scannedImagesCount: 0
+  startTime: "2024-01-15T10:30:00Z"
+  completionTime: "2024-01-15T10:35:00Z"
+  conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+    - type: InProgress
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+    - type: Complete
+      status: "True"
+      reason: "NoImagesToScan"
+      message: "No images to process"
+    - type: Failed
+      status: "False"
+      reason: "Complete"
+      message: "ScanJob completed successfully"
+```
+
+Job failed:
+
+```yaml
+status:
+  imagesCount: 0
+  scannedImagesCount: 0
+  startTime: "2024-01-15T10:30:00Z"
+  completionTime: "2024-01-15T10:32:00Z"
+  conditions:
+    - type: Scheduled
+      status: "False"
+      reason: "Failed"
+      message: "ScanJob failed"
+    - type: InProgress
+      status: "False"
+      reason: "Failed"
+      message: "ScanJob failed"
+    - type: Complete
+      status: "False"
+      reason: "Failed"
+      message: "ScanJob failed"
+    - type: Failed
+      status: "True"
+      reason: "InternalError"
+      message: "Failed to create catalog: registry connection timeout"
 ```
 
 ### Validation
@@ -91,17 +268,19 @@ A `ScanJob` reconciler will be introduced to handle and manage the entire lifecy
 When a `ScanJob` is created, the following sequence of actions is triggered:
 
 1. **The `ScanJob` reconciler** fetches the referenced `Registry` resource.
-2. **If the Registry is not found**, the reconciler marks the `ScanJob` as `Failed` with an appropriate message.
+2. **If the Registry is not found**, the reconciler marks the `ScanJob` as `Failed` with reason `RegistryNotFound`.
 3. **The ScanJob reconciler** adds the serialized `Registry` resource as an annotation on the `ScanJob`. This ensures the scan uses a consistent snapshot of the registry configuration.
-4. **The ScanJob reconciler** sends a message on the NATS queue to trigger the scan workflow.
-5. **The ScanJob reconciler** updates the `ScanJob` status to `InProgress`.
-6. **A worker** receives the message and starts the discovery process.
-7. **The worker** discovers images in the registry.
-8. **The worker** updates the `ScanJob` status field `ImagesCount` with the number of images found.
-9. **The worker** sends a NATS message for each image to trigger SBOM generation.
-10. **Workers** generate SBOMs and send messages to initiate vulnerability scans.
-11. **Workers** create a `VulnerabilityReport` resource for each image with the scan results.
-12. **The `VulnerabilityReport` reconciler** monitors the number of `VulnerabilityReport` resources and, once it matches `ImagesCount`, marks the `ScanJob` as `Complete`.
+4. **The ScanJob reconciler** marks the `ScanJob` as `Scheduled` and sends a message on the NATS queue to trigger the scan workflow.
+5. **A catalog creation worker** receives the message and marks the `ScanJob` as `InProgress` with reason `CatalogCreationInProgress`.
+6. **The catalog worker** discovers images in the registry and creates `Image` resources for each discovered image.
+7. **The catalog worker** updates the `ScanJob` status field `ImagesCount` with the number of images found.
+8. **If no images are found**, the worker marks the `ScanJob` as `Complete` with reason `NoImagesToScan`.
+9. **If images are found**, the worker marks the `ScanJob` as `InProgress` with reason `SBOMGenerationInProgress` and sends a NATS message for each image to trigger SBOM generation.
+10. **SBOM generation workers** process each image and send messages to initiate vulnerability scans.
+11. **Vulnerability scan workers** create a `VulnerabilityReport` resource for each image with the scan results.
+12. **The `VulnerabilityReport` reconciler** monitors the number of `VulnerabilityReport` resources, updates the `ScannedImagesCount` field, and marks the `ScanJob` as `InProgress` with reason `ImageScanInProgress` while scanning is ongoing.
+13. **Once `ScannedImagesCount` matches `ImagesCount`**, the reconciler marks the `ScanJob` as `Complete` with reason `AllImagesScanned`.
+14. **If any step fails**, the failure handler marks the `ScanJob` as `Failed` with reason `InternalError` and the specific error message.
 
 This design simplifies the architecture by retaining only the `ScanJob` and `VulnerabilityReport` reconcilers.
 Unlike the previous model, where the `Image` and `SBOM` reconcilers coordinated different stages of the scan, the worker now directly publishes follow-up jobs (e.g., SBOM generation, vulnerability scan) to the queue.
@@ -159,4 +338,4 @@ Why should we **not** do this?
 <!---
 - What are the unknowns?
 - What can happen if Murphy's law holds true?
--
+--->
