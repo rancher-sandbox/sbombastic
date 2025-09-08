@@ -13,9 +13,9 @@ sources:
     name: "Get latest sbombastic version"
     kind: githubrelease
     spec:
-      owner: '{{ requiredEnv .github.owner }}'
+      owner: "{{ requiredEnv .github.owner }}"
       repository: sbombastic
-      token: '{{ requiredEnv .github.token }}'
+      token: "{{ requiredEnv .github.token }}"
       typefilter:
         prerelease: true
         release: true
@@ -30,7 +30,6 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      directory: "/tmp/helm-charts"
       owner: "{{ requiredEnv .github.owner }}"
       repository: "sbombastic"
       token: "{{ requiredEnv .github.token }}"
@@ -99,3 +98,4 @@ targets:
     spec:
       file: charts/sbombastic/values.yaml
       key: $.worker.image.tag
+

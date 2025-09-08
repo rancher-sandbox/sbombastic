@@ -18,6 +18,9 @@ jobs:
 
       - name: Update SBOMbastic charts
         env:
+          # Until this repository is under the rancher-sandbox GitHub organisation
+          # It's easier to use the default GITHUB_TOKEN but ultimately
+          # it's gonna be better to use a GitHub App token
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-        run: "updatecli apply --config ./updatecli/updatecli.d/helm-chart-update.yaml --values updatecli/values.yaml"
+        run: "updatecli compose apply --file updatecli/updatecli-compose.release.yaml"

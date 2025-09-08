@@ -1,0 +1,49 @@
+name: Updatecli
+on:
+  # Allow to manually trigger Updatecli
+  workflow_dispatch:
+  # Trigger Updatecli on main branch changes
+  # To rebase existing PR
+  push:
+    branches: [main]
+  # Trigger Updatecli pullrequest to test potential changes
+  pull_request:
+    branches: [main]
+  # Periodically checks update
+  schedule:
+    # Run every hour
+    - cron: "0 * * * *"
+
+jobs:
+  updatecli:
+    name: Run Updatecli
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for updatecli to update the repository
+      pull-requests: write # for updatecli to create a PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@a327da0e796f543b8fa4706e5ed63014852ead0e # v2.91.0
+
+      - name: Run Updatecli (dryrun)
+        if: github.ref != 'refs/heads/main'
+        env:
+          # Until this repository is under the rancher-sandbox GitHub organisation
+          # It's easier to use the default GITHUB_TOKEN but ultimately
+          # it's gonna be better to use a GitHub App token
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: "updatecli compose diff --file updatecli/updatecli-compose.yaml"
+
+      - name: Run Updatecli
+        if: github.ref == 'refs/heads/main'
+        env:
+          # Until this repository is under the rancher-sandbox GitHub organisation
+          # It's easier to use the default GITHUB_TOKEN but ultimately
+          # it's gonna be better to use a GitHub App token
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: "updatecli compose apply --file updatecli/updatecli-compose.yaml"
