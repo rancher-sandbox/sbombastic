@@ -154,7 +154,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, image.Name),
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, image.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 
@@ -287,7 +287,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, existingSBOM.Name),
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, existingSBOM.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 
@@ -411,7 +411,7 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, image.Name),
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, image.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 

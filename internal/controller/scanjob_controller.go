@@ -109,7 +109,7 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *v1alp
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
 	}
 
-	messageID := string(scanJob.UID)
+	messageID := fmt.Sprintf("createCatalog/%s", scanJob.GetUID())
 	message, err := json.Marshal(&handlers.CreateCatalogMessage{
 		BaseMessage: handlers.BaseMessage{
 			ScanJob: handlers.ObjectRef{

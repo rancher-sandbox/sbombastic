@@ -123,7 +123,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		h.logger.DebugContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
 	}
 
-	scanSBOMMessageID := fmt.Sprintf("%s/%s", scanJob.UID, sbom.Name)
+	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, sbom.Name)
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: generateSBOMMessage.BaseMessage,
 		SBOM: ObjectRef{
