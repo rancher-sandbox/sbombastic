@@ -93,6 +93,7 @@ local_resource(
         "api",
         "internal/controller",
         "internal/messaging",
+        "internal/webhook",
     ],
 )
 

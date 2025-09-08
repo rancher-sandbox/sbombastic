@@ -1,0 +1,138 @@
+package v1alpha1
+
+import (
+	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/rancher/sbombastic/api/v1alpha1"
+)
+
+type registryTestCase struct {
+	name          string
+	registry      *v1alpha1.Registry
+	expectedError string
+	expectedField string
+}
+
+var registryTestCasees = []registryTestCase{
+	{
+		name: "should admit creation when scanInterval is nil",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI:          "registry.example.com",
+				ScanInterval: nil,
+			},
+		},
+	},
+	{
+		name: "should admit creation when scanInterval is exactly 1 minute",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI: "registry.example.com",
+				ScanInterval: &metav1.Duration{
+					Duration: time.Minute,
+				},
+			},
+		},
+	},
+	{
+		name: "should admit creation when scanInterval is greater than 1 minute",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI: "registry.test.local",
+				ScanInterval: &metav1.Duration{
+					Duration: 1 * time.Hour,
+				},
+			},
+		},
+	},
+	{
+		name: "should deny creation when scanInterval is less than 1 minute",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI: "registry.test.local",
+				ScanInterval: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+			},
+		},
+		expectedField: "spec.scanInterval",
+		expectedError: "scanInterval must be at least 1 minute",
+	},
+}
+
+func TestRegistryCustomValidator_ValidateCreate(t *testing.T) {
+	for _, test := range registryTestCasees {
+		t.Run(test.name, func(t *testing.T) {
+			validator := &RegistryCustomValidator{
+				logger: logr.Discard(),
+			}
+
+			warnings, err := validator.ValidateCreate(t.Context(), test.registry)
+
+			if test.expectedError != "" {
+				require.Error(t, err)
+				statusErr, ok := err.(interface{ Status() metav1.Status })
+				require.True(t, ok)
+				details := statusErr.Status().Details
+				require.NotNil(t, details)
+				require.Len(t, details.Causes, 1)
+				assert.Equal(t, test.expectedField, details.Causes[0].Field)
+				assert.Contains(t, details.Causes[0].Message, test.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Empty(t, warnings)
+		})
+	}
+}
+
+func TestRegistryCustomValidator_ValidateUpdate(t *testing.T) {
+	for _, test := range registryTestCasees {
+		t.Run(test.name, func(t *testing.T) {
+			validator := &RegistryCustomValidator{
+				logger: logr.Discard(),
+			}
+
+			warnings, err := validator.ValidateUpdate(t.Context(), &v1alpha1.Registry{}, test.registry)
+
+			if test.expectedError != "" {
+				require.Error(t, err)
+				statusErr, ok := err.(interface{ Status() metav1.Status })
+				require.True(t, ok)
+				details := statusErr.Status().Details
+				require.NotNil(t, details)
+				require.Len(t, details.Causes, 1)
+				assert.Equal(t, test.expectedField, details.Causes[0].Field)
+				assert.Contains(t, details.Causes[0].Message, test.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Empty(t, warnings)
+		})
+	}
+}
