@@ -122,12 +122,13 @@ This ensures that scans are not interrupted mid-process, preserving the integrit
 A maximum of X ScanJob resources per registry will be retained in the system for auditing and historical purposes, with X being a configurable value.
 This logic could be effectively implemented within either the `ValidatingWebhook` or the `ScanJob` reconciler.
 
-## Scheduled scans
+## Periodic scans
 
 The scan frequency is set in the `Registry` resource via the `spec.scanInterval` field.
 A new [`Runnable`](https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/manager#Runnable) will be implemented to regularly trigger scans for all registries.
 Using a ticker, the runnable will periodically examine each `Registry`’s `spec.scanInterval` and create a `ScanJob` if the time since the last scan exceeds the configured interval.
-This allows us to use the same resource and reonciliation logic for both manual and scheduled scans, simplifying the architecture.
+This allows us to use the same resource and reonciliation logic for both manual and periodic scans, simplifying the architecture.
+If `spec.scanInterval` is not set, the registry will not be scanned automatically.
 
 # Drawbacks
 
