@@ -222,14 +222,14 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, amd64ImageName),
+		fmt.Sprintf("generateSBOM/%s/%s", scanJob.UID, amd64ImageName),
 		expectedMessageAmd64,
 	).Return(nil).Once()
 
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, arm64ImageName),
+		fmt.Sprintf("generateSBOM/%s/%s", scanJob.UID, arm64ImageName),
 		expectedMessageArm64,
 	).Return(nil).Once()
 
@@ -403,7 +403,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, existingImage.Name),
+		fmt.Sprintf("generateSBOM/%s/%s", scanJob.UID, existingImage.Name),
 		expectedMessage,
 	).Return(nil).Once()
 
@@ -865,7 +865,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 	mockPublisher.On("Publish",
 		mock.Anything,
 		GenerateSBOMSubject,
-		fmt.Sprintf("%s/%s", scanJob.UID, amd64ImageName),
+		fmt.Sprintf("generateSBOM/%s/%s", scanJob.UID, amd64ImageName),
 		expectedMessageAmd64,
 	).Return(nil).Once()
 

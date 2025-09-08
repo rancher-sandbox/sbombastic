@@ -154,7 +154,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		mock.Anything, // messageID is the SBOM UID which we can't predict with fake client
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, image.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 
@@ -240,6 +240,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
+			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: "test-registry",
@@ -286,7 +287,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		"", // TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, existingSBOM.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 
@@ -372,6 +373,7 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
+			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: "test-registry",
@@ -409,7 +411,7 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 	publisher.On("Publish",
 		mock.Anything,
 		ScanSBOMSubject,
-		"", // TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
+		fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, image.Name),
 		expectedScanMessage,
 	).Return(nil).Once()
 

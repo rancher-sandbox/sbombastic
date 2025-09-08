@@ -83,12 +83,13 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		Namespace: generateSBOMMessage.ScanJob.Namespace,
 	}, scanJob)
 	if err != nil {
-		return fmt.Errorf(
-			"cannot get ScanJob %s/%s: %w",
-			generateSBOMMessage.ScanJob.Name,
-			generateSBOMMessage.ScanJob.Namespace,
-			err,
-		)
+		// If the scan job is not found, we skip the  sbom generation since it might have been deleted.
+		if apierrors.IsNotFound(err) {
+			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", generateSBOMMessage.ScanJob.Name, "namespace", generateSBOMMessage.ScanJob.Namespace)
+			return nil
+		}
+
+		return fmt.Errorf("cannot get ScanJob %s/%s: %w", generateSBOMMessage.ScanJob.Name, generateSBOMMessage.ScanJob.Namespace, err)
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
 
@@ -122,6 +123,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		h.logger.DebugContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
 	}
 
+	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, sbom.Name)
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: generateSBOMMessage.BaseMessage,
 		SBOM: ObjectRef{
@@ -133,8 +135,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		return fmt.Errorf("cannot marshal scan SBOM message: %w", err)
 	}
 
-	// TODO: introduce deduplication if needed. The UID should be the ScanJob UID + the SBOM UID.
-	if err = h.publisher.Publish(ctx, ScanSBOMSubject, "", scanSBOMMessage); err != nil {
+	if err = h.publisher.Publish(ctx, ScanSBOMSubject, scanSBOMMessageID, scanSBOMMessage); err != nil {
 		return fmt.Errorf("failed to publish scan SBOM message: %w", err)
 	}
 

@@ -72,7 +72,7 @@ var _ = Describe("ScanJob Controller", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(scanJob.GetUID()), message).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, fmt.Sprintf("createCatalog/%s", scanJob.GetUID()), message).Return(nil)
 
 			By("Reconciling the ScanJob")
 			_, err = reconciler.Reconcile(ctx, reconcile.Request{
@@ -265,7 +265,7 @@ var _ = Describe("ScanJob Controller", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, string(newScanJob.GetUID()), expectedMessage).Return(nil)
+			mockPublisher.On("Publish", mock.Anything, handlers.CreateCatalogSubject, fmt.Sprintf("createCatalog/%s", newScanJob.GetUID()), expectedMessage).Return(nil)
 
 			By("Reconciling the new ScanJob")
 			_, err = reconciler.Reconcile(ctx, reconcile.Request{
