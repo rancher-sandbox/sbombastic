@@ -14,6 +14,13 @@ controller:
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 300Mi
 
 storage:
   image:
@@ -22,6 +29,13 @@ storage:
     pullPolicy: IfNotPresent
   replicas: 1
   # logLevel: "debug" //TODO: uncomment this, when the log parser in storage is implemented
+  resources:
+    limits:
+      cpu: 500m
+      memory: 3Gi
+    requests:
+      cpu: 250m
+      memory: 300Mi
 
 worker:
   image:
@@ -30,6 +44,13 @@ worker:
     pullPolicy: IfNotPresent
   replicas: 3
   logLevel: "info"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 300Mi
 
 persistence:
   enabled: true

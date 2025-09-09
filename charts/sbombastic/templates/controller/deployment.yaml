@@ -46,13 +46,10 @@ spec:
               port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
+          {{- if and .Values.controller .Values.controller.resources }}
           resources:
-            limits:
-              cpu: 500m
-              memory: 128Mi
-            requests:
-              cpu: 10m
-              memory: 64Mi
+{{ toYaml .Values.controller.resources | indent 12 }}
+          {{- end }}
           volumeMounts:
             - mountPath: "/tmp/k8s-webhook-server/serving-certs"
               name: webhook-tls

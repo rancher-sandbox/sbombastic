@@ -4,7 +4,7 @@ templates:
   - "templates/storage/deployment.yaml"
 
 tests:
-  - it: "should render a Deployment with the correct replica count, logging level, image, and imagePullPolicy"
+  - it: "should render a Deployment with the correct replica count, logging level, image, resources, and imagePullPolicy"
     set:
       global:
         cattle:
@@ -18,6 +18,13 @@ tests:
           pullPolicy: Always
         persistence:
           name: sqlite-pvc-test
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 200Mi
     asserts:
       - equal:
           path: "spec.replicas"
@@ -34,6 +41,18 @@ tests:
       - equal:
           path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
           value: "RELEASE-NAME-sbombastic-storage-data"
+      - equal:
+          path: "spec.template.spec.containers[0].resources.limits.cpu"
+          value: "500m"
+      - equal:
+          path: "spec.template.spec.containers[0].resources.limits.memory"
+          value: "1Gi"
+      - equal:
+          path: "spec.template.spec.containers[0].resources.requests.cpu"
+          value: "250m"
+      - equal:
+          path: "spec.template.spec.containers[0].resources.requests.memory"
+          value: "200Mi"
   - it: "should use existing PVC claim name when persistence.storageData.existingClaim is specified"
     set:
       persistence:
