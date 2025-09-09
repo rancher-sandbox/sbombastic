@@ -1,4 +1,4 @@
-# Collect logs for debugging
+# Collecting logs for debugging
 
 ## Install
 
