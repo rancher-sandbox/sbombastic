@@ -41,11 +41,19 @@ type store struct {
 	newFunc     func() runtime.Object
 	newListFunc func() runtime.Object
 	logger      *slog.Logger
+	keysFunc    storage.KeysFunc
 }
 
 // Returns Versioner associated with this interface.
 func (s *store) Versioner() storage.Versioner {
 	return storage.APIObjectVersioner{}
+}
+
+// Stats returns storage stats.
+//
+// TODO: this is a dummy implementation to satisfy the storage.Interface.
+func (s *store) Stats(_ context.Context) (storage.Stats, error) {
+	return storage.Stats{}, nil
 }
 
 // Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
@@ -533,6 +541,16 @@ func (s *store) Count(key string) (int64, error) {
 // ReadinessCheck checks if the storage is ready for accepting requests.
 func (s *store) ReadinessCheck() error {
 	return nil
+}
+
+func (s *store) CompactRevision() int64 {
+	// TODO: this is a dummy implementation to satisfy the storage.Interface.
+	return 0
+}
+
+func (s *store) SetKeysFunc(keysFunc storage.KeysFunc) {
+	// TODO: this is a dummy implementation to satisfy the storage.Interface.
+	s.keysFunc = keysFunc
 }
 
 // RequestWatchProgress requests the a watch stream progress status be sent in the
