@@ -1,6 +1,6 @@
 module github.com/rancher/sbombastic
 
-go 1.25.0
+go 1.25.1
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
