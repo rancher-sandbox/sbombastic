@@ -530,9 +530,30 @@ func (s *store) Count(key string) (int64, error) {
 	return count, nil
 }
 
+// Stats returns storage stats.
+//
+// TODO: this is a dummy implementation to satisfy the storage.Interface.
+func (s *store) Stats(_ context.Context) (storage.Stats, error) {
+	return storage.Stats{}, nil
+}
+
 // ReadinessCheck checks if the storage is ready for accepting requests.
 func (s *store) ReadinessCheck() error {
 	return nil
+}
+
+// CompactRevision returns latest observed revision that was compacted.
+// Without ListFromCacheSnapshot enabled only locally executed compaction will be observed.
+// Returns 0 if no compaction was yet observed.
+func (s *store) CompactRevision() int64 {
+	// Return 0, as we don't have compaction in SQL storage.
+	return 0
+}
+
+// SetKeysFunc allows to override the function used to get keys from storage.
+// This allows to replace default function that fetches keys from storage with one using cache.
+func (s *store) SetKeysFunc(_ storage.KeysFunc) {
+	// No-op, we don't have a cache implementation.
 }
 
 // RequestWatchProgress requests the a watch stream progress status be sent in the
