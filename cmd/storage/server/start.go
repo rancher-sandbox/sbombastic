@@ -148,6 +148,13 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 		apiserver.WardleComponentName, basecompatibility.NewEffectiveVersionFromString(defaultWardleVersion, "", ""),
 		featuregate.NewVersionedFeatureGate(version.MustParse(defaultWardleVersion)))
 
+	// TODO: remove this once we implement WatchList in the storage.
+	mutableFeatureGate := utilfeature.DefaultMutableFeatureGate
+	err := mutableFeatureGate.Set("WatchList=false")
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("failed to set default feature gate: %w", err))
+	}
+
 	// Register the default kube component if not already present in the global registry.
 	_, _ = defaults.ComponentGlobalsRegistry.ComponentGlobalsOrRegister(
 		basecompatibility.DefaultKubeComponent,
@@ -156,7 +163,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 			"",
 			"",
 		),
-		utilfeature.DefaultMutableFeatureGate,
+		mutableFeatureGate,
 	)
 
 	// Set the emulation version mapping from the "Wardle" component to the kube component.
