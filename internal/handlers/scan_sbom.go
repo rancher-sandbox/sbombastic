@@ -71,7 +71,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		return fmt.Errorf("failed to unmarshal scan job message: %w", err)
 	}
 
-	h.logger.DebugContext(ctx, "SBOM scan requested",
+	h.logger.InfoContext(ctx, "SBOM scan requested",
 		"sbom", scanSBOMMessage.SBOM.Name,
 		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
@@ -193,7 +193,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		return fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
-	h.logger.DebugContext(ctx, "SBOM scanned",
+	h.logger.InfoContext(ctx, "SBOM scanned",
 		"sbom", scanSBOMMessage.SBOM.Name,
 		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)

@@ -70,7 +70,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return fmt.Errorf("cannot unmarshal message: %w", err)
 	}
 
-	h.logger.DebugContext(ctx, "Catalog creation requested",
+	h.logger.InfoContext(ctx, "Catalog creation requested",
 		"scanjob", createCatalogMessage.ScanJob.Name,
 		"namespace", createCatalogMessage.ScanJob.Namespace,
 	)
@@ -197,10 +197,10 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 			if existingImageNames.Has(image.Name) {
 				continue
 			}
-
+			h.logger.InfoContext(ctx, "Creating image", "image", image.Name, "namespace", image.Namespace)
 			if err = h.k8sClient.Create(ctx, &image); err != nil {
 				if apierrors.IsAlreadyExists(err) {
-					h.logger.DebugContext(ctx, "Image already exists, skipping creation", "image", image.Name, "namespace", image.Namespace)
+					h.logger.InfoContext(ctx, "Image already exists, skipping creation", "image", image.Name, "namespace", image.Namespace)
 					continue
 				}
 				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
@@ -227,10 +227,10 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		}
 
 		if len(discoveredImages) == 0 {
-			h.logger.DebugContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+			h.logger.InfoContext(ctx, "No images to process", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
 			scanJob.MarkComplete(v1alpha1.ReasonNoImagesToScan, "No images to process")
 		} else {
-			h.logger.DebugContext(ctx, "Images to process", "count", len(discoveredImages))
+			h.logger.InfoContext(ctx, "Images to process", "count", len(discoveredImages))
 			scanJob.MarkInProgress(v1alpha1.ReasonSBOMGenerationInProgress, "SBOM generation in progress")
 			scanJob.Status.ImagesCount = len(discoveredImages)
 			scanJob.Status.ScannedImagesCount = 0

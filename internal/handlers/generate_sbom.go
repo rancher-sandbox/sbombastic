@@ -57,7 +57,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		return fmt.Errorf("failed to unmarshal GenerateSBOM message: %w", err)
 	}
 
-	h.logger.DebugContext(ctx, "SBOM generation requested",
+	h.logger.InfoContext(ctx, "SBOM generation requested",
 		"image", generateSBOMMessage.Image.Name,
 		"namespace", generateSBOMMessage.Image.Namespace,
 	)
@@ -112,7 +112,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	// Check if the SBOM already exists.
 	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
 	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
-		h.logger.DebugContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
+		h.logger.InfoContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
 		sbom, err = h.generateSBOM(ctx, image, registry, generateSBOMMessage)
 		if err != nil {
 			return err
@@ -120,7 +120,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	} else if err != nil {
 		return fmt.Errorf("failed to check if SBOM %s in namespace %s exists: %w", generateSBOMMessage.Image.Name, generateSBOMMessage.Image.Namespace, err)
 	} else {
-		h.logger.DebugContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
+		h.logger.InfoContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
 	}
 
 	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, sbom.Name)
