@@ -30,6 +30,10 @@ spec:
             - -log-level={{ .Values.storage.logLevel }}
           {{- end }}
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}
+          {{- if and .Values.storage .Values.storage.resources }}
+          resources:
+{{ toYaml .Values.storage.resources | indent 12 }}
+          {{- end }}
           volumeMounts:
             - name: sqlite-pvc
               mountPath: /data/sqlite/
