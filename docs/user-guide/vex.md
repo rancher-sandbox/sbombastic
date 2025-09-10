@@ -1,4 +1,4 @@
-# VEX
+# VEX Support
 
 VEX is a format used to convey information about the exploitability of vulnerabilities in software products and share them with scanning tools.
 

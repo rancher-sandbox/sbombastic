@@ -4,62 +4,26 @@ A SBOM-centric security scanner for Kubernetes.
 
 This is still being developed. For additional details, please refer to the [RFC](docs/rfc).
 
-# Development
+# Documentation
 
-## Run tests
+### Installation
 
-```shell
-make test
-```
+- [Quickstart](docs/installation/quickstart.md)
 
-## Run the development environment with Tilt
+### Usage
 
-Customize `tilt-settings.yaml` to your needs.
-A default StorageClass must be defined in your cluster for SQLite data persistence.
+- [Scan Registries](docs/user-guide/scan-registries.md)
+- [Querying Reports](docs/user-guide/querying-reports.md)
+- [Private Registries](docs/user-guide/private-registries.md)
+- [VEX Support and VEXHub Integration](docs/user-guide/vex.md)
 
-Run tilt:
+### Troubleshooting
 
-```shell
-tilt up
-```
+- [Collecting logs](docs/troubleshooting/collecting-logs.md)
 
-Run tilt with unified logs:
+### Development
 
-```shell
-tilt up --stream
-```
-
-Follow controller logs:
-
-```shell
-tilt logs -f controller
-```
-
-Follow storage logs:
-
-```shell
-tilt logs -f storage
-```
-
-Follow worker logs:
-
-```shell
-tilt logs -f worker
-```
-
-Teardown the environment:
-
-```shell
-tilt down
-```
-
-## Generate code
-
-When you make changes to the CRDs in `/api` or rbac rules annotations, you need to regenerate the code.
-
-```shell
-make generate
-```
+- [Contributing guidelines](CONTRIBUTING.md)
 
 # Credits
 
