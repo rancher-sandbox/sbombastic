@@ -15,7 +15,29 @@ spec:
     singular: scanjob
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Target registry
+      jsonPath: .spec.registry
+      name: Registry
+      type: string
+    - description: Current status
+      jsonPath: .status.conditions[?(@.status=='True')].type
+      name: Status
+      type: string
+    - description: Status reason
+      jsonPath: .status.conditions[?(@.status=='True')].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.scannedImagesCount
+      name: Scanned
+      type: integer
+    - jsonPath: .status.imagesCount
+      name: Total
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ScanJob is the Schema for the scanjobs API.
