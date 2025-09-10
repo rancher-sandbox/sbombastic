@@ -23,12 +23,12 @@ require (
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/registry v0.38.0
 	go.yaml.in/yaml/v3 v3.0.4
-	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
-	k8s.io/apiserver v0.34.0
-	k8s.io/client-go v0.34.0
-	k8s.io/code-generator v0.34.0
-	k8s.io/component-base v0.34.0
+	k8s.io/api v0.34.1
+	k8s.io/apimachinery v0.34.1
+	k8s.io/apiserver v0.34.1
+	k8s.io/client-go v0.34.1
+	k8s.io/code-generator v0.34.1
+	k8s.io/component-base v0.34.1
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	modernc.org/sqlite v1.38.2
@@ -436,7 +436,7 @@ require (
 	k8s.io/cli-runtime v0.33.3 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kms v0.34.0 // indirect
+	k8s.io/kms v0.34.1 // indirect
 	k8s.io/kubectl v0.33.3 // indirect
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
