@@ -1,16 +1,17 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 const CreateSBOMTableSQL = `
@@ -54,9 +55,7 @@ func NewSBOMStore(
 		CreateStrategy: strategy,
 		UpdateStrategy: strategy,
 		DeleteStrategy: strategy,
-
-		// TODO: define table converter that exposes more than name/creation timestamp
-		TableConvertor: rest.NewDefaultTableConvertor(v1alpha1.Resource("sboms")),
+		TableConvertor: &sbomTableConvertor{},
 	}
 
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: getAttrs}
@@ -65,4 +64,34 @@ func NewSBOMStore(
 	}
 
 	return store, nil
+}
+
+type sbomTableConvertor struct{}
+
+func (c *sbomTableConvertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runtime.Object) (*metav1.Table, error) {
+	table := &metav1.Table{
+		ColumnDefinitions: imageMetadataTableColumns(),
+		Rows:              []metav1.TableRow{},
+	}
+
+	// Handle both single object and list
+	var sboms []v1alpha1.SBOM
+	switch t := obj.(type) {
+	case *v1alpha1.SBOMList:
+		sboms = t.Items
+	case *v1alpha1.SBOM:
+		sboms = []v1alpha1.SBOM{*t}
+	default:
+		return nil, fmt.Errorf("unexpected type %T", obj)
+	}
+
+	for _, sbom := range sboms {
+		row := metav1.TableRow{
+			Object: runtime.RawExtension{Object: &sbom},
+			Cells:  imageMetadataTableRowCells(sbom.Name, &sbom),
+		}
+		table.Rows = append(table.Rows, row)
+	}
+
+	return table, nil
 }
