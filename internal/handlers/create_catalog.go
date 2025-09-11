@@ -243,6 +243,11 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return h.k8sClient.Status().Update(ctx, scanJob)
 	})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Stop processing if the scanjob is not found, since it might have been deleted.
+			h.logger.InfoContext(ctx, "ScanJob not found, stopping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
+			return nil
+		}
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
