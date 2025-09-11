@@ -1,16 +1,17 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 const CreateImageTableSQL = `
@@ -54,9 +55,7 @@ func NewImageStore(
 		CreateStrategy: strategy,
 		UpdateStrategy: strategy,
 		DeleteStrategy: strategy,
-
-		// TODO: define table converter that exposes more than name/creation timestamp
-		TableConvertor: rest.NewDefaultTableConvertor(v1alpha1.Resource("images")),
+		TableConvertor: &imageTableConvertor{},
 	}
 
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: getAttrs}
@@ -65,4 +64,34 @@ func NewImageStore(
 	}
 
 	return store, nil
+}
+
+type imageTableConvertor struct{}
+
+func (c *imageTableConvertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runtime.Object) (*metav1.Table, error) {
+	table := &metav1.Table{
+		ColumnDefinitions: imageMetadataTableColumns(),
+		Rows:              []metav1.TableRow{},
+	}
+
+	// Handle both single object and list
+	var images []v1alpha1.Image
+	switch t := obj.(type) {
+	case *v1alpha1.ImageList:
+		images = t.Items
+	case *v1alpha1.Image:
+		images = []v1alpha1.Image{*t}
+	default:
+		return nil, fmt.Errorf("unexpected type %T", obj)
+	}
+
+	for _, image := range images {
+		row := metav1.TableRow{
+			Object: runtime.RawExtension{Object: &image},
+			Cells:  imageMetadataTableRowCells(image.Name, &image),
+		}
+		table.Rows = append(table.Rows, row)
+	}
+
+	return table, nil
 }
