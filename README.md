@@ -9,6 +9,7 @@ This is still being developed. For additional details, please refer to the [RFC]
 ### Installation
 
 - [Quickstart](docs/installation/quickstart.md)
+- [Uninstall](docs/installation/uninstall.md)
 
 ### Usage
 
