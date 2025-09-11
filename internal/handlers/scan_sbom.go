@@ -83,8 +83,9 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	}, scanJob)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Stop processing if the ScanJob is not found.
-			h.logger.ErrorContext(ctx, "ScanJob not found, skipping SBOM scan", "scanJob", scanSBOMMessage.ScanJob.Name, "namespace", scanSBOMMessage.ScanJob.Namespace)
+			// Stop processing if the scanjob is not found, since it might have been deleted.
+			h.logger.ErrorContext(ctx, "ScanJob not found, stopping SBOM scan", "scanJob", scanSBOMMessage.ScanJob.Name, "namespace", scanSBOMMessage.ScanJob.Namespace)
+			return nil
 		}
 		return fmt.Errorf("failed to get ScanJob: %w", err)
 	}
@@ -95,6 +96,11 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		Namespace: scanSBOMMessage.SBOM.Namespace,
 	}, sbom)
 	if err != nil {
+		// Stop processing if the SBOM is not found, since it might have been deleted.
+		if apierrors.IsNotFound(err) {
+			h.logger.ErrorContext(ctx, "SBOM not found, stopping SBOM scan", "sbom", scanSBOMMessage.SBOM.Name, "namespace", scanSBOMMessage.SBOM.Namespace)
+			return nil
+		}
 		return fmt.Errorf("failed to get SBOM: %w", err)
 	}
 
