@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -15,7 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/spdx/tools-golang/spdx"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -200,6 +203,110 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	diff := cmp.Diff(expectedSPDX, generatedSPDX, filter, cmpopts.IgnoreUnexported(spdx.Package{}))
 
 	assert.Empty(t, diff, "SPDX diff mismatch on platform %s\nDiff:\n%s", platform, diff)
+}
+
+func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
+	image := &storagev1alpha1.Image{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-image",
+			Namespace: "default",
+		},
+		Spec: storagev1alpha1.ImageSpec{
+			ImageMetadata: storagev1alpha1.ImageMetadata{
+				Registry:    "ghcr",
+				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+				Repository:  "golang",
+				Tag:         "1.12-alpine",
+				Platform:    "linux/amd64",
+				Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
+			},
+		},
+	}
+
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI: "test.io",
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
+	tests := []struct {
+		name            string
+		existingObjects []runtime.Object
+	}{
+		{
+			name:            "scanjob not found",
+			existingObjects: []runtime.Object{image},
+		},
+		{
+			name:            "image not found",
+			existingObjects: []runtime.Object{registry, scanJob},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scheme := scheme.Scheme
+			err := storagev1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+			err = v1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+
+			k8sClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithRuntimeObjects(test.existingObjects...).
+				Build()
+
+			publisher := messagingMocks.NewMockPublisher(t)
+			// Publisher should not be called since we exit early
+
+			handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+
+			message, err := json.Marshal(&GenerateSBOMMessage{
+				BaseMessage: BaseMessage{
+					ScanJob: ObjectRef{
+						Name:      scanJob.Name,
+						Namespace: "default",
+					},
+				},
+				Image: ObjectRef{
+					Name:      image.Name,
+					Namespace: "default",
+				},
+			})
+			require.NoError(t, err)
+
+			// Should return nil (no error) when resource doesn't exist
+			err = handler.Handle(context.Background(), message)
+			require.NoError(t, err)
+
+			// Verify no SBOM was created
+			sbom := &storagev1alpha1.SBOM{}
+			err = k8sClient.Get(context.Background(), types.NamespacedName{
+				Name:      image.Name,
+				Namespace: "default",
+			}, sbom)
+			assert.True(t, apierrors.IsNotFound(err), "SBOM should not exist")
+		})
+	}
 }
 
 func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
