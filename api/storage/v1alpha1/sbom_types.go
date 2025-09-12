@@ -44,8 +44,7 @@ type SBOM struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SBOMSpec   `json:"spec,omitempty"`
-	Status SBOMStatus `json:"status,omitempty"`
+	Spec SBOMSpec `json:"spec,omitempty"`
 }
 
 // SBOMSpec defines the desired state of a SBOM
@@ -53,12 +52,6 @@ type SBOMSpec struct {
 	ImageMetadata ImageMetadata `json:"imageMetadata"`
 	// SPDX contains the SPDX document of the SBOM in JSON format
 	SPDX runtime.RawExtension `json:"spdx"`
-}
-
-// SBOMStatus defines the observed state of a SBOM
-type SBOMStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 func (s *SBOM) GetImageMetadata() ImageMetadata {

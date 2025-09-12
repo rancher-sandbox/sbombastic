@@ -3,7 +3,6 @@
 package v1alpha1
 
 import (
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
@@ -15,7 +14,6 @@ type ImageApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	Spec                             *ImageSpecApplyConfiguration `json:"spec,omitempty"`
-	Status                           *storagev1alpha1.ImageStatus `json:"status,omitempty"`
 }
 
 // Image constructs a declarative configuration of the Image type for use with
@@ -193,14 +191,6 @@ func (b *ImageApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
 // If called multiple times, the Spec field is set to the value of the last call.
 func (b *ImageApplyConfiguration) WithSpec(value *ImageSpecApplyConfiguration) *ImageApplyConfiguration {
 	b.Spec = value
-	return b
-}
-
-// WithStatus sets the Status field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Status field is set to the value of the last call.
-func (b *ImageApplyConfiguration) WithStatus(value storagev1alpha1.ImageStatus) *ImageApplyConfiguration {
-	b.Status = &value
 	return b
 }
 

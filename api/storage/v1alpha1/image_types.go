@@ -43,8 +43,7 @@ type Image struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ImageSpec   `json:"spec,omitempty"`
-	Status ImageStatus `json:"status,omitempty"`
+	Spec ImageSpec `json:"spec,omitempty"`
 }
 
 // ImageSpec defines the desired state of Image
@@ -64,12 +63,6 @@ type ImageLayer struct {
 	Digest string `json:"digest"`
 	// diffID is the Hash of the uncompressed layer
 	DiffID string `json:"diffID"`
-}
-
-// ImageStatus defines the observed state of Image
-type ImageStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 func (i *Image) GetImageMetadata() ImageMetadata {

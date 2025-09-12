@@ -80,9 +80,6 @@ spec:
             - imageMetadata
             - spdx
             type: object
-          status:
-            description: SBOMStatus defines the observed state of a SBOM
-            type: object
         type: object
     selectableFields:
     - jsonPath: .spec.imageMetadata.registry

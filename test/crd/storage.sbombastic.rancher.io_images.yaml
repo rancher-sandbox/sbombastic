@@ -97,9 +97,6 @@ spec:
             required:
             - imageMetadata
             type: object
-          status:
-            description: ImageStatus defines the observed state of Image
-            type: object
         type: object
     selectableFields:
     - jsonPath: .spec.imageMetadata.registry
