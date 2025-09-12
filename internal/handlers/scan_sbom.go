@@ -124,7 +124,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		}
 	}()
 
-	_, err = sbomFile.Write(sbom.Spec.SPDX.Raw)
+	_, err = sbomFile.Write(sbom.SPDX.Raw)
 	if err != nil {
 		return fmt.Errorf("failed to write SBOM file: %w", err)
 	}
@@ -237,8 +237,8 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 			api.LabelPartOfKey:          api.LabelPartOfValue,
 		}
 
-		vulnerabilityReport.Spec.ImageMetadata = sbom.GetImageMetadata()
-		vulnerabilityReport.Spec.Report = storagev1alpha1.Report{
+		vulnerabilityReport.ImageMetadata = sbom.GetImageMetadata()
+		vulnerabilityReport.Report = storagev1alpha1.Report{
 			Results: results,
 		}
 		return nil

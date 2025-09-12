@@ -84,15 +84,13 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 			Name:      "test-image",
 			Namespace: "default",
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "ghcr",
-				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
-				Repository:  "golang",
-				Tag:         "1.12-alpine",
-				Platform:    platform,
-				Digest:      sha256,
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    "ghcr",
+			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			Repository:  "golang",
+			Tag:         "1.12-alpine",
+			Platform:    platform,
+			Digest:      sha256,
 		},
 	}
 
@@ -187,11 +185,11 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	}, sbom)
 	require.NoError(t, err, "failed to get SBOM, with platform %s", platform)
 
-	assert.Equal(t, image.Spec.ImageMetadata, sbom.Spec.ImageMetadata)
+	assert.Equal(t, image.ImageMetadata, sbom.ImageMetadata)
 	assert.Equal(t, image.UID, sbom.GetOwnerReferences()[0].UID)
 
 	generatedSPDX := &spdx.Document{}
-	err = json.Unmarshal(sbom.Spec.SPDX.Raw, generatedSPDX)
+	err = json.Unmarshal(sbom.SPDX.Raw, generatedSPDX)
 	require.NoError(t, err, "failed to unmarshal generated SPDX, with platform %s", platform)
 
 	// Filter out "DocumentNamespace" and any field named "AnnotationDate" or "Created" regardless of nesting,
@@ -211,15 +209,13 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			Name:      "test-image",
 			Namespace: "default",
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "ghcr",
-				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
-				Repository:  "golang",
-				Tag:         "1.12-alpine",
-				Platform:    "linux/amd64",
-				Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    "ghcr",
+			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			Repository:  "golang",
+			Tag:         "1.12-alpine",
+			Platform:    "linux/amd64",
+			Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
 		},
 	}
 
@@ -316,15 +312,13 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 			Namespace: "default",
 			UID:       "image-uid",
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "ghcr",
-				RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
-				Repository:  "golang",
-				Tag:         "1.12-alpine",
-				Platform:    "linux/amd64",
-				Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    "ghcr",
+			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			Repository:  "golang",
+			Tag:         "1.12-alpine",
+			Platform:    "linux/amd64",
+			Digest:      "sha256:1782cafde43390b032f960c0fad3def745fac18994ced169003cb56e9a93c028",
 		},
 	}
 
@@ -360,9 +354,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 			Namespace: "default",
 			UID:       "sbom-uid",
 		},
-		Spec: storagev1alpha1.SBOMSpec{
-			ImageMetadata: image.Spec.ImageMetadata,
-		},
+		ImageMetadata: image.ImageMetadata,
 	}
 
 	scheme := scheme.Scheme
@@ -429,15 +421,13 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 			Namespace: "default",
 			UID:       "image-uid",
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    "localhost",
-				RegistryURI: suite.registryURL,
-				Repository:  imageName,
-				Tag:         tag,
-				Platform:    platform,
-				Digest:      digest,
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    "localhost",
+			RegistryURI: suite.registryURL,
+			Repository:  imageName,
+			Tag:         tag,
+			Platform:    platform,
+			Digest:      digest,
 		},
 	}
 

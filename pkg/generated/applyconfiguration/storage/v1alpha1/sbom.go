@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	types "k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
@@ -14,8 +14,8 @@ import (
 type SBOMApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
-	Spec                             *SBOMSpecApplyConfiguration `json:"spec,omitempty"`
-	Status                           *storagev1alpha1.SBOMStatus `json:"status,omitempty"`
+	ImageMetadata                    *ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
+	SPDX                             *runtime.RawExtension            `json:"spdx,omitempty"`
 }
 
 // SBOM constructs a declarative configuration of the SBOM type for use with
@@ -188,19 +188,19 @@ func (b *SBOMApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
 	}
 }
 
-// WithSpec sets the Spec field in the declarative configuration to the given value
+// WithImageMetadata sets the ImageMetadata field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Spec field is set to the value of the last call.
-func (b *SBOMApplyConfiguration) WithSpec(value *SBOMSpecApplyConfiguration) *SBOMApplyConfiguration {
-	b.Spec = value
+// If called multiple times, the ImageMetadata field is set to the value of the last call.
+func (b *SBOMApplyConfiguration) WithImageMetadata(value *ImageMetadataApplyConfiguration) *SBOMApplyConfiguration {
+	b.ImageMetadata = value
 	return b
 }
 
-// WithStatus sets the Status field in the declarative configuration to the given value
+// WithSPDX sets the SPDX field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Status field is set to the value of the last call.
-func (b *SBOMApplyConfiguration) WithStatus(value storagev1alpha1.SBOMStatus) *SBOMApplyConfiguration {
-	b.Status = &value
+// If called multiple times, the SPDX field is set to the value of the last call.
+func (b *SBOMApplyConfiguration) WithSPDX(value runtime.RawExtension) *SBOMApplyConfiguration {
+	b.SPDX = &value
 	return b
 }
 

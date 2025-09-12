@@ -24,24 +24,18 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &storagev1alpha1.ImageLayerApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ImageMetadata"):
 		return &storagev1alpha1.ImageMetadataApplyConfiguration{}
-	case v1alpha1.SchemeGroupVersion.WithKind("ImageSpec"):
-		return &storagev1alpha1.ImageSpecApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("Report"):
 		return &storagev1alpha1.ReportApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("Result"):
 		return &storagev1alpha1.ResultApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("SBOM"):
 		return &storagev1alpha1.SBOMApplyConfiguration{}
-	case v1alpha1.SchemeGroupVersion.WithKind("SBOMSpec"):
-		return &storagev1alpha1.SBOMSpecApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("VEXStatus"):
 		return &storagev1alpha1.VEXStatusApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("Vulnerability"):
 		return &storagev1alpha1.VulnerabilityApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("VulnerabilityReport"):
 		return &storagev1alpha1.VulnerabilityReportApplyConfiguration{}
-	case v1alpha1.SchemeGroupVersion.WithKind("VulnerabilityReportSpec"):
-		return &storagev1alpha1.VulnerabilityReportSpecApplyConfiguration{}
 
 	}
 	return nil

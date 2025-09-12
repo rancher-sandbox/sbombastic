@@ -17,7 +17,7 @@ func SetupIndexer(ctx context.Context, mgr ctrl.Manager) error {
 		if !ok {
 			panic(fmt.Sprintf("Expected Image, got %T", rawObj))
 		}
-		return []string{image.Spec.Registry}
+		return []string{image.Registry}
 	}); err != nil {
 		return fmt.Errorf("unable to create field indexer: %w", err)
 	}
