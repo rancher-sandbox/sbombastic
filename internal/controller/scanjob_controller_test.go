@@ -34,6 +34,7 @@ var _ = Describe("ScanJob Controller", func() {
 			reconciler = ScanJobReconciler{
 				Client:    k8sClient,
 				Publisher: mockPublisher,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Creating a Registry")
@@ -83,7 +84,6 @@ var _ = Describe("ScanJob Controller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Verifying the ScanJob was updated with registry data")
 			updatedScanJob := &v1alpha1.ScanJob{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      scanJob.Name,
@@ -91,7 +91,15 @@ var _ = Describe("ScanJob Controller", func() {
 			}, updatedScanJob)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Checking that registry data was stored in annotations")
+			By("Verifying that the ScanJob has the correct owner reference")
+			Expect(updatedScanJob.OwnerReferences).To(HaveLen(1))
+			Expect(updatedScanJob.OwnerReferences[0].Name).To(Equal(registry.Name))
+			Expect(updatedScanJob.OwnerReferences[0].Kind).To(Equal("Registry"))
+			Expect(updatedScanJob.OwnerReferences[0].APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+			Expect(updatedScanJob.OwnerReferences[0].UID).To(Equal(registry.UID))
+			Expect(*updatedScanJob.OwnerReferences[0].Controller).To(BeTrue())
+
+			By("Verifying that registry data was stored in annotations")
 			registryData, exists := updatedScanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
 			Expect(exists).To(BeTrue())
 
@@ -116,6 +124,7 @@ var _ = Describe("ScanJob Controller", func() {
 			reconciler = ScanJobReconciler{
 				Client:    k8sClient,
 				Publisher: mockPublisher,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Creating a ScanJob with non-existent Registry")
@@ -163,6 +172,7 @@ var _ = Describe("ScanJob Controller", func() {
 			reconciler = ScanJobReconciler{
 				Client:    k8sClient,
 				Publisher: mockPublisher,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Creating a completed ScanJob")
@@ -207,6 +217,7 @@ var _ = Describe("ScanJob Controller", func() {
 			reconciler = ScanJobReconciler{
 				Client:    k8sClient,
 				Publisher: mockPublisher,
+				Scheme:    k8sClient.Scheme(),
 			}
 			By("Creating a Registry")
 			registry = v1alpha1.Registry{

@@ -291,12 +291,27 @@ This reduces the number of Kubernetes API interactions and streamlines the scann
 - Transient errors encountered during the scan process (such as network problems or registry downtime) will be automatically retried by both reconcilers and workers. Workers will use exponential backoff for these retries. If the scan continues to fail after multiple attempts, the `ScanJob` will be marked as `Failed` with a relevant error message.
 - For non-transient errors (like an invalid registry configuration), the `ScanJob` will be marked as `Failed` immediately, accompanied by a clear error message.
 
-## Registry deletion
+## Stopping scans
 
-A finalizer will be added to the `Registry` resource to guarantee that deletion only proceeds once any ongoing `ScanJob` has either completed or failed.
-This ensures that scans are not interrupted mid-process, preserving the integrity of scan results and preventing orphaned resources.
+When a user deletes a `ScanJob` to stop an ongoing scan, workers will gracefully handle the deletion by checking if the `ScanJob` resource still exists before performing any work.
+If the `ScanJob` is not found, workers will immediately stop processing and return.
 
-## Garbage collection
+## Owner references and garbage collection
+
+`ScanJob` resources are linked to their corresponding `Registry` through owner references. This establishes a parent-child relationship where:
+
+- If a `Registry` is deleted, all associated `ScanJob` resources are automatically deleted by Kubernetes garbage collection
+- This automatically stops any ongoing scans without requiring additional logic
+- All resources created by the scan workflow are linked via owner references: `Image` resources point to their `Registry`, `SBOM` resources point to their `Image`, and `VulnerabilityReport` resources point to their `SBOM`.
+  This ensures that deleting a `Registry` cascades and removes all associated resources.
+
+## Deleting a Registry during an active scan
+
+When a `Registry` gets deleted during an active scan, workers may still be processing and attempting to create new resources.
+Since these resources would have owner references pointing to the now-deleted `Registry` (or other deleted resources in the chain), they become orphaned upon creation.
+Kubernetes garbage collection automatically handles cleanup of these orphaned resources.
+
+## ScanJob retention
 
 A maximum of X ScanJob resources per registry will be retained in the system for auditing and historical purposes, with X being a configurable value.
 This logic could be effectively implemented within either the `ValidatingWebhook` or the `ScanJob` reconciler.
@@ -330,6 +345,13 @@ Why should we **not** do this?
 - What other designs/options have been considered?
 - What is the impact of not doing this?
 --->
+
+## Registry finalizer approach
+
+An alternative approach would be to add a finalizer to the `Registry` resource to guarantee that deletion only proceeds once any ongoing `ScanJob` has either completed or failed.
+This would ensure that scans are not interrupted mid-process, preserving the integrity of scan results and preventing orphaned resources.
+
+However, the owner reference approach is simpler and more idiomatic in Kubernetes, as it leverages built-in garbage collection mechanisms rather than requiring custom finalizer logic.
 
 # Unresolved questions
 

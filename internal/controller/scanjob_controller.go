@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/rancher/sbombastic/api/v1alpha1"
@@ -101,6 +102,9 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *v1alp
 
 	original := scanJob.DeepCopy()
 
+	if err = controllerutil.SetControllerReference(registry, scanJob, r.Scheme); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set owner reference on ScanJob: %w", err)
+	}
 	scanJob.Annotations = map[string]string{
 		v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 	}

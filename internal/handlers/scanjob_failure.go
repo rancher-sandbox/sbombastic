@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,19 +51,18 @@ func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message []byt
 			Name:      baseMessage.ScanJob.Name,
 			Namespace: baseMessage.ScanJob.Namespace,
 		}, scanJob); err != nil {
-			return fmt.Errorf("failed to get ScanJob %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
+			return fmt.Errorf("cannot get scanjob %s/%s: %w", baseMessage.ScanJob.Namespace, baseMessage.ScanJob.Name, err)
 		}
 
 		scanJob.MarkFailed(sbombasticv1alpha1.ReasonInternalError, errorMessage)
 		return h.k8sClient.Status().Update(ctx, scanJob)
 	})
 	if err != nil {
-		h.logger.ErrorContext(ctx, "Failed to update ScanJob status with failure",
-			"scanjob", scanJob.Name,
-			"namespace", scanJob.Namespace,
-			"error", err,
-		)
-		return fmt.Errorf("failed to update ScanJob %s/%s status: %w", scanJob.Namespace, scanJob.Name, err)
+		if apierrors.IsNotFound(err) {
+			h.logger.InfoContext(ctx, "ScanJob not found, skipping updating ScanJob status to failed", "scanjob", baseMessage.ScanJob.Name, "namespace", baseMessage.ScanJob.Namespace)
+			return nil
+		}
+		return fmt.Errorf("failed to update ScanJob %s/%s status to failed: %w", scanJob.Namespace, scanJob.Name, err)
 	}
 
 	h.logger.DebugContext(ctx, "ScanJob marked as failed",

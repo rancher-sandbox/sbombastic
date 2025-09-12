@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -15,8 +16,10 @@ import (
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	_ "modernc.org/sqlite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -214,4 +217,92 @@ func fakeVEXHubRepository(t *testing.T) *httptest.Server {
 	require.NoError(t, err)
 	server.Listener = listener
 	return server
+}
+
+func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
+	spdxData, err := os.ReadFile(filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"))
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			UID:       "test-scanjob-uid",
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
+	sbom := &storagev1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-sbom",
+			Namespace: "default",
+		},
+		Spec: storagev1alpha1.SBOMSpec{
+			SPDX: runtime.RawExtension{Raw: spdxData},
+		},
+	}
+
+	vexHubs := &v1alpha1.VEXHubList{
+		Items: []v1alpha1.VEXHub{},
+	}
+
+	tests := []struct {
+		name            string
+		existingObjects []runtime.Object
+	}{
+		{
+			name:            "scanjob not found",
+			existingObjects: []runtime.Object{sbom, vexHubs},
+		},
+		{
+			name:            "sbom not found",
+			existingObjects: []runtime.Object{scanJob, vexHubs},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scheme := scheme.Scheme
+			err := storagev1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+			err = v1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+
+			k8sClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithRuntimeObjects(test.existingObjects...).
+				Build()
+
+			cacheDir := t.TempDir()
+			handler := NewScanSBOMHandler(k8sClient, scheme, cacheDir, testTrivyDBRepository, testTrivyJavaDBRepository, slog.Default())
+
+			message, err := json.Marshal(&ScanSBOMMessage{
+				BaseMessage: BaseMessage{
+					ScanJob: ObjectRef{
+						Name:      scanJob.Name,
+						Namespace: "default",
+					},
+				},
+				SBOM: ObjectRef{
+					Name:      sbom.Name,
+					Namespace: "default",
+				},
+			})
+			require.NoError(t, err)
+
+			// Should return nil (no error) when resource doesn't exist
+			err = handler.Handle(context.Background(), message)
+			require.NoError(t, err)
+
+			// Verify no VulnerabilityReport was created
+			vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
+			err = k8sClient.Get(context.Background(), types.NamespacedName{
+				Name:      sbom.Name,
+				Namespace: "default",
+			}, vulnerabilityReport)
+			assert.True(t, apierrors.IsNotFound(err), "VulnerabilityReport should not exist")
+		})
+	}
 }

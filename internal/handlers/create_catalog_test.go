@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -32,7 +33,7 @@ import (
 
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers/registry"
+	registryClient "github.com/rancher/sbombastic/internal/handlers/registry"
 	registryMocks "github.com/rancher/sbombastic/internal/handlers/registry/mocks"
 	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
 	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
@@ -119,8 +120,8 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
 	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
-		Return(registry.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
-	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+		Return(registryClient.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
+	mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client { return mockRegistryClient }
 
 	mockPublisher := messagingMocks.NewMockPublisher(t)
 
@@ -308,7 +309,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
 		Return(imageDetails, nil)
 
-	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+	mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client { return mockRegistryClient }
 	mockPublisher := messagingMocks.NewMockPublisher(t)
 
 	registry := &v1alpha1.Registry{
@@ -554,6 +555,143 @@ func TestCatalogHandler_DeleteObsoleteImages(t *testing.T) {
 	assert.Equal(t, "image-1", remainingImages.Items[0].Name)
 }
 
+func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI: "test.io",
+		},
+	}
+	registryData, err := json.Marshal(registry)
+	require.NoError(t, err)
+
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			UID:       "test-scanjob-uid",
+			Annotations: map[string]string{
+				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
+			},
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
+	tests := []struct {
+		name                string
+		existingObjects     []runtime.Object
+		setupRegistryClient func(*registryMocks.Client, client.Client, *v1alpha1.ScanJob)
+	}{
+		{
+			name:            "scanjob not found initially",
+			existingObjects: []runtime.Object{registry},
+			setupRegistryClient: func(_ *registryMocks.Client, _ client.Client, _ *v1alpha1.ScanJob) {
+			},
+		},
+		{
+			name:            "scanjob deleted before image creation",
+			existingObjects: []runtime.Object{registry, scanJob},
+			setupRegistryClient: func(mockClient *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
+				mockClient.On("Catalog", mock.Anything, mock.Anything).Return([]string{"test.io/repo"}, nil)
+				mockClient.On("ListRepositoryContents", mock.Anything, mock.Anything).Return([]string{"test.io/repo:latest"}, nil)
+				mockClient.On("GetImageIndex", mock.Anything).Return(nil, errors.New("not multi-arch"))
+
+				digest, _ := cranev1.NewHash("sha256:abc123def456")
+				platform := cranev1.Platform{OS: "linux", Architecture: "amd64"}
+				mockLayer := &registryMocks.Layer{}
+				mockLayer.On("Digest").Return(cranev1.Hash{Algorithm: "sha256", Hex: "layer123"}, nil)
+				mockLayer.On("DiffID").Return(cranev1.Hash{Algorithm: "sha256", Hex: "diff123"}, nil)
+
+				imageDetails := registryClient.ImageDetails{
+					Digest:   digest,
+					Platform: platform,
+					History:  []cranev1.History{{CreatedBy: "test command", EmptyLayer: false}},
+					Layers:   []cranev1.Layer{mockLayer},
+				}
+
+				mockClient.On("GetImageDetails", mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+					// Delete the ScanJob when GetImageDetails is called
+					// This ensures the handler gets valid image details but then finds the ScanJob missing
+					// when it tries to re-fetch it before image creation
+					_ = k8sClient.Delete(context.Background(), scanJob)
+				}).Return(imageDetails, nil)
+			},
+		},
+		{
+			name:            "scanjob deleted before status update",
+			existingObjects: []runtime.Object{registry, scanJob},
+			setupRegistryClient: func(mockClient *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
+				mockClient.On("Catalog", mock.Anything, mock.Anything).Return([]string{"test.io/repo"}, nil)
+				mockClient.On("ListRepositoryContents", mock.Anything, mock.Anything).Return([]string{"test.io/repo:latest"}, nil)
+				mockClient.On("GetImageIndex", mock.Anything).Return(nil, errors.New("not multi-arch"))
+
+				// On GetImageDetails call, delete the ScanJob to simulate mid-processing deletion
+				mockClient.On("GetImageDetails", mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+					_ = k8sClient.Delete(context.Background(), scanJob)
+				}).Return(registryClient.ImageDetails{}, errors.New("something went wrong"))
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scheme := scheme.Scheme
+			err := storagev1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+			err = v1alpha1.AddToScheme(scheme)
+			require.NoError(t, err)
+
+			k8sClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithRuntimeObjects(test.existingObjects...).
+				WithStatusSubresource(&v1alpha1.ScanJob{}).
+				WithIndex(&storagev1alpha1.Image{}, storagev1alpha1.IndexImageMetadataRegistry, func(obj client.Object) []string {
+					image, ok := obj.(*storagev1alpha1.Image)
+					if !ok {
+						return nil
+					}
+					return []string{image.GetImageMetadata().Registry}
+				}).
+				Build()
+
+			mockRegistryClient := registryMocks.NewClient(t)
+			test.setupRegistryClient(mockRegistryClient, k8sClient, scanJob)
+
+			mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client {
+				return mockRegistryClient
+			}
+			mockPublisher := messagingMocks.NewMockPublisher(t)
+
+			handler := NewCreateCatalogHandler(mockRegistryClientFactory, k8sClient, scheme, mockPublisher, slog.Default())
+
+			message, err := json.Marshal(&CreateCatalogMessage{
+				BaseMessage: BaseMessage{
+					ScanJob: ObjectRef{
+						Name:      scanJob.Name,
+						Namespace: scanJob.Namespace,
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			// Should return nil (no error) when resource doesn't exist
+			err = handler.Handle(context.Background(), message)
+			require.NoError(t, err)
+
+			// Verify no Image resources were created
+			imageList := &storagev1alpha1.ImageList{}
+			err = k8sClient.List(context.Background(), imageList)
+			require.NoError(t, err)
+			assert.Empty(t, imageList.Items, "No images should be created")
+		})
+	}
+}
+
 func TestImageDetailsToImage(t *testing.T) {
 	digest, err := cranev1.NewHash("sha256:f41b7d70c5779beba4a570ca861f788d480156321de2876ce479e072fb0246f1")
 	require.NoError(t, err)
@@ -611,7 +749,7 @@ func TestImageDetailsToImage(t *testing.T) {
 	}
 }
 
-func buildImageDetails(digest cranev1.Hash, platform cranev1.Platform) (registry.ImageDetails, error) {
+func buildImageDetails(digest cranev1.Hash, platform cranev1.Platform) (registryClient.ImageDetails, error) {
 	numberOfLayers := 8
 
 	layers := make([]cranev1.Layer, 0, numberOfLayers)
@@ -620,7 +758,7 @@ func buildImageDetails(digest cranev1.Hash, platform cranev1.Platform) (registry
 	for i := range numberOfLayers {
 		layerDigest, layerDiffID, err := fakeDigestAndDiffID(i)
 		if err != nil {
-			return registry.ImageDetails{}, err
+			return registryClient.ImageDetails{}, err
 		}
 
 		layer := &registryMocks.Layer{}
@@ -647,7 +785,7 @@ func buildImageDetails(digest cranev1.Hash, platform cranev1.Platform) (registry
 		})
 	}
 
-	return registry.ImageDetails{
+	return registryClient.ImageDetails{
 		Digest:   digest,
 		Layers:   layers,
 		History:  history,
@@ -671,43 +809,6 @@ func fakeDigestAndDiffID(layerIndex int) (cranev1.Hash, cranev1.Hash, error) {
 	}
 
 	return digest, diffID, nil
-}
-
-func TestCreateCatalogHandler_Handle_ScanJobNotFound(t *testing.T) {
-	mockRegistryClient := registryMocks.NewClient(t)
-	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
-	mockPublisher := messagingMocks.NewMockPublisher(t)
-
-	scheme := scheme.Scheme
-	err := v1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-	err = storagev1alpha1.AddToScheme(scheme)
-	require.NoError(t, err)
-
-	k8sClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		Build()
-
-	handler := NewCreateCatalogHandler(
-		mockRegistryClientFactory,
-		k8sClient,
-		scheme,
-		mockPublisher,
-		slog.Default().With("handler", "create_catalog_handler"),
-	)
-
-	message, err := json.Marshal(&CreateCatalogMessage{
-		BaseMessage: BaseMessage{
-			ScanJob: ObjectRef{
-				Name:      "non-existent-scan-job",
-				Namespace: "default",
-			},
-		},
-	})
-	require.NoError(t, err)
-
-	err = handler.Handle(t.Context(), message)
-	require.NoError(t, err)
 }
 
 func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
@@ -755,7 +856,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 	require.NoError(t, err)
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
-	mockRegistryClientFactory := func(_ http.RoundTripper) registry.Client { return mockRegistryClient }
+	mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client { return mockRegistryClient }
 
 	mockPublisher := messagingMocks.NewMockPublisher(t)
 

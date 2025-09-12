@@ -62,36 +62,37 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		"namespace", generateSBOMMessage.Image.Namespace,
 	)
 
-	image := &storagev1alpha1.Image{}
-	err := h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      generateSBOMMessage.Image.Name,
-		Namespace: generateSBOMMessage.Image.Namespace,
-	}, image)
-	if err != nil {
-		return fmt.Errorf(
-			"cannot get image %s/%s: %w",
-			generateSBOMMessage.Image.Namespace,
-			generateSBOMMessage.Image.Name,
-			err,
-		)
-	}
-	h.logger.DebugContext(ctx, "Image found", "image", image)
-
 	scanJob := &v1alpha1.ScanJob{}
-	err = h.k8sClient.Get(ctx, client.ObjectKey{
+	err := h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      generateSBOMMessage.ScanJob.Name,
 		Namespace: generateSBOMMessage.ScanJob.Namespace,
 	}, scanJob)
 	if err != nil {
-		// If the scan job is not found, we skip the  sbom generation since it might have been deleted.
+		// Stop processing if the scanjob is not found, since it might have been deleted.
 		if apierrors.IsNotFound(err) {
-			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", generateSBOMMessage.ScanJob.Name, "namespace", generateSBOMMessage.ScanJob.Namespace)
+			h.logger.InfoContext(ctx, "ScanJob not found, stopping SBOM generation", "scanjob", generateSBOMMessage.ScanJob.Name, "namespace", generateSBOMMessage.ScanJob.Namespace)
 			return nil
 		}
 
 		return fmt.Errorf("cannot get ScanJob %s/%s: %w", generateSBOMMessage.ScanJob.Name, generateSBOMMessage.ScanJob.Namespace, err)
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
+
+	image := &storagev1alpha1.Image{}
+	err = h.k8sClient.Get(ctx, client.ObjectKey{
+		Name:      generateSBOMMessage.Image.Name,
+		Namespace: generateSBOMMessage.Image.Namespace,
+	}, image)
+	if err != nil {
+		// Stop processing if the image is not found, since it might have been deleted.
+		if apierrors.IsNotFound(err) {
+			h.logger.InfoContext(ctx, "Image not found, stopping SBOM generation", "image", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
+			return nil
+		}
+
+		return fmt.Errorf("cannot get image %s/%s: %w", generateSBOMMessage.Image.Namespace, generateSBOMMessage.Image.Name, err)
+	}
+	h.logger.DebugContext(ctx, "Image found", "image", image)
 
 	// Retrieve the registry from the scan job annotations.
 	registryData, ok := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]

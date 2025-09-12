@@ -13,7 +13,7 @@ This is still being developed. For additional details, please refer to the [RFC]
 
 ### Usage
 
-- [Scan Registries](docs/user-guide/scan-registries.md)
+- [Scanning Registries](docs/user-guide/scanning-registries.md)
 - [Querying Reports](docs/user-guide/querying-reports.md)
 - [Private Registries](docs/user-guide/private-registries.md)
 - [VEX Support and VEXHub Integration](docs/user-guide/vex.md)

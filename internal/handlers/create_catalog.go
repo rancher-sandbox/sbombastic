@@ -75,36 +75,25 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		"namespace", createCatalogMessage.ScanJob.Namespace,
 	)
 
-	scanJob := &v1alpha1.ScanJob{}
-	err = h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      createCatalogMessage.ScanJob.Name,
-		Namespace: createCatalogMessage.ScanJob.Namespace,
-	}, scanJob)
-	if err != nil {
-		// If the scan job is not found, we skip the catalog creation since it might have been deleted.
-		if apierrors.IsNotFound(err) {
-			h.logger.InfoContext(ctx, "ScanJob not found, skipping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
-			return nil
-		}
-
-		return fmt.Errorf("cannot get scan job %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
-	}
-	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
-
 	// It is possible that the controller is slow to set the status condition "Scheduled" to true,
 	// so we might encounter conflicts when setting the status condition to "InProgress".
+	scanJob := &v1alpha1.ScanJob{}
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err = h.k8sClient.Get(ctx, client.ObjectKey{
-			Name:      scanJob.Name,
-			Namespace: scanJob.Namespace,
+			Name:      createCatalogMessage.ScanJob.Name,
+			Namespace: createCatalogMessage.ScanJob.Namespace,
 		}, scanJob); err != nil {
-			return fmt.Errorf("cannot get scan job %s/%s while updating status: %w", scanJob.Namespace, scanJob.Name, err)
+			return fmt.Errorf("cannot get scanjob %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 		}
-
 		scanJob.MarkInProgress(v1alpha1.ReasonCatalogCreationInProgress, "Catalog creation in progress")
 		return h.k8sClient.Status().Update(ctx, scanJob)
 	})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Stop processing if the scanjob is not found, since it might have been deleted.
+			h.logger.InfoContext(ctx, "ScanJob not found, stopping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
+			return nil
+		}
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
@@ -197,6 +186,21 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 			if existingImageNames.Has(image.Name) {
 				continue
 			}
+
+			// Re-fetch the scanjob to be sure it was not deleted while we were processing images.
+			// If the scanjob is not found, we circuit-break the image creation.
+			err = h.k8sClient.Get(ctx, types.NamespacedName{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			}, scanJob)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					h.logger.InfoContext(ctx, "ScanJob not found, stopping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
+					return nil
+				}
+				return fmt.Errorf("cannot get scanjob %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
+			}
+
 			h.logger.InfoContext(ctx, "Creating image", "image", image.Name, "namespace", image.Namespace)
 			if err = h.k8sClient.Create(ctx, &image); err != nil {
 				if apierrors.IsAlreadyExists(err) {
@@ -239,6 +243,11 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		return h.k8sClient.Status().Update(ctx, scanJob)
 	})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Stop processing if the scanjob is not found, since it might have been deleted.
+			h.logger.InfoContext(ctx, "ScanJob not found, stopping catalog creation", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace)
+			return nil
+		}
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
 
@@ -359,8 +368,7 @@ func (h *CreateCatalogHandler) refToImages(
 
 		if err = controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
 			h.logger.Info("cannot set owner reference", "reference", ref.Name(), "error", err)
-			// Avoid blocking other images to be cataloged
-			continue
+			return []storagev1alpha1.Image{}, fmt.Errorf("cannot set owner reference: %w", err)
 		}
 
 		images = append(images, image)
