@@ -53,6 +53,19 @@ Teardown the environment:
 tilt down
 ```
 
+### Development registry
+
+Tilt automatically runs a local Docker registry alongside your development components. The registry deployment configuration is defined in [`hack/registry.yaml`](hack/registry.yaml).
+
+**Private Registry Setup**
+If you need authentication, set `use_private_registry: true` in your [`tilt-settings.yaml`](tilt-settings.yaml) file. The default credentials are `user:password`, and the deployment manifest is located at [`hack/private-registry.yaml`](hack/private-registry.yaml).
+
+**Using the Registry**
+
+- Registry endpoint: `localhost:5000`
+- Tag images with the `localhost:5000/` prefix to push them to this registry
+- Check out [`examples/registry.yaml`](examples/registry.yaml) for a sample `Registry` resource configured for this development setup
+
 ## Generate code
 
 When you make changes to the CRDs in `/api` or rbac rules annotations, you need to regenerate the code.
