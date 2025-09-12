@@ -80,7 +80,17 @@ yaml = helm(
         "worker.logLevel=debug",
     ],
 )
-k8s_yaml(yaml)
+
+objects = decode_yaml_stream(yaml)
+for o in objects:
+    if o.get('kind') == 'Deployment':
+        containers = o['spec']['template']['spec']['containers']
+        # Remove securityContext to allow hot reloading
+        for container in containers:
+            if 'securityContext' in container:
+                container['securityContext'] = {}
+updated_yaml = encode_yaml_stream(objects)
+k8s_yaml(updated_yaml)
 
 # Hot reloading containers
 local_resource(
