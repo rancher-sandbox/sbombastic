@@ -35,7 +35,7 @@ Now that you know the available fields, let's walk through a few practical examp
 Use the following command to list all `VulnerabilityReport` resources for images from the `rancher-sandbox/sbombastic/test-assets/golang` repository, built for the `amd64` platform:
 
 ```bash
-kubectl get vulnerabilityreport --field-selector='.imageMetadata.repository=rancher-sandbox/sbombastic/test-assets/golang,.imageMetadata.platform=linux/amd64'
+kubectl get vulnerabilityreport --field-selector='imageMetadata.repository=rancher-sandbox/sbombastic/test-assets/golang,imageMetadata.platform=linux/amd64'
 ```
 
 **Example output:**
@@ -51,7 +51,7 @@ dfe56d8371e7df15a3dde25c33a78b84b79766de2ab5a5897032019c878b5932   2025-06-23T04
 If you're looking for the all SBOMs of images tagged `1.12-alpine` and built for `amd64`, you can run:
 
 ```bash
-kubectl get sboms --field-selector='.imageMetadata.repository=rancher-sandbox/sbombastic/test-assets/golang,.imageMetadata.tag=1.12-alpine,.imageMetadata.platform=linux/amd64'
+kubectl get sboms --field-selector='imageMetadata.repository=rancher-sandbox/sbombastic/test-assets/golang,imageMetadata.tag=1.12-alpine,imageMetadata.platform=linux/amd64'
 ```
 
 **Example output:**
@@ -66,7 +66,7 @@ dfe56d8371e7df15a3dde25c33a78b84b79766de2ab5a5897032019c878b5932   2025-06-23T04
 To list all `Image` resources from the `ghcr.io` registry, use:
 
 ```bash
-kubectl get images --field-selector='.imageMetadata.registryURI=ghcr.io'
+kubectl get images --field-selector='imageMetadata.registryURI=ghcr.io'
 ```
 
 ### View Report/SBOM Details
