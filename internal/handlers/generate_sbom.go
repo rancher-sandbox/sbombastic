@@ -217,10 +217,8 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 				api.LabelPartOfKey:    api.LabelPartOfValue,
 			},
 		},
-		Spec: storagev1alpha1.SBOMSpec{
-			ImageMetadata: image.GetImageMetadata(),
-			SPDX:          runtime.RawExtension{Raw: spdxBytes},
-		},
+		ImageMetadata: image.GetImageMetadata(),
+		SPDX:          runtime.RawExtension{Raw: spdxBytes},
 	}
 	if err = controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {
 		return nil, fmt.Errorf("failed to set owner reference: %w", err)

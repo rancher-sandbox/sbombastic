@@ -13,7 +13,8 @@ import (
 type ImageApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
-	Spec                             *ImageSpecApplyConfiguration `json:"spec,omitempty"`
+	*ImageMetadataApplyConfiguration `json:"imageMetadata,omitempty"`
+	Layers                           []ImageLayerApplyConfiguration `json:"layers,omitempty"`
 }
 
 // Image constructs a declarative configuration of the Image type for use with
@@ -186,11 +187,76 @@ func (b *ImageApplyConfiguration) ensureObjectMetaApplyConfigurationExists() {
 	}
 }
 
-// WithSpec sets the Spec field in the declarative configuration to the given value
+// WithRegistry sets the Registry field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Spec field is set to the value of the last call.
-func (b *ImageApplyConfiguration) WithSpec(value *ImageSpecApplyConfiguration) *ImageApplyConfiguration {
-	b.Spec = value
+// If called multiple times, the Registry field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithRegistry(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Registry = &value
+	return b
+}
+
+// WithRegistryURI sets the RegistryURI field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the RegistryURI field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithRegistryURI(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.RegistryURI = &value
+	return b
+}
+
+// WithRepository sets the Repository field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Repository field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithRepository(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Repository = &value
+	return b
+}
+
+// WithTag sets the Tag field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Tag field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithTag(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Tag = &value
+	return b
+}
+
+// WithPlatform sets the Platform field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Platform field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithPlatform(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Platform = &value
+	return b
+}
+
+// WithDigest sets the Digest field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Digest field is set to the value of the last call.
+func (b *ImageApplyConfiguration) WithDigest(value string) *ImageApplyConfiguration {
+	b.ensureImageMetadataApplyConfigurationExists()
+	b.ImageMetadataApplyConfiguration.Digest = &value
+	return b
+}
+
+func (b *ImageApplyConfiguration) ensureImageMetadataApplyConfigurationExists() {
+	if b.ImageMetadataApplyConfiguration == nil {
+		b.ImageMetadataApplyConfiguration = &ImageMetadataApplyConfiguration{}
+	}
+}
+
+// WithLayers adds the given value to the Layers field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the Layers field.
+func (b *ImageApplyConfiguration) WithLayers(values ...*ImageLayerApplyConfiguration) *ImageApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithLayers")
+		}
+		b.Layers = append(b.Layers, *values[i])
+	}
 	return b
 }
 

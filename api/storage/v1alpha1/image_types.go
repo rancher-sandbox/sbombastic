@@ -31,23 +31,18 @@ type ImageList struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registryURI`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.registryURI`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.repository`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.tag`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.platform`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.digest`
 
 // Image is the Schema for the images API
 type Image struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ImageSpec `json:"spec,omitempty"`
-}
-
-// ImageSpec defines the desired state of Image
-type ImageSpec struct {
 	// Metadata of the image
 	ImageMetadata `json:"imageMetadata"`
 	// List of the layers that make the image
@@ -66,5 +61,5 @@ type ImageLayer struct {
 }
 
 func (i *Image) GetImageMetadata() ImageMetadata {
-	return i.Spec.ImageMetadata
+	return i.ImageMetadata
 }

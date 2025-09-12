@@ -144,9 +144,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 			Name:      "test-sbom",
 			Namespace: "default",
 		},
-		Spec: storagev1alpha1.SBOMSpec{
-			SPDX: runtime.RawExtension{Raw: spdxData},
-		},
+		SPDX: runtime.RawExtension{Raw: spdxData},
 	}
 	vexHubs := &v1alpha1.VEXHubList{
 		Items: vexHubList,
@@ -201,7 +199,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	assert.Equal(t, sbom.UID, vulnerabilityReport.GetOwnerReferences()[0].UID)
 	assert.Equal(t, string(scanJob.UID), vulnerabilityReport.Labels[v1alpha1.LabelScanJobUIDKey])
 
-	report := &vulnerabilityReport.Spec.Report
+	report := &vulnerabilityReport.Report
 	require.NotEmpty(t, report)
 
 	// override report field since trivy uses the sbom name as Target,
@@ -239,9 +237,7 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			Name:      "test-sbom",
 			Namespace: "default",
 		},
-		Spec: storagev1alpha1.SBOMSpec{
-			SPDX: runtime.RawExtension{Raw: spdxData},
-		},
+		SPDX: runtime.RawExtension{Raw: spdxData},
 	}
 
 	vexHubs := &v1alpha1.VEXHubList{

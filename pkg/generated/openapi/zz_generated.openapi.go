@@ -18,17 +18,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer":              schema_sbombastic_api_storage_v1alpha1_ImageLayer(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageList":               schema_sbombastic_api_storage_v1alpha1_ImageList(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata":           schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec":               schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.Report":                  schema_sbombastic_api_storage_v1alpha1_Report(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.Result":                  schema_sbombastic_api_storage_v1alpha1_Result(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":                    schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":                schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec":                schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.VEXStatus":               schema_sbombastic_api_storage_v1alpha1_VEXStatus(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.Vulnerability":           schema_sbombastic_api_storage_v1alpha1_Vulnerability(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport":     schema_sbombastic_api_storage_v1alpha1_VulnerabilityReport(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportList": schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportList(ref),
-		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec": schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportSpec(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup":                              schema_pkg_apis_meta_v1_APIGroup(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroupList":                          schema_pkg_apis_meta_v1_APIGroupList(ref),
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIResource":                           schema_pkg_apis_meta_v1_APIResource(ref),
@@ -142,17 +139,33 @@ func schema_sbombastic_api_storage_v1alpha1_Image(ref common.ReferenceCallback) 
 							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"imageMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec"),
+							Description: "Metadata of the image",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
+					"layers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "List of the layers that make the image",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer"),
+									},
+								},
+							},
 						},
 					},
 				},
+				Required: []string{"imageMetadata"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer", "github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -305,43 +318,6 @@ func schema_sbombastic_api_storage_v1alpha1_ImageMetadata(ref common.ReferenceCa
 	}
 }
 
-func schema_sbombastic_api_storage_v1alpha1_ImageSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ImageSpec defines the desired state of Image",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"imageMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Metadata of the image",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
-						},
-					},
-					"layers": {
-						SchemaProps: spec.SchemaProps{
-							Description: "List of the layers that make the image",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"imageMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageLayer", "github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"},
-	}
-}
-
 func schema_sbombastic_api_storage_v1alpha1_Report(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -453,17 +429,24 @@ func schema_sbombastic_api_storage_v1alpha1_SBOM(ref common.ReferenceCallback) c
 							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"imageMetadata": {
 						SchemaProps: spec.SchemaProps{
 							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec"),
+							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
+					"spdx": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SPDX contains the SPDX document of the SBOM in JSON format",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
+				Required: []string{"imageMetadata", "spdx"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -513,34 +496,6 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMList(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_sbombastic_api_storage_v1alpha1_SBOMSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SBOMSpec defines the desired state of a SBOM",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"imageMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
-						},
-					},
-					"spdx": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SPDX contains the SPDX document of the SBOM in JSON format",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
-				},
-				Required: []string{"imageMetadata", "spdx"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -752,17 +707,26 @@ func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReport(ref common.Refer
 							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"imageMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec"),
+							Description: "ImageMetadata contains info about the scanned image",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
+						},
+					},
+					"report": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Report is the actual vulnerability scan report",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.Report"),
 						},
 					},
 				},
+				Required: []string{"imageMetadata", "report"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReportSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "github.com/rancher/sbombastic/api/storage/v1alpha1.Report", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -812,36 +776,6 @@ func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportList(ref common.R
 		},
 		Dependencies: []string{
 			"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_sbombastic_api_storage_v1alpha1_VulnerabilityReportSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "VulnerabilityReportSpec defines the desired state of a VulnerabilityReport",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"imageMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ImageMetadata contains info about the scanned image",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata"),
-						},
-					},
-					"report": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Report is the actual vulnerability scan report",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.Report"),
-						},
-					},
-				},
-				Required: []string{"imageMetadata", "report"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.ImageMetadata", "github.com/rancher/sbombastic/api/storage/v1alpha1.Report"},
 	}
 }
 

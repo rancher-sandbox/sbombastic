@@ -1,4 +1,4 @@
-API rule violation: list_type_missing,github.com/rancher/sbombastic/api/storage/v1alpha1,ImageSpec,Layers
+API rule violation: list_type_missing,github.com/rancher/sbombastic/api/storage/v1alpha1,Image,Layers
 API rule violation: list_type_missing,github.com/rancher/sbombastic/api/storage/v1alpha1,Report,Results
 API rule violation: list_type_missing,github.com/rancher/sbombastic/api/storage/v1alpha1,Result,Vulnerabilities
 API rule violation: list_type_missing,github.com/rancher/sbombastic/api/storage/v1alpha1,Vulnerability,FixedVersions

@@ -185,7 +185,7 @@ func main() {
 							return obj, nil
 						}
 
-						image.Spec.Layers = nil
+						image.Layers = nil
 
 						return cache.TransformStripManagedFields()(image)
 					},
@@ -197,7 +197,7 @@ func main() {
 							return obj, nil
 						}
 
-						vulnerabilityReport.Spec.Report.Results = nil
+						vulnerabilityReport.Report.Results = nil
 
 						return cache.TransformStripManagedFields()(vulnerabilityReport)
 					},

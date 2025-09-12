@@ -32,28 +32,23 @@ type SBOMList struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registry`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.registryURI`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.repository`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.tag`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.platform`
-// +kubebuilder:selectablefield:JSONPath=`.spec.imageMetadata.digest`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.registry`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.registryURI`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.repository`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.tag`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.platform`
+// +kubebuilder:selectablefield:JSONPath=`.imageMetadata.digest`
 
 // SBOM represents a Software Bill of Materials of an OCI artifact
 type SBOM struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec SBOMSpec `json:"spec,omitempty"`
-}
-
-// SBOMSpec defines the desired state of a SBOM
-type SBOMSpec struct {
 	ImageMetadata ImageMetadata `json:"imageMetadata"`
 	// SPDX contains the SPDX document of the SBOM in JSON format
 	SPDX runtime.RawExtension `json:"spdx"`
 }
 
 func (s *SBOM) GetImageMetadata() ImageMetadata {
-	return s.Spec.ImageMetadata
+	return s.ImageMetadata
 }

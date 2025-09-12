@@ -95,17 +95,17 @@ func imageMetadataFieldSelectorConversion(label, value string) (string, string, 
 		return label, value, nil
 	case "metadata.namespace":
 		return label, value, nil
-	case "spec.imageMetadata.registry":
+	case ".imageMetadata.registry":
 		return label, value, nil
-	case "spec.imageMetadata.registryURI":
+	case ".imageMetadata.registryURI":
 		return label, value, nil
-	case "spec.imageMetadata.repository":
+	case ".imageMetadata.repository":
 		return label, value, nil
-	case "spec.imageMetadata.tag":
+	case ".imageMetadata.tag":
 		return label, value, nil
-	case "spec.imageMetadata.platform":
+	case ".imageMetadata.platform":
 		return label, value, nil
-	case "spec.imageMetadata.digest":
+	case ".imageMetadata.digest":
 		return label, value, nil
 	default:
 		return "", "", fmt.Errorf(
@@ -113,7 +113,7 @@ func imageMetadataFieldSelectorConversion(label, value string) (string, string, 
 			label,
 			"metadata.name",
 			"metadata.namespace",
-			"spec.imageMetadata.*",
+			"imageMetadata.*",
 		)
 	}
 }
