@@ -3,13 +3,15 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,7 +22,6 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx"
 )
 
 // objectSchema is the schema of an object in the database.
@@ -35,7 +36,7 @@ type objectSchema struct {
 var _ storage.Interface = &store{}
 
 type store struct {
-	db          *sqlx.DB
+	db          *pgxpool.Pool
 	broadcaster *watch.Broadcaster
 	table       string
 	newFunc     func() runtime.Object
@@ -72,22 +73,18 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		Columns("name", "namespace", "object").
 		Values(name, namespace, bytes).
 		Suffix("ON CONFLICT DO NOTHING").
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	result, err := s.db.ExecContext(ctx, query, args...)
+	result, err := s.db.Exec(ctx, query, args...)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected() == 0 {
 		return storage.NewKeyExistsError(key, 0)
 	}
 
@@ -120,27 +117,34 @@ func (s *store) Delete(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, err := s.db.BeginTxx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 	defer func() {
-		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
 	query, args, err := sq.Delete(s.table).
 		Where(sq.Eq{"name": name, "namespace": namespace}).
-		Suffix("RETURNING *").
+		Suffix("RETURNING id, name, namespace, object").
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	objectRecord := &objectSchema{}
-	if err = tx.GetContext(ctx, objectRecord, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	var objectRecord objectSchema
+	err = tx.QueryRow(ctx, query, args...).Scan(
+		&objectRecord.ID,
+		&objectRecord.Name,
+		&objectRecord.Namespace,
+		&objectRecord.Object,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return storage.NewKeyNotFoundError(key, 0)
 		}
 		return storage.NewInternalError(err)
@@ -158,7 +162,7 @@ func (s *store) Delete(
 		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return storage.NewInternalError(err)
 	}
 
@@ -256,21 +260,27 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
-	query, args, err := sq.Select("*").
+	query, args, err := sq.Select("id", "name", "namespace", "object").
 		From(s.table).
 		Where(sq.Eq{"name": name, "namespace": namespace}).
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	objectRecord := &objectSchema{}
-	if err = s.db.GetContext(ctx, objectRecord, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	var objectRecord objectSchema
+	err = s.db.QueryRow(ctx, query, args...).Scan(
+		&objectRecord.ID,
+		&objectRecord.Name,
+		&objectRecord.Namespace,
+		&objectRecord.Object,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			if opts.IgnoreNotFound {
 				return nil
 			}
-
 			return storage.NewKeyNotFoundError(key, 0)
 		}
 		return storage.NewInternalError(err)
@@ -298,27 +308,43 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		"continue", opts.Predicate.Continue,
 	)
 
-	queryBuilder := sq.Select("*").From(s.table)
+	queryBuilder := sq.Select("id", "name", "namespace", "object").
+		From(s.table).
+		PlaceholderFormat(sq.Dollar)
+
 	namespace := extractNamespace(key)
 	if namespace != "" {
 		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
 	}
+
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
-	var objectRecords []objectSchema
-	if err = s.db.SelectContext(ctx, &objectRecords, query, args...); err != nil {
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
 		return storage.NewInternalError(err)
 	}
+	defer rows.Close()
 
 	itemsValue, err := getItems(listObj)
 	if err != nil {
 		return err
 	}
 
-	for _, objectRecord := range objectRecords {
+	for rows.Next() {
+		var objectRecord objectSchema
+		err = rows.Scan(
+			&objectRecord.ID,
+			&objectRecord.Name,
+			&objectRecord.Namespace,
+			&objectRecord.Object,
+		)
+		if err != nil {
+			return storage.NewInternalError(err)
+		}
+
 		obj := s.newFunc()
 		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
 			return storage.NewInternalError(err)
@@ -335,6 +361,10 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 
 		// Append the object to the items slice
 		itemsValue.Set(reflect.Append(itemsValue, reflect.ValueOf(obj).Elem()))
+	}
+
+	if err = rows.Err(); err != nil {
+		return storage.NewInternalError(err)
 	}
 
 	// TODO: Implement pagination and use a proper resourceVersion
@@ -397,23 +427,22 @@ func (s *store) GuaranteedUpdate(
 		return storage.NewInternalError(fmt.Errorf("invalid key: %s", key))
 	}
 
-	tx, err := s.db.BeginTxx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err = tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			s.logger.ErrorContext(ctx, "failed to rollback transaction", "error", err)
 		}
 	}()
 
 	for {
-		var query string
-		var args []interface{}
-		query, args, err = sq.Select("*").
+		query, args, err := sq.Select("id", "name", "namespace", "object").
 			From(s.table).
 			Where(sq.Eq{"name": name, "namespace": namespace}).
+			PlaceholderFormat(sq.Dollar).
 			ToSql()
 		if err != nil {
 			return storage.NewInternalError(err)
@@ -423,14 +452,18 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(fmt.Errorf("unable to set destination to zero value: %w", err))
 		}
 
-		objectRecord := &objectSchema{}
-		err = tx.GetContext(ctx, objectRecord, query, args...)
+		var objectRecord objectSchema
+		err = tx.QueryRow(ctx, query, args...).Scan(
+			&objectRecord.ID,
+			&objectRecord.Name,
+			&objectRecord.Namespace,
+			&objectRecord.Object,
+		)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, pgx.ErrNoRows) {
 				if !ignoreNotFound {
 					return storage.NewKeyNotFoundError(key, 0)
 				}
-
 				return nil
 			}
 			return err
@@ -456,7 +489,6 @@ func (s *store) GuaranteedUpdate(
 				// retry update on optimistic lock conflict
 				continue
 			}
-
 			return err
 		}
 
@@ -475,20 +507,21 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		query, args, err = sq.Update(s.table).
+		updateQuery, updateArgs, err := sq.Update(s.table).
 			Set("object", bytes).
 			Where(sq.Eq{"name": name, "namespace": namespace}).
+			PlaceholderFormat(sq.Dollar).
 			ToSql()
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		_, err = tx.ExecContext(ctx, query, args...)
+		_, err = tx.Exec(ctx, updateQuery, updateArgs...)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
 
-		if err = tx.Commit(); err != nil {
+		if err = tx.Commit(ctx); err != nil {
 			return storage.NewInternalError(err)
 		}
 
@@ -512,7 +545,10 @@ func (s *store) Count(key string) (int64, error) {
 
 	namespace := extractNamespace(key)
 
-	queryBuilder := sq.Select("COUNT(*)").From(s.table)
+	queryBuilder := sq.Select("COUNT(*)").
+		From(s.table).
+		PlaceholderFormat(sq.Dollar)
+
 	if namespace != "" {
 		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
 	}
@@ -523,7 +559,8 @@ func (s *store) Count(key string) (int64, error) {
 	}
 
 	var count int64
-	if err = s.db.Get(&count, query, args...); err != nil {
+	err = s.db.QueryRow(context.Background(), query, args...).Scan(&count)
+	if err != nil {
 		return 0, storage.NewInternalError(err)
 	}
 
@@ -601,7 +638,6 @@ func extractNameAndNamespace(key string) (string, string) {
 func extractNamespace(key string) string {
 	key = strings.TrimPrefix(key, "/")
 	parts := strings.Split(key, "/")
-
 	if len(parts) == 3 {
 		return parts[2]
 	}
