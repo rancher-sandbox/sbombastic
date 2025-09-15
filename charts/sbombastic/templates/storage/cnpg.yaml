@@ -1,0 +1,8 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-cnpg-cluster
+spec:
+  instances: 3
+  storage:
+    size: 1Gi
