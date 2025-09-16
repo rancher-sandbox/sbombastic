@@ -14,6 +14,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	// TODO: add CLI flags
 	opts := slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -24,33 +28,32 @@ func main() {
 	dbURI, err := os.ReadFile("/pg/uri")
 	if err != nil {
 		logger.Error("failed to read database URI", "error", err)
-		os.Exit(1)
+		return 1
 	}
 
 	db, err := pgxpool.New(ctx, string(dbURI))
 	if err != nil {
 		logger.Error("failed to create connection pool", "error", err)
-		os.Exit(1)
+		return 1
 	}
+	defer db.Close()
 
 	// Run migrations
 	if _, err := db.Exec(ctx, storage.CreateImageTableSQL); err != nil {
 		logger.Error("failed to create image table", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	if _, err := db.Exec(ctx, storage.CreateSBOMTableSQL); err != nil {
 		logger.Error("failed to create sbom table", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	if _, err := db.Exec(ctx, storage.CreateVulnerabilityReportTableSQL); err != nil {
 		logger.Error("failed to create vulnerability report table", "error", err)
-		os.Exit(1)
+		return 1
 	}
 
 	options := server.NewWardleServerOptions(db, logger)
 	cmd := server.NewCommandStartWardleServer(ctx, options)
-	code := cli.Run(cmd)
 
-	db.Close()
-	os.Exit(code)
+	return cli.Run(cmd)
 }
