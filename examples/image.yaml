@@ -3,16 +3,14 @@ kind: Image
 metadata:
   name: 82df15a51db0bb0182ee86c6d084c43d1c2731e36c68900ee59c88747dd4af10
   namespace: default
-spec:
-  imageMetadata:
-    digest: sha256:6169c4bcc1982095067d85edf58fdcc3bd8505aef728610c5b728f3cf1cec46b
-    platform: linux/amd64
-    registry: my-first-registry
-    registryURI: docker-registry.default.svc.cluster.local
-    repository: ubuntu
-    tag: latest
-  layers:
-    - command: L2Jpbi9zaCAtYyAjKG5vcCkgQUREIGZpbGU6MzRkYzRmM2FiN2E2OTRlY2RlNDdmZjdhNjEwYmUxODU5MTgzNGM0NWYxZDcyNTE4MTMyNjc3OTg0MTI2MDRlNSBpbiAvIA==
-      diffID: sha256:a46a5fb872b554648d9d0262f302b2c1ded46eeb1ef4dc727ecc5274605937af
-      digest: sha256:802008e7f7617aa11266de164e757a6c8d7bb57ed4c972cf7e9f519dd0a21708
-status: {}
+imageMetadata:
+  digest: sha256:6169c4bcc1982095067d85edf58fdcc3bd8505aef728610c5b728f3cf1cec46b
+  platform: linux/amd64
+  registry: my-first-registry
+  registryURI: docker-registry.default.svc.cluster.local
+  repository: ubuntu
+  tag: latest
+layers:
+  - command: L2Jpbi9zaCAtYyAjKG5vcCkgQUREIGZpbGU6MzRkYzRmM2FiN2E2OTRlY2RlNDdmZjdhNjEwYmUxODU5MTgzNGM0NWYxZDcyNTE4MTMyNjc3OTg0MTI2MDRlNSBpbiAvIA==
+    diffID: sha256:a46a5fb872b554648d9d0262f302b2c1ded46eeb1ef4dc727ecc5274605937af
+    digest: sha256:802008e7f7617aa11266de164e757a6c8d7bb57ed4c972cf7e9f519dd0a21708

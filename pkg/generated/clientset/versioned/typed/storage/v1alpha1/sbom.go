@@ -24,8 +24,6 @@ type SBOMsGetter interface {
 type SBOMInterface interface {
 	Create(ctx context.Context, sBOM *storagev1alpha1.SBOM, opts v1.CreateOptions) (*storagev1alpha1.SBOM, error)
 	Update(ctx context.Context, sBOM *storagev1alpha1.SBOM, opts v1.UpdateOptions) (*storagev1alpha1.SBOM, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, sBOM *storagev1alpha1.SBOM, opts v1.UpdateOptions) (*storagev1alpha1.SBOM, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*storagev1alpha1.SBOM, error)
@@ -33,8 +31,6 @@ type SBOMInterface interface {
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *storagev1alpha1.SBOM, err error)
 	Apply(ctx context.Context, sBOM *applyconfigurationstoragev1alpha1.SBOMApplyConfiguration, opts v1.ApplyOptions) (result *storagev1alpha1.SBOM, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, sBOM *applyconfigurationstoragev1alpha1.SBOMApplyConfiguration, opts v1.ApplyOptions) (result *storagev1alpha1.SBOM, err error)
 	SBOMExpansion
 }
 

@@ -40,14 +40,12 @@ var _ = Describe("Registry Controller", func() {
 					Name:      uuid.New().String(),
 					Namespace: "default",
 				},
-				Spec: storagev1alpha1.ImageSpec{
-					ImageMetadata: storagev1alpha1.ImageMetadata{
-						Registry:   registry.Name,
-						Repository: "sbombastic-dev",
-						Tag:        "latest",
-						Digest:     "sha256:123",
-						Platform:   "linux/amd64",
-					},
+				ImageMetadata: storagev1alpha1.ImageMetadata{
+					Registry:   registry.Name,
+					Repository: "sbombastic-dev",
+					Tag:        "latest",
+					Digest:     "sha256:123",
+					Platform:   "linux/amd64",
 				},
 			}
 			Expect(k8sClient.Create(ctx, &image)).To(Succeed())
@@ -58,14 +56,12 @@ var _ = Describe("Registry Controller", func() {
 					Name:      uuid.New().String(),
 					Namespace: "default",
 				},
-				Spec: storagev1alpha1.ImageSpec{
-					ImageMetadata: storagev1alpha1.ImageMetadata{
-						Registry:   registry.Name,
-						Repository: "sbombastic-prod",
-						Tag:        "latest",
-						Digest:     "sha256:234",
-						Platform:   "linux/amd64",
-					},
+				ImageMetadata: storagev1alpha1.ImageMetadata{
+					Registry:   registry.Name,
+					Repository: "sbombastic-prod",
+					Tag:        "latest",
+					Digest:     "sha256:234",
+					Platform:   "linux/amd64",
 				},
 			}
 			Expect(k8sClient.Create(ctx, &image)).To(Succeed())

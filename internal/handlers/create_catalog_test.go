@@ -252,7 +252,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, imageTag, image1.GetImageMetadata().Tag)
 	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
 	assert.Equal(t, platformLinuxAmd64.String(), image1.GetImageMetadata().Platform)
-	assert.Len(t, image1.Spec.Layers, 8)
+	assert.Len(t, image1.Layers, 8)
 	assert.Equal(t, registry.UID, image1.GetOwnerReferences()[0].UID)
 
 	assert.Equal(t, registry.Namespace, image2.Namespace)
@@ -262,7 +262,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 	assert.Equal(t, imageTag, image2.GetImageMetadata().Tag)
 	assert.Equal(t, digestLinuxArm64.String(), image2.GetImageMetadata().Digest)
 	assert.Equal(t, platformLinuxArm64.String(), image2.GetImageMetadata().Platform)
-	assert.Len(t, image2.Spec.Layers, 8)
+	assert.Len(t, image2.Layers, 8)
 	assert.Equal(t, registry.UID, image2.GetOwnerReferences()[0].UID)
 
 	updatedScanJob := &v1alpha1.ScanJob{}
@@ -337,15 +337,13 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 				UID:        registry.UID,
 			}},
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    registry.Name,
-				RegistryURI: registryURI,
-				Repository:  repositoryName,
-				Tag:         "old-tag", // This tag no longer exists
-				Digest:      "sha256:obsolete",
-				Platform:    platform.String(),
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    registry.Name,
+			RegistryURI: registryURI,
+			Repository:  repositoryName,
+			Tag:         "old-tag", // This tag no longer exists
+			Digest:      "sha256:obsolete",
+			Platform:    platform.String(),
 		},
 	}
 
@@ -361,15 +359,13 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 				UID:        registry.UID,
 			}},
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    registry.Name,
-				RegistryURI: registryURI,
-				Repository:  repositoryName,
-				Tag:         imageTag,
-				Digest:      digest.String(),
-				Platform:    platform.String(),
-			},
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    registry.Name,
+			RegistryURI: registryURI,
+			Repository:  repositoryName,
+			Tag:         imageTag,
+			Digest:      digest.String(),
+			Platform:    platform.String(),
 		},
 	}
 
@@ -418,7 +414,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 		WithScheme(scheme).
 		WithRuntimeObjects(registry, obsoleteImage, existingImage, scanJob).
 		WithStatusSubresource(&v1alpha1.ScanJob{}).
-		WithIndex(&storagev1alpha1.Image{}, "spec.imageMetadata.registry", func(obj client.Object) []string {
+		WithIndex(&storagev1alpha1.Image{}, storagev1alpha1.IndexImageMetadataRegistry, func(obj client.Object) []string {
 			image, ok := obj.(*storagev1alpha1.Image)
 			if !ok {
 				return nil
@@ -732,13 +728,13 @@ func TestImageDetailsToImage(t *testing.T) {
 	assert.Equal(t, platform.String(), image.GetImageMetadata().Platform)
 	assert.Equal(t, digest.String(), image.GetImageMetadata().Digest)
 
-	assert.Len(t, image.Spec.Layers, numberOfLayers)
+	assert.Len(t, image.Layers, numberOfLayers)
 	for i := range numberOfLayers {
 		var expectedDigest, expectedDiffID cranev1.Hash
 		expectedDigest, expectedDiffID, err = fakeDigestAndDiffID(i)
 		require.NoError(t, err)
 
-		layer := image.Spec.Layers[i]
+		layer := image.Layers[i]
 		assert.Equal(t, expectedDigest.String(), layer.Digest)
 		assert.Equal(t, expectedDiffID.String(), layer.DiffID)
 
@@ -987,7 +983,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 	assert.Equal(t, tag, image1.GetImageMetadata().Tag)
 	assert.Equal(t, digestLinuxAmd64.String(), image1.GetImageMetadata().Digest)
 	assert.Equal(t, platformLinuxAmd64.String(), image1.GetImageMetadata().Platform)
-	assert.Len(t, image1.Spec.Layers, 8)
+	assert.Len(t, image1.Layers, 8)
 	assert.Equal(t, registry.UID, image1.GetOwnerReferences()[0].UID)
 
 	updatedScanJob := &v1alpha1.ScanJob{}

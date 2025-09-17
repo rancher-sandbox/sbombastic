@@ -24,8 +24,6 @@ type ImagesGetter interface {
 type ImageInterface interface {
 	Create(ctx context.Context, image *storagev1alpha1.Image, opts v1.CreateOptions) (*storagev1alpha1.Image, error)
 	Update(ctx context.Context, image *storagev1alpha1.Image, opts v1.UpdateOptions) (*storagev1alpha1.Image, error)
-	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, image *storagev1alpha1.Image, opts v1.UpdateOptions) (*storagev1alpha1.Image, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*storagev1alpha1.Image, error)
@@ -33,8 +31,6 @@ type ImageInterface interface {
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *storagev1alpha1.Image, err error)
 	Apply(ctx context.Context, image *applyconfigurationstoragev1alpha1.ImageApplyConfiguration, opts v1.ApplyOptions) (result *storagev1alpha1.Image, err error)
-	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, image *applyconfigurationstoragev1alpha1.ImageApplyConfiguration, opts v1.ApplyOptions) (result *storagev1alpha1.Image, err error)
 	ImageExpansion
 }
 

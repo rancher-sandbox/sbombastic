@@ -366,7 +366,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				if !ok {
 					return nil, ptr.To(uint64(0)), errors.New("input is not of type *v1alpha1.SBOM")
 				}
-				sbom.Spec.SPDX.Raw = []byte(`{"foo":"bar"}`)
+				sbom.SPDX.Raw = []byte(`{"foo":"bar"}`)
 				return input, ptr.To(uint64(0)), nil
 			},
 			sbom: &v1alpha1.SBOM{
@@ -375,10 +375,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					Namespace: "default",
 					UID:       "test1-uid",
 				},
-				Spec: v1alpha1.SBOMSpec{
-					SPDX: runtime.RawExtension{
-						Raw: []byte("{}"),
-					},
+				SPDX: runtime.RawExtension{
+					Raw: []byte("{}"),
 				},
 			},
 			expectedUpdatedSBOM: &v1alpha1.SBOM{
@@ -388,10 +386,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					UID:             "test1-uid",
 					ResourceVersion: "2",
 				},
-				Spec: v1alpha1.SBOMSpec{
-					SPDX: runtime.RawExtension{
-						Raw: []byte(`{"foo":"bar"}`),
-					},
+				SPDX: runtime.RawExtension{
+					Raw: []byte(`{"foo":"bar"}`),
 				},
 			},
 		},
@@ -411,10 +407,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					Namespace: "default",
 					UID:       "test2-uid",
 				},
-				Spec: v1alpha1.SBOMSpec{
-					SPDX: runtime.RawExtension{
-						Raw: []byte("{}"),
-					},
+				SPDX: runtime.RawExtension{
+					Raw: []byte("{}"),
 				},
 			},
 			expectedError: storage.NewInvalidObjError(keyPrefix+"/default/test2",
@@ -433,10 +427,8 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					Namespace: "default",
 					UID:       "test3-uid",
 				},
-				Spec: v1alpha1.SBOMSpec{
-					SPDX: runtime.RawExtension{
-						Raw: []byte("{}"),
-					},
+				SPDX: runtime.RawExtension{
+					Raw: []byte("{}"),
 				},
 			},
 			expectedError: storage.NewInternalError(errors.New("tryUpdate failed")),

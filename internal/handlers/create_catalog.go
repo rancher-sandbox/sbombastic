@@ -520,17 +520,15 @@ func imageDetailsToImage(
 				api.LabelPartOfKey:    api.LabelPartOfValue,
 			},
 		},
-		Spec: storagev1alpha1.ImageSpec{
-			ImageMetadata: storagev1alpha1.ImageMetadata{
-				Registry:    registry.Name,
-				RegistryURI: ref.Context().RegistryStr(),
-				Repository:  ref.Context().RepositoryStr(),
-				Tag:         ref.Identifier(),
-				Platform:    details.Platform.String(),
-				Digest:      details.Digest.String(),
-			},
-			Layers: imageLayers,
+		ImageMetadata: storagev1alpha1.ImageMetadata{
+			Registry:    registry.Name,
+			RegistryURI: ref.Context().RegistryStr(),
+			Repository:  ref.Context().RepositoryStr(),
+			Tag:         ref.Identifier(),
+			Platform:    details.Platform.String(),
+			Digest:      details.Digest.String(),
 		},
+		Layers: imageLayers,
 	}
 
 	return image, nil
