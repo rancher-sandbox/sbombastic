@@ -12,6 +12,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
+	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,14 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-
-	sq "github.com/Masterminds/squirrel"
 )
 
 // objectSchema is the schema of an object in the database.
 // Note: the struct fields must be exported in order to work.
 type objectSchema struct {
-	ID        int    `db:"id"`
 	Name      string `db:"name"`
 	Namespace string `db:"namespace"`
 	Object    []byte `db:"object"`
@@ -69,12 +71,11 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		return storage.NewInternalError(err)
 	}
 
-	query, args, err := sq.Insert(s.table).
-		Columns("name", "namespace", "object").
-		Values(name, namespace, bytes).
-		Suffix("ON CONFLICT DO NOTHING").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
+	query, args, err := psql.Insert(
+		im.Into(psql.Quote(s.table)),
+		im.Values(psql.Arg(name), psql.Arg(namespace), psql.Arg(bytes)),
+		im.OnConflict().DoNothing(),
+	).Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -127,18 +128,15 @@ func (s *store) Delete(
 		}
 	}()
 
-	query, args, err := sq.Delete(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		Suffix("RETURNING id, name, namespace, object").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
+	query, args, err := psql.Delete(
+		dm.From(psql.Quote(s.table)),
+		dm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+		dm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		dm.Returning("name", "namespace", "object"),
+	).Build(ctx)
 
 	var objectRecord objectSchema
 	err = tx.QueryRow(ctx, query, args...).Scan(
-		&objectRecord.ID,
 		&objectRecord.Name,
 		&objectRecord.Namespace,
 		&objectRecord.Object,
@@ -260,18 +258,18 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
-	query, args, err := sq.Select("id", "name", "namespace", "object").
-		From(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
+	query, args, err := psql.Select(
+		sm.Columns("name", "namespace", "object"),
+		sm.From(psql.Quote(s.table)),
+		sm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+		sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+	).Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
 	var objectRecord objectSchema
 	err = s.db.QueryRow(ctx, query, args...).Scan(
-		&objectRecord.ID,
 		&objectRecord.Name,
 		&objectRecord.Namespace,
 		&objectRecord.Object,
@@ -308,16 +306,19 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		"continue", opts.Predicate.Continue,
 	)
 
-	queryBuilder := sq.Select("id", "name", "namespace", "object").
-		From(s.table).
-		PlaceholderFormat(sq.Dollar)
+	queryBuilder := psql.Select(
+		sm.From(psql.Quote(s.table)),
+		sm.Columns("name", "namespace", "object"),
+	)
 
 	namespace := extractNamespace(key)
 	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
+		queryBuilder.Apply(
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		)
 	}
 
-	query, args, err := queryBuilder.ToSql()
+	query, args, err := queryBuilder.Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -336,7 +337,6 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	for rows.Next() {
 		var objectRecord objectSchema
 		err = rows.Scan(
-			&objectRecord.ID,
 			&objectRecord.Name,
 			&objectRecord.Namespace,
 			&objectRecord.Object,
@@ -439,11 +439,12 @@ func (s *store) GuaranteedUpdate(
 	}()
 
 	for {
-		query, args, err := sq.Select("id", "name", "namespace", "object").
-			From(s.table).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			PlaceholderFormat(sq.Dollar).
-			ToSql()
+		query, args, err := psql.Select(
+			sm.Columns("name", "namespace", "object"),
+			sm.From(psql.Quote(s.table)),
+			sm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		).Build(ctx)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -454,7 +455,6 @@ func (s *store) GuaranteedUpdate(
 
 		var objectRecord objectSchema
 		err = tx.QueryRow(ctx, query, args...).Scan(
-			&objectRecord.ID,
 			&objectRecord.Name,
 			&objectRecord.Namespace,
 			&objectRecord.Object,
@@ -507,11 +507,12 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		updateQuery, updateArgs, err := sq.Update(s.table).
-			Set("object", bytes).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			PlaceholderFormat(sq.Dollar).
-			ToSql()
+		updateQuery, updateArgs, err := psql.Update(
+			um.Table(psql.Quote(s.table)),
+			um.SetCol("object").To(psql.Arg(bytes)),
+			um.Where(psql.Quote("name").EQ(psql.Arg(name))),
+			um.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		).Build(ctx)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -545,15 +546,18 @@ func (s *store) Count(key string) (int64, error) {
 
 	namespace := extractNamespace(key)
 
-	queryBuilder := sq.Select("COUNT(*)").
-		From(s.table).
-		PlaceholderFormat(sq.Dollar)
+	queryBuilder := psql.Select(
+		sm.Columns("COUNT(*)"),
+		sm.From(psql.Quote(s.table)),
+	)
 
 	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
+		queryBuilder.Apply(
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		)
 	}
 
-	query, args, err := queryBuilder.ToSql()
+	query, args, err := queryBuilder.Build(context.Background())
 	if err != nil {
 		return 0, storage.NewInternalError(err)
 	}
