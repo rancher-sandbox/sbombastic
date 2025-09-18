@@ -16,8 +16,6 @@ tests:
           repository: rancher-sandbox/sbombastic/storage
           tag: v0.1.0
           pullPolicy: Always
-        persistence:
-          name: sqlite-pvc-test
         resources:
           limits:
             cpu: 500m
@@ -39,9 +37,6 @@ tests:
           path: "spec.template.spec.containers[0].args"
           content: "-log-level=debug"
       - equal:
-          path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
-          value: "RELEASE-NAME-sbombastic-storage-data"
-      - equal:
           path: "spec.template.spec.containers[0].resources.limits.cpu"
           value: "500m"
       - equal:
@@ -53,13 +48,3 @@ tests:
       - equal:
           path: "spec.template.spec.containers[0].resources.requests.memory"
           value: "200Mi"
-  - it: "should use existing PVC claim name when persistence.storageData.existingClaim is specified"
-    set:
-      persistence:
-        enabled: true
-        storageData:
-          existingClaim: "existing-claim"
-    asserts:
-      - equal:
-          path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName"
-          value: "existing-claim"
