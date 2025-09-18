@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lib/pq"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/im"
@@ -21,7 +22,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -318,6 +321,16 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		)
 	}
 
+	if opts.Predicate.Label != nil {
+		labelExpressions, err := buildLabelSelectorExpressions(opts.Predicate.Label)
+		if err != nil {
+			return storage.NewInternalError(err)
+		}
+		for _, expression := range labelExpressions {
+			queryBuilder.Apply(sm.Where(expression))
+		}
+	}
+
 	query, args, err := queryBuilder.Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
@@ -348,15 +361,6 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		obj := s.newFunc()
 		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
 			return storage.NewInternalError(err)
-		}
-
-		var ok bool
-		ok, err = opts.Predicate.Matches(obj)
-		if err != nil {
-			return storage.NewInternalError(err)
-		}
-		if !ok {
-			continue
 		}
 
 		// Append the object to the items slice
@@ -679,4 +683,39 @@ func getItems(listObj runtime.Object) (reflect.Value, error) {
 	}
 
 	return itemsValue, nil
+}
+
+// buildLabelSelectorExpressions builds SQL expressions from the provided k8s label selector
+// using PostgreSQL JSONB operators.
+func buildLabelSelectorExpressions(labelSelector labels.Selector) ([]psql.Expression, error) {
+	var expressions []psql.Expression
+	requirements, selectable := labelSelector.Requirements()
+	if !selectable {
+		return expressions, nil
+	}
+
+	for _, req := range requirements {
+		var expression psql.Expression
+
+		switch req.Operator() {
+		case selection.Equals, selection.DoubleEquals:
+			expression = psql.Raw("object->'metadata'->'labels'->>?", req.Key()).EQ(psql.Arg(req.Values().List()[0]))
+		case selection.NotEquals:
+			expression = psql.Raw("object->'metadata'->'labels'->>?", req.Key()).NE(psql.Arg(req.Values().List()[0]))
+		case selection.In:
+			expression = psql.Raw("object->'metadata'->'labels'->>? = ANY(?)", req.Key(), pq.Array(req.Values().List()))
+		case selection.NotIn:
+			expression = psql.Raw("object->'metadata'->'labels'->>? != ALL(?)", req.Key(), pq.Array(req.Values().List()))
+		case selection.Exists:
+			expression = psql.Raw("jsonb_exists(object->'metadata'->'labels', ?)", req.Key())
+		case selection.DoesNotExist:
+			expression = psql.Not(psql.Raw("jsonb_exists(object->'metadata'->'labels', ?)", req.Key()))
+		case selection.GreaterThan, selection.LessThan:
+			return nil, fmt.Errorf("unsupported label selector operator: %s", req.Operator())
+		}
+
+		expressions = append(expressions, expression)
+	}
+
+	return expressions, nil
 }
