@@ -16,11 +16,10 @@ import (
 
 const CreateSBOMTableSQL = `
 CREATE TABLE IF NOT EXISTS sboms (
-    id SERIAL PRIMARY KEY,
     name VARCHAR(253) NOT NULL,
     namespace VARCHAR(253) NOT NULL,
     object JSONB NOT NULL,
-    UNIQUE (name, namespace)
+    PRIMARY KEY (name, namespace)
 );
 `
 
