@@ -417,6 +417,20 @@ func (suite *storeTestSuite) TestGetList() {
 				Predicate: matcher(mustParseLabelSelector("!sbombastic.rancher.io/critical"), fields.Everything()),
 			},
 		},
+		{
+			name:          "list field selector (=)",
+			expectedItems: []v1alpha1.SBOM{sbom1},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name=test1")),
+			},
+		},
+		{
+			name:          "list field selector (!=)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name!=test1")),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -436,6 +450,14 @@ func mustParseLabelSelector(selector string) labels.Selector {
 	}
 
 	return labelSelector
+}
+
+func mustParseFieldSelector(selector string) fields.Selector {
+	fieldSelector, err := fields.ParseSelector(selector)
+	if err != nil {
+		panic("failed to parse field selector: " + err.Error())
+	}
+	return fieldSelector
 }
 
 func (suite *storeTestSuite) TestGuaranteedUpdate() {

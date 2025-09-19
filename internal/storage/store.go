@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
@@ -322,11 +323,21 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	}
 
 	if opts.Predicate.Label != nil {
-		labelExpressions, err := buildLabelSelectorExpressions(opts.Predicate.Label)
+		labelSelectorExpressions, err := buildLabelSelectorExpressions(opts.Predicate.Label)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
-		for _, expression := range labelExpressions {
+		for _, expression := range labelSelectorExpressions {
+			queryBuilder.Apply(sm.Where(expression))
+		}
+	}
+
+	if opts.Predicate.Field != nil {
+		fieldSelectorExpressions, err := buildFieldSelectorExpressions(opts.Predicate.Field)
+		if err != nil {
+			return storage.NewInternalError(err)
+		}
+		for _, expression := range fieldSelectorExpressions {
 			queryBuilder.Apply(sm.Where(expression))
 		}
 	}
@@ -717,5 +728,33 @@ func buildLabelSelectorExpressions(labelSelector labels.Selector) ([]psql.Expres
 		expressions = append(expressions, expression)
 	}
 
+	return expressions, nil
+}
+
+// buildFieldSelectorExpressions builds SQL expressions from the provided k8s field selector
+// using PostgreSQL JSONB operators.
+func buildFieldSelectorExpressions(fieldSelector fields.Selector) ([]psql.Expression, error) {
+	var expressions []psql.Expression
+	requirements := fieldSelector.Requirements()
+
+	for _, req := range requirements {
+		// Convert dot notation to JSON path
+		// "metadata.name" -> {metadata,name}
+		pathParts := strings.Split(req.Field, ".")
+		jsonPath := "{" + strings.Join(pathParts, ",") + "}"
+
+		var expression psql.Expression
+
+		switch req.Operator {
+		case selection.Equals, selection.DoubleEquals:
+			expression = psql.Raw("object #>> ?", jsonPath).EQ(psql.Arg(req.Value))
+		case selection.NotEquals:
+			expression = psql.Raw("object #>> ?", jsonPath).NE(psql.Arg(req.Value))
+		case selection.In, selection.NotIn, selection.Exists, selection.DoesNotExist, selection.GreaterThan, selection.LessThan:
+			return nil, fmt.Errorf("unsupported field selector operator: %v", req.Operator)
+		}
+
+		expressions = append(expressions, expression)
+	}
 	return expressions, nil
 }
