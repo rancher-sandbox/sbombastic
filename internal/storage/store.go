@@ -300,6 +300,8 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 // that satisfies runtime.IsList definition).
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
+//
+//nolint:gocognit // This function can't be easily split into smaller parts.
 func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
 	s.logger.DebugContext(ctx, "Getting list",
 		"key", key,
