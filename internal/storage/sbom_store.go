@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,11 +16,10 @@ import (
 
 const CreateSBOMTableSQL = `
 CREATE TABLE IF NOT EXISTS sboms (
-    id INTEGER PRIMARY KEY,
     name VARCHAR(253) NOT NULL,
     namespace VARCHAR(253) NOT NULL,
-    object TEXT NOT NULL,
-    UNIQUE(name, namespace)
+    object JSONB NOT NULL,
+    PRIMARY KEY (name, namespace)
 );
 `
 
@@ -28,7 +27,7 @@ CREATE TABLE IF NOT EXISTS sboms (
 func NewSBOMStore(
 	scheme *runtime.Scheme,
 	optsGetter generic.RESTOptionsGetter,
-	db *sqlx.DB,
+	db *pgxpool.Pool,
 	logger *slog.Logger,
 ) (*registry.Store, error) {
 	strategy := newSBOMStrategy(scheme)

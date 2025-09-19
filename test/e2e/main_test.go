@@ -22,6 +22,7 @@ var (
 	storageImage         = "ghcr.io/rancher-sandbox/sbombastic/storage:latest"
 	certManagerNamespace = "cert-manager"
 	certManagerVersion   = "v1.18.2"
+	cnpgNamespace        = "cnpg-system"
 )
 
 func TestMain(m *testing.M) {
@@ -64,6 +65,29 @@ func TestMain(m *testing.M) {
 				helm.WithTimeout("3m"))
 			if err != nil {
 				return ctx, fmt.Errorf("failed to install cert-manager: %w", err)
+			}
+
+			// Add the CNPG repository
+			err = manager.RunRepo(helm.WithArgs(
+				"add",
+				"cnpg",
+				"https://cloudnative-pg.github.io/charts",
+				"--force-update"),
+			)
+			if err != nil {
+				return ctx, fmt.Errorf("failed to add cnpg helm repo: %w", err)
+			}
+
+			// Install the CNPG operator
+			err = manager.RunInstall(
+				helm.WithName("cnpg"),
+				helm.WithChart("cnpg/cloudnative-pg"),
+				helm.WithWait(),
+				helm.WithNamespace(cnpgNamespace),
+				helm.WithArgs("--create-namespace"),
+				helm.WithTimeout("3m"))
+			if err != nil {
+				return ctx, fmt.Errorf("failed to install cnpg operator: %w", err)
 			}
 
 			return ctx, nil

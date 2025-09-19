@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -17,9 +19,6 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/utils/ptr"
 
-	"github.com/jmoiron/sqlx"
-	_ "modernc.org/sqlite"
-
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
 )
 
@@ -28,14 +27,50 @@ const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
 type storeTestSuite struct {
 	suite.Suite
 	store       *store
-	db          *sqlx.DB
+	db          *pgxpool.Pool
 	broadcaster *watch.Broadcaster
+	pgContainer *postgres.PostgresContainer
+}
+
+func (suite *storeTestSuite) SetupSuite() {
+	ctx := context.Background()
+
+	pgContainer, err := postgres.Run(ctx,
+		"postgres:16-alpine",
+		postgres.WithDatabase("testdb"),
+		postgres.WithUsername("testuser"),
+		postgres.WithPassword("testpassword"),
+		postgres.BasicWaitStrategies(),
+	)
+	suite.Require().NoError(err, "failed to start postgres container")
+	suite.pgContainer = pgContainer
+
+	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
+	suite.Require().NoError(err, "failed to get connection string")
+
+	db, err := pgxpool.New(ctx, connStr)
+	suite.Require().NoError(err, "failed to create connection pool")
+	suite.db = db
+
+	_, err = db.Exec(ctx, CreateSBOMTableSQL)
+	suite.Require().NoError(err, "failed to create SBOM table")
+}
+
+func (suite *storeTestSuite) TearDownSuite() {
+	if suite.db != nil {
+		suite.db.Close()
+	}
+
+	if suite.pgContainer != nil {
+		err := suite.pgContainer.Terminate(context.Background())
+		suite.Require().NoError(err, "failed to terminate postgres container")
+	}
 }
 
 func (suite *storeTestSuite) SetupTest() {
-	suite.db = sqlx.MustConnect("sqlite", ":memory:")
-
-	suite.db.MustExec(CreateSBOMTableSQL)
+	ctx := context.Background()
+	_, err := suite.db.Exec(ctx, "TRUNCATE TABLE sboms")
+	suite.Require().NoError(err, "failed to truncate table")
 
 	suite.broadcaster = watch.NewBroadcaster(1000, watch.WaitIfChannelFull)
 	suite.store = &store{
@@ -49,7 +84,6 @@ func (suite *storeTestSuite) SetupTest() {
 }
 
 func (suite *storeTestSuite) TearDownTest() {
-	suite.db.Close()
 	suite.broadcaster.Shutdown()
 }
 
@@ -297,7 +331,7 @@ func (suite *storeTestSuite) TestGetList() {
 			Name:      "test1",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/test": "true",
+				"sbombastic.rancher.io/env": "test",
 			},
 		},
 	}
@@ -308,9 +342,25 @@ func (suite *storeTestSuite) TestGetList() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test2",
 			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/env": "dev",
+			},
 		},
 	}
 	err = suite.store.Create(context.Background(), key+"/test2", &sbom2, nil, 0)
+	suite.Require().NoError(err)
+
+	sbom3 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test3",
+			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/env":      "prod",
+				"sbombastic.rancher.io/critical": "true",
+			},
+		},
+	}
+	err = suite.store.Create(context.Background(), key+"/test3", &sbom3, nil, 0)
 	suite.Require().NoError(err)
 
 	tests := []struct {
@@ -320,18 +370,65 @@ func (suite *storeTestSuite) TestGetList() {
 	}{
 		{
 			name:          "list all",
-			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2, sbom3},
 			listOptions: storage.ListOptions{
 				Predicate: matcher(labels.Everything(), fields.Everything()),
 			},
 		},
 		{
-			name:          "list label selector",
+			name:          "list label selector (=)",
 			expectedItems: []v1alpha1.SBOM{sbom1},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(labels.SelectorFromSet(labels.Set{
-					"sbombastic.rancher.io/test": "true",
-				}), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env=test"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (!=)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env!=test"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (in)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env in (dev,prod)"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (notin)",
+			expectedItems: []v1alpha1.SBOM{sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env notin (test,dev)"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (exists)",
+			expectedItems: []v1alpha1.SBOM{sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/critical"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (does not exist)",
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("!sbombastic.rancher.io/critical"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list field selector (=)",
+			expectedItems: []v1alpha1.SBOM{sbom1},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name=test1")),
+			},
+		},
+		{
+			name:          "list field selector (!=)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name!=test1")),
 			},
 		},
 	}
@@ -344,6 +441,23 @@ func (suite *storeTestSuite) TestGetList() {
 			suite.ElementsMatch(test.expectedItems, sbomList.Items)
 		})
 	}
+}
+
+func mustParseLabelSelector(selector string) labels.Selector {
+	labelSelector, err := labels.Parse(selector)
+	if err != nil {
+		panic("failed to parse label selector: " + err.Error())
+	}
+
+	return labelSelector
+}
+
+func mustParseFieldSelector(selector string) fields.Selector {
+	fieldSelector, err := fields.ParseSelector(selector)
+	if err != nil {
+		panic("failed to parse field selector: " + err.Error())
+	}
+	return fieldSelector
 }
 
 func (suite *storeTestSuite) TestGuaranteedUpdate() {
@@ -366,7 +480,9 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 				if !ok {
 					return nil, ptr.To(uint64(0)), errors.New("input is not of type *v1alpha1.SBOM")
 				}
-				sbom.SPDX.Raw = []byte(`{"foo":"bar"}`)
+
+				sbom.SPDX.Raw = []byte(`{"foo": "bar"}`)
+
 				return input, ptr.To(uint64(0)), nil
 			},
 			sbom: &v1alpha1.SBOM{
@@ -387,7 +503,7 @@ func (suite *storeTestSuite) TestGuaranteedUpdate() {
 					ResourceVersion: "2",
 				},
 				SPDX: runtime.RawExtension{
-					Raw: []byte(`{"foo":"bar"}`),
+					Raw: []byte(`{"foo": "bar"}`),
 				},
 			},
 		},
