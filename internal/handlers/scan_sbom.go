@@ -219,6 +219,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 	if err != nil {
 		return fmt.Errorf("failed to convert from trivy results: %w", err)
 	}
+	summary := vulnReport.ComputeSummary(results)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{
 		ObjectMeta: metav1.ObjectMeta{
@@ -239,6 +240,7 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 
 		vulnerabilityReport.ImageMetadata = sbom.GetImageMetadata()
 		vulnerabilityReport.Report = storagev1alpha1.Report{
+			Summary: summary,
 			Results: results,
 		}
 		return nil
