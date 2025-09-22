@@ -30,6 +30,8 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &storagev1alpha1.ResultApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("SBOM"):
 		return &storagev1alpha1.SBOMApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("Summary"):
+		return &storagev1alpha1.SummaryApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("VEXStatus"):
 		return &storagev1alpha1.VEXStatusApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("Vulnerability"):

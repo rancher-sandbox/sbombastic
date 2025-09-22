@@ -1,4 +1,12 @@
 {
+  "summary": {
+    "critical": 4,
+    "high": 29,
+    "medium": 10,
+    "low": 2,
+    "unknown": 0,
+    "suppressed": 0
+  },
   "results": [
     {
       "target": "/tmp/TestScanSBOMHandler_Handle2489466138/001/trivy.sbom.2242993374.json (alpine 3.11.3)",

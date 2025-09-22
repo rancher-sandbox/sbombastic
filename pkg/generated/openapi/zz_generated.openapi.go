@@ -22,6 +22,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.Result":                  schema_sbombastic_api_storage_v1alpha1_Result(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM":                    schema_sbombastic_api_storage_v1alpha1_SBOM(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOMList":                schema_sbombastic_api_storage_v1alpha1_SBOMList(ref),
+		"github.com/rancher/sbombastic/api/storage/v1alpha1.Summary":                 schema_sbombastic_api_storage_v1alpha1_Summary(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.VEXStatus":               schema_sbombastic_api_storage_v1alpha1_VEXStatus(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.Vulnerability":           schema_sbombastic_api_storage_v1alpha1_Vulnerability(ref),
 		"github.com/rancher/sbombastic/api/storage/v1alpha1.VulnerabilityReport":     schema_sbombastic_api_storage_v1alpha1_VulnerabilityReport(ref),
@@ -325,6 +326,13 @@ func schema_sbombastic_api_storage_v1alpha1_Report(ref common.ReferenceCallback)
 				Description: "Report contains metadata about the scanned image and a list of vulnerability results.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"summary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Summary of vulnerabilities found",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/rancher/sbombastic/api/storage/v1alpha1.Summary"),
+						},
+					},
 					"results": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Results per target (e.g., layer, package type)",
@@ -340,11 +348,11 @@ func schema_sbombastic_api_storage_v1alpha1_Report(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"results"},
+				Required: []string{"summary", "results"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rancher/sbombastic/api/storage/v1alpha1.Result"},
+			"github.com/rancher/sbombastic/api/storage/v1alpha1.Result", "github.com/rancher/sbombastic/api/storage/v1alpha1.Summary"},
 	}
 }
 
@@ -496,6 +504,68 @@ func schema_sbombastic_api_storage_v1alpha1_SBOMList(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/rancher/sbombastic/api/storage/v1alpha1.SBOM", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_sbombastic_api_storage_v1alpha1_Summary(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Summary provides a high-level overview of the vulnerabilities found.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"critical": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Critical vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"high": {
+						SchemaProps: spec.SchemaProps{
+							Description: "High vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"medium": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Medium vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"low": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Low vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"unknown": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Unknown vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"suppressed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Suppressed vulnerabilities count",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"critical", "high", "medium", "low", "unknown", "suppressed"},
+			},
+		},
 	}
 }
 
