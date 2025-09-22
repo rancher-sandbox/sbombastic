@@ -5,6 +5,7 @@ package v1alpha1
 // ReportApplyConfiguration represents a declarative configuration of the Report type for use
 // with apply.
 type ReportApplyConfiguration struct {
+	Summary *SummaryApplyConfiguration `json:"summary,omitempty"`
 	Results []ResultApplyConfiguration `json:"results,omitempty"`
 }
 
@@ -12,6 +13,14 @@ type ReportApplyConfiguration struct {
 // apply.
 func Report() *ReportApplyConfiguration {
 	return &ReportApplyConfiguration{}
+}
+
+// WithSummary sets the Summary field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Summary field is set to the value of the last call.
+func (b *ReportApplyConfiguration) WithSummary(value *SummaryApplyConfiguration) *ReportApplyConfiguration {
+	b.Summary = value
+	return b
 }
 
 // WithResults adds the given value to the Results field in the declarative configuration
