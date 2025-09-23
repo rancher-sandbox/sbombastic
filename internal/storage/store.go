@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lib/pq"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/im"
@@ -716,9 +715,9 @@ func buildLabelSelectorExpressions(labelSelector labels.Selector) ([]psql.Expres
 		case selection.NotEquals:
 			expression = psql.Raw("object->'metadata'->'labels'->>?", req.Key()).NE(psql.Arg(req.Values().List()[0]))
 		case selection.In:
-			expression = psql.Raw("object->'metadata'->'labels'->>? = ANY(?)", req.Key(), pq.Array(req.Values().List()))
+			expression = psql.Raw("object->'metadata'->'labels'->>? = ANY(?)", req.Key(), req.Values().List())
 		case selection.NotIn:
-			expression = psql.Raw("object->'metadata'->'labels'->>? != ALL(?)", req.Key(), pq.Array(req.Values().List()))
+			expression = psql.Raw("object->'metadata'->'labels'->>? != ALL(?)", req.Key(), req.Values().List())
 		case selection.Exists:
 			expression = psql.Raw("jsonb_exists(object->'metadata'->'labels', ?)", req.Key())
 		case selection.DoesNotExist:
