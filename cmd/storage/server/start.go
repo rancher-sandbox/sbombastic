@@ -23,7 +23,7 @@ import (
 	"math"
 	"net"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -55,7 +55,7 @@ type WardleServerOptions struct {
 	SharedInformerFactory informers.SharedInformerFactory
 	AlternateDNS          []string
 
-	DB     *sqlx.DB
+	DB     *pgxpool.Pool
 	Logger *slog.Logger
 }
 
@@ -80,7 +80,7 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 }
 
 // NewWardleServerOptions returns a new WardleServerOptions
-func NewWardleServerOptions(db *sqlx.DB, logger *slog.Logger) *WardleServerOptions {
+func NewWardleServerOptions(db *pgxpool.Pool, logger *slog.Logger) *WardleServerOptions {
 	o := &WardleServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
 			"/registry/sbombastic.rancher.io",

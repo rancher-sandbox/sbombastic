@@ -27,7 +27,7 @@ storage:
     repository: rancher-sandbox/sbombastic/storage
     tag: v0.5.0
     pullPolicy: IfNotPresent
-  replicas: 1
+  replicas: 3
   # logLevel: "debug" //TODO: uncomment this, when the log parser in storage is implemented
   resources:
     limits:
@@ -51,21 +51,6 @@ worker:
     requests:
       cpu: 250m
       memory: 300Mi
-
-persistence:
-  enabled: true
-
-  ## Specify a PVC for the storage data
-  storageData:
-    enabled: true
-    subPath:
-    annotations: {}
-    labels: {}
-    # storageClass: ""
-    ## If defined, PVC must be created manually before volume will be bound
-    # existingClaim:
-    accessMode: ReadWriteOnce
-    size: 1Gi
 
 # NOTE: This section is used to configure the NATS server and its components
 # deployed by the NATS chart dependency.

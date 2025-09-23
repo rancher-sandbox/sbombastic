@@ -35,13 +35,14 @@ spec:
 {{ toYaml .Values.storage.resources | indent 12 }}
           {{- end }}
           volumeMounts:
-            - name: sqlite-pvc
-              mountPath: /data/sqlite/
             - name: cert-volume
               mountPath: /certs
+            - name: pg-secret
+              mountPath: /pg
+              readOnly: true
       volumes:
-        - name: sqlite-pvc
-          persistentVolumeClaim:
-            claimName: {{ if .Values.persistence.storageData.existingClaim }}{{ .Values.persistence.storageData.existingClaim }}{{- else }}{{ template "sbombastic.fullname" . }}-storage-data{{- end }}
         - name: cert-volume
           emptyDir: {}
+        - name: pg-secret
+          secret:
+            secretName: {{ include "sbombastic.fullname" . }}-cnpg-cluster-app
