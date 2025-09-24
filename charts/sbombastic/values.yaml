@@ -36,6 +36,34 @@ storage:
     requests:
       cpu: 250m
       memory: 300Mi
+  postgres:
+    # Name of existing secret containing the URI to connect to external Postgres.
+    # Expects a `uri` key. See https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
+    # The sslmode parameter will be ignored.
+    # Ignored if CNPG is enabled.
+    authSecretName: ""
+    # Name of secret containing the CA certificate used to verify the Postgres server certificate.
+    # This secret must contain a `ca.crt` key with the CA certificate in PEM format.
+    # Ignored if CNPG is enabled.
+    caSecretName: ""
+    # CNPG Cluster configuration.
+    cnpg:
+      enabled: true
+      instances: 3
+      storage:
+        # Size of the storage. Required if not already specified in the PVC template.
+        # Changes to this field are automatically reapplied to the created PVCs.
+        # Size cannot be decreased.
+        # Pleae refer to https://cloudnative-pg.io/documentation/1.18/storage/#volume-expansion for more details.
+        size: 1Gi
+        # Resize existent PVCs, defaults to true
+        resizeInUseVolumes: true
+        # StorageClass to use for PVCs.
+        # Applied after evaluating the PVC template, if available.
+        # If not specified, the generated PVCs will use the default storage class.
+        storageClass: ""
+        # Template to be used to generate the Persistent Volume Claim.
+        pvcTemplate: {}
 
 worker:
   image:
