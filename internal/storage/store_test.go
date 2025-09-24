@@ -331,7 +331,7 @@ func (suite *storeTestSuite) TestGetList() {
 			Name:      "test1",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/test": "true",
+				"sbombastic.rancher.io/env": "test",
 			},
 		},
 	}
@@ -342,9 +342,25 @@ func (suite *storeTestSuite) TestGetList() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test2",
 			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/env": "dev",
+			},
 		},
 	}
 	err = suite.store.Create(context.Background(), key+"/test2", &sbom2, nil, 0)
+	suite.Require().NoError(err)
+
+	sbom3 := v1alpha1.SBOM{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test3",
+			Namespace: "default",
+			Labels: map[string]string{
+				"sbombastic.rancher.io/env":      "prod",
+				"sbombastic.rancher.io/critical": "true",
+			},
+		},
+	}
+	err = suite.store.Create(context.Background(), key+"/test3", &sbom3, nil, 0)
 	suite.Require().NoError(err)
 
 	tests := []struct {
@@ -354,18 +370,65 @@ func (suite *storeTestSuite) TestGetList() {
 	}{
 		{
 			name:          "list all",
-			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2, sbom3},
 			listOptions: storage.ListOptions{
 				Predicate: matcher(labels.Everything(), fields.Everything()),
 			},
 		},
 		{
-			name:          "list label selector",
+			name:          "list label selector (=)",
 			expectedItems: []v1alpha1.SBOM{sbom1},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(labels.SelectorFromSet(labels.Set{
-					"sbombastic.rancher.io/test": "true",
-				}), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env=test"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (!=)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env!=test"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (in)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env in (dev,prod)"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (notin)",
+			expectedItems: []v1alpha1.SBOM{sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env notin (test,dev)"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (exists)",
+			expectedItems: []v1alpha1.SBOM{sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/critical"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list label selector (does not exist)",
+			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(mustParseLabelSelector("!sbombastic.rancher.io/critical"), fields.Everything()),
+			},
+		},
+		{
+			name:          "list field selector (=)",
+			expectedItems: []v1alpha1.SBOM{sbom1},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name=test1")),
+			},
+		},
+		{
+			name:          "list field selector (!=)",
+			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
+			listOptions: storage.ListOptions{
+				Predicate: matcher(labels.Everything(), mustParseFieldSelector("metadata.name!=test1")),
 			},
 		},
 	}
@@ -378,6 +441,23 @@ func (suite *storeTestSuite) TestGetList() {
 			suite.ElementsMatch(test.expectedItems, sbomList.Items)
 		})
 	}
+}
+
+func mustParseLabelSelector(selector string) labels.Selector {
+	labelSelector, err := labels.Parse(selector)
+	if err != nil {
+		panic("failed to parse label selector: " + err.Error())
+	}
+
+	return labelSelector
+}
+
+func mustParseFieldSelector(selector string) fields.Selector {
+	fieldSelector, err := fields.ParseSelector(selector)
+	if err != nil {
+		panic("failed to parse field selector: " + err.Error())
+	}
+	return fieldSelector
 }
 
 func (suite *storeTestSuite) TestGuaranteedUpdate() {

@@ -12,22 +12,27 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
+	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-
-	sq "github.com/Masterminds/squirrel"
 )
 
 // objectSchema is the schema of an object in the database.
 // Note: the struct fields must be exported in order to work.
 type objectSchema struct {
-	ID        int    `db:"id"`
 	Name      string `db:"name"`
 	Namespace string `db:"namespace"`
 	Object    []byte `db:"object"`
@@ -69,12 +74,11 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 		return storage.NewInternalError(err)
 	}
 
-	query, args, err := sq.Insert(s.table).
-		Columns("name", "namespace", "object").
-		Values(name, namespace, bytes).
-		Suffix("ON CONFLICT DO NOTHING").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
+	query, args, err := psql.Insert(
+		im.Into(psql.Quote(s.table)),
+		im.Values(psql.Arg(name), psql.Arg(namespace), psql.Arg(bytes)),
+		im.OnConflict().DoNothing(),
+	).Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -127,18 +131,15 @@ func (s *store) Delete(
 		}
 	}()
 
-	query, args, err := sq.Delete(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		Suffix("RETURNING id, name, namespace, object").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
-	if err != nil {
-		return storage.NewInternalError(err)
-	}
+	query, args, err := psql.Delete(
+		dm.From(psql.Quote(s.table)),
+		dm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+		dm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		dm.Returning("name", "namespace", "object"),
+	).Build(ctx)
 
 	var objectRecord objectSchema
 	err = tx.QueryRow(ctx, query, args...).Scan(
-		&objectRecord.ID,
 		&objectRecord.Name,
 		&objectRecord.Namespace,
 		&objectRecord.Object,
@@ -260,18 +261,18 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 		return storage.NewInternalError(fmt.Errorf("unable to set objPtr zero value: %w", err))
 	}
 
-	query, args, err := sq.Select("id", "name", "namespace", "object").
-		From(s.table).
-		Where(sq.Eq{"name": name, "namespace": namespace}).
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
+	query, args, err := psql.Select(
+		sm.Columns("name", "namespace", "object"),
+		sm.From(psql.Quote(s.table)),
+		sm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+		sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+	).Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
 
 	var objectRecord objectSchema
 	err = s.db.QueryRow(ctx, query, args...).Scan(
-		&objectRecord.ID,
 		&objectRecord.Name,
 		&objectRecord.Namespace,
 		&objectRecord.Object,
@@ -298,6 +299,8 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ob
 // that satisfies runtime.IsList definition).
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
+//
+//nolint:gocognit // This function can't be easily split into smaller parts.
 func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
 	s.logger.DebugContext(ctx, "Getting list",
 		"key", key,
@@ -308,16 +311,39 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		"continue", opts.Predicate.Continue,
 	)
 
-	queryBuilder := sq.Select("id", "name", "namespace", "object").
-		From(s.table).
-		PlaceholderFormat(sq.Dollar)
+	queryBuilder := psql.Select(
+		sm.From(psql.Quote(s.table)),
+		sm.Columns("name", "namespace", "object"),
+	)
 
 	namespace := extractNamespace(key)
 	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
+		queryBuilder.Apply(
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		)
 	}
 
-	query, args, err := queryBuilder.ToSql()
+	if opts.Predicate.Label != nil {
+		labelSelectorExpressions, err := buildLabelSelectorExpressions(opts.Predicate.Label)
+		if err != nil {
+			return storage.NewInternalError(err)
+		}
+		for _, expression := range labelSelectorExpressions {
+			queryBuilder.Apply(sm.Where(expression))
+		}
+	}
+
+	if opts.Predicate.Field != nil {
+		fieldSelectorExpressions, err := buildFieldSelectorExpressions(opts.Predicate.Field)
+		if err != nil {
+			return storage.NewInternalError(err)
+		}
+		for _, expression := range fieldSelectorExpressions {
+			queryBuilder.Apply(sm.Where(expression))
+		}
+	}
+
+	query, args, err := queryBuilder.Build(ctx)
 	if err != nil {
 		return storage.NewInternalError(err)
 	}
@@ -336,7 +362,6 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 	for rows.Next() {
 		var objectRecord objectSchema
 		err = rows.Scan(
-			&objectRecord.ID,
 			&objectRecord.Name,
 			&objectRecord.Namespace,
 			&objectRecord.Object,
@@ -348,15 +373,6 @@ func (s *store) GetList(ctx context.Context, key string, opts storage.ListOption
 		obj := s.newFunc()
 		if err = json.Unmarshal(objectRecord.Object, obj); err != nil {
 			return storage.NewInternalError(err)
-		}
-
-		var ok bool
-		ok, err = opts.Predicate.Matches(obj)
-		if err != nil {
-			return storage.NewInternalError(err)
-		}
-		if !ok {
-			continue
 		}
 
 		// Append the object to the items slice
@@ -439,11 +455,12 @@ func (s *store) GuaranteedUpdate(
 	}()
 
 	for {
-		query, args, err := sq.Select("id", "name", "namespace", "object").
-			From(s.table).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			PlaceholderFormat(sq.Dollar).
-			ToSql()
+		query, args, err := psql.Select(
+			sm.Columns("name", "namespace", "object"),
+			sm.From(psql.Quote(s.table)),
+			sm.Where(psql.Quote("name").EQ(psql.Arg(name))),
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		).Build(ctx)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -454,7 +471,6 @@ func (s *store) GuaranteedUpdate(
 
 		var objectRecord objectSchema
 		err = tx.QueryRow(ctx, query, args...).Scan(
-			&objectRecord.ID,
 			&objectRecord.Name,
 			&objectRecord.Namespace,
 			&objectRecord.Object,
@@ -507,11 +523,12 @@ func (s *store) GuaranteedUpdate(
 			return storage.NewInternalError(err)
 		}
 
-		updateQuery, updateArgs, err := sq.Update(s.table).
-			Set("object", bytes).
-			Where(sq.Eq{"name": name, "namespace": namespace}).
-			PlaceholderFormat(sq.Dollar).
-			ToSql()
+		updateQuery, updateArgs, err := psql.Update(
+			um.Table(psql.Quote(s.table)),
+			um.SetCol("object").To(psql.Arg(bytes)),
+			um.Where(psql.Quote("name").EQ(psql.Arg(name))),
+			um.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		).Build(ctx)
 		if err != nil {
 			return storage.NewInternalError(err)
 		}
@@ -545,15 +562,18 @@ func (s *store) Count(key string) (int64, error) {
 
 	namespace := extractNamespace(key)
 
-	queryBuilder := sq.Select("COUNT(*)").
-		From(s.table).
-		PlaceholderFormat(sq.Dollar)
+	queryBuilder := psql.Select(
+		sm.Columns("COUNT(*)"),
+		sm.From(psql.Quote(s.table)),
+	)
 
 	if namespace != "" {
-		queryBuilder = queryBuilder.Where(sq.Eq{"namespace": namespace})
+		queryBuilder.Apply(
+			sm.Where(psql.Quote("namespace").EQ(psql.Arg(namespace))),
+		)
 	}
 
-	query, args, err := queryBuilder.ToSql()
+	query, args, err := queryBuilder.Build(context.Background())
 	if err != nil {
 		return 0, storage.NewInternalError(err)
 	}
@@ -675,4 +695,67 @@ func getItems(listObj runtime.Object) (reflect.Value, error) {
 	}
 
 	return itemsValue, nil
+}
+
+// buildLabelSelectorExpressions builds SQL expressions from the provided k8s label selector
+// using PostgreSQL JSONB operators.
+func buildLabelSelectorExpressions(labelSelector labels.Selector) ([]psql.Expression, error) {
+	var expressions []psql.Expression
+	requirements, selectable := labelSelector.Requirements()
+	if !selectable {
+		return expressions, nil
+	}
+
+	for _, req := range requirements {
+		var expression psql.Expression
+
+		switch req.Operator() {
+		case selection.Equals, selection.DoubleEquals:
+			expression = psql.Raw("object->'metadata'->'labels'->>?", req.Key()).EQ(psql.Arg(req.Values().List()[0]))
+		case selection.NotEquals:
+			expression = psql.Raw("object->'metadata'->'labels'->>?", req.Key()).NE(psql.Arg(req.Values().List()[0]))
+		case selection.In:
+			expression = psql.Raw("object->'metadata'->'labels'->>? = ANY(?)", req.Key(), req.Values().List())
+		case selection.NotIn:
+			expression = psql.Raw("object->'metadata'->'labels'->>? != ALL(?)", req.Key(), req.Values().List())
+		case selection.Exists:
+			expression = psql.Raw("jsonb_exists(object->'metadata'->'labels', ?)", req.Key())
+		case selection.DoesNotExist:
+			expression = psql.Not(psql.Raw("jsonb_exists(object->'metadata'->'labels', ?)", req.Key()))
+		case selection.GreaterThan, selection.LessThan:
+			return nil, fmt.Errorf("unsupported label selector operator: %s", req.Operator())
+		}
+
+		expressions = append(expressions, expression)
+	}
+
+	return expressions, nil
+}
+
+// buildFieldSelectorExpressions builds SQL expressions from the provided k8s field selector
+// using PostgreSQL JSONB operators.
+func buildFieldSelectorExpressions(fieldSelector fields.Selector) ([]psql.Expression, error) {
+	var expressions []psql.Expression
+	requirements := fieldSelector.Requirements()
+
+	for _, req := range requirements {
+		// Convert dot notation to JSON path
+		// "metadata.name" -> {metadata,name}
+		pathParts := strings.Split(req.Field, ".")
+		jsonPath := "{" + strings.Join(pathParts, ",") + "}"
+
+		var expression psql.Expression
+
+		switch req.Operator {
+		case selection.Equals, selection.DoubleEquals:
+			expression = psql.Raw("object #>> ?", jsonPath).EQ(psql.Arg(req.Value))
+		case selection.NotEquals:
+			expression = psql.Raw("object #>> ?", jsonPath).NE(psql.Arg(req.Value))
+		case selection.In, selection.NotIn, selection.Exists, selection.DoesNotExist, selection.GreaterThan, selection.LessThan:
+			return nil, fmt.Errorf("unsupported field selector operator: %v", req.Operator)
+		}
+
+		expressions = append(expressions, expression)
+	}
+	return expressions, nil
 }
