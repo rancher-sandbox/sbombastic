@@ -98,8 +98,8 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 					},
 				},
 			},
-			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.sbombastic.json"),
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbombastic-vex.json"),
 		},
 		{
 			platform: "linux/s390x with VEX repo not enabled",
@@ -114,8 +114,8 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 					},
 				},
 			},
-			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.sbombastic.json"),
+			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbombastic.json"),
 		},
 	} {
 		t.Run(test.platform, func(t *testing.T) {
@@ -211,7 +211,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 func fakeVEXHubRepository(t *testing.T) *httptest.Server {
 	handler := http.FileServer(http.Dir("../../test/fixtures/vexhub"))
 	server := httptest.NewUnstartedServer(handler)
-	listener, err := net.Listen("tcp", ":1337")
+	listener, err := net.Listen("tcp", "127.0.0.1:1337")
 	require.NoError(t, err)
 	server.Listener = listener
 	return server
