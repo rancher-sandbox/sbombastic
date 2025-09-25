@@ -40,9 +40,19 @@ spec:
             - name: pg-secret
               mountPath: /pg
               readOnly: true
+            - name: pg-server-ca
+              mountPath: /pg/tls/server/
+              readOnly: true
       volumes:
         - name: cert-volume
           emptyDir: {}
         - name: pg-secret
           secret:
             secretName: {{ include "sbombastic.fullname" . }}-cnpg-cluster-app
+        - name: pg-server-ca
+          secret:
+            secretName: {{ include "sbombastic.fullname" . }}-cnpg-cluster-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
+

@@ -2,6 +2,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: {{ include "sbombastic.fullname" . }}-cnpg-cluster
+  namespace: {{ .Release.Namespace }}
 spec:
   instances: 3
   storage:

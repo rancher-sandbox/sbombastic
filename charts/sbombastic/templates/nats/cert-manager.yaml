@@ -2,7 +2,7 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: {{ include "sbombastic.fullname" . }}-selfsigned-issuer
+  name: {{ include "sbombastic.fullname" . }}-nats-selfsigned-issuer
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "sbombastic.labels" . | nindent 4 }}
@@ -26,7 +26,7 @@ spec:
     algorithm: ECDSA
     size: 256
   issuerRef:
-    name: {{ include "sbombastic.fullname" . }}-selfsigned-issuer
+    name: {{ include "sbombastic.fullname" . }}-nats-selfsigned-issuer
     kind: Issuer
     group: cert-manager.io
 ---
