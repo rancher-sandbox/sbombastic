@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "id": "pkg:apk/alpine/zlib",
+      "location": "pkg/apk/alpine/zlib/scan.openvex.json"
+    }
+  ]
+}
