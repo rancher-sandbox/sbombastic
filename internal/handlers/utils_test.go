@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
-	"github.com/docker/docker/api/types/image"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/registry"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -65,13 +63,13 @@ func startTestPrivateRegistry(ctx context.Context) (*testPrivateRegistry, error)
 	defer cleanup()
 
 	imageRefPull := fmt.Sprintf("%s/%s:%s", registryURI, imageName, tag)
-	err = pullImage(ctx, imageRefPull)
+	err = registryContainer.PullImage(ctx, imageRefPull)
 	if err != nil {
 		return &testPrivateRegistry{}, fmt.Errorf("unable to pull image: %w", err)
 	}
 
 	imageRef := fmt.Sprintf("%s/%s:%s", registryContainer.RegistryName, imageName, tag)
-	err = tagImage(ctx, imageRefPull, imageRef)
+	err = registryContainer.TagImage(ctx, imageRefPull, imageRef)
 	if err != nil {
 		return &testPrivateRegistry{}, fmt.Errorf("unable to tag image: %w", err)
 	}
@@ -85,54 +83,6 @@ func startTestPrivateRegistry(ctx context.Context) (*testPrivateRegistry, error)
 		registry:    registryContainer,
 		registryURL: registryHostAddress,
 	}, nil
-}
-
-// TODO(alegrey91): fix upstream
-// pullImage pulls an image from an external Registry.
-// It will use the internal registry to store the image.
-func pullImage(ctx context.Context, ref string) error {
-	dockerProvider, err := testcontainers.NewDockerProvider()
-	if err != nil {
-		return fmt.Errorf("failed to create Docker provider: %w", err)
-	}
-	defer dockerProvider.Close()
-
-	dockerCli := dockerProvider.Client()
-
-	pullOpts := image.PullOptions{
-		All: true,
-	}
-
-	pullOutput, err := dockerCli.ImagePull(ctx, ref, pullOpts)
-	if err != nil {
-		return fmt.Errorf("failed to push image %s: %w", ref, err)
-	}
-
-	_, err = io.Copy(io.Discard, pullOutput)
-	if err != nil {
-		return fmt.Errorf("failed to read output: %w", err)
-	}
-
-	return nil
-}
-
-// TODO(alegrey91): fix upstream
-// tagImage tags an image from the local Registry.
-func tagImage(ctx context.Context, image, ref string) error {
-	dockerProvider, err := testcontainers.NewDockerProvider()
-	if err != nil {
-		return fmt.Errorf("failed to create Docker provider: %w", err)
-	}
-	defer dockerProvider.Close()
-
-	dockerCli := dockerProvider.Client()
-
-	err = dockerCli.ImageTag(ctx, image, ref)
-	if err != nil {
-		return fmt.Errorf("failed to tag image %s: %w", image, err)
-	}
-
-	return nil
 }
 
 func (r *testPrivateRegistry) stop(ctx context.Context) error {
