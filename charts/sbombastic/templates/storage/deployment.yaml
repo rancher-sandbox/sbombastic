@@ -48,11 +48,19 @@ spec:
           emptyDir: {}
         - name: pg-secret
           secret:
+            {{- if .Values.storage.postgres.cnpg.enabled }}
             secretName: {{ include "sbombastic.fullname" . }}-cnpg-cluster-app
+            {{- else }}
+            secretName: {{ .Values.storage.postgres.authSecretName }}
+            {{- end }}
         - name: pg-server-ca
           secret:
+            {{- if .Values.storage.postgres.cnpg.enabled }}
             secretName: {{ include "sbombastic.fullname" . }}-cnpg-cluster-ca
+            {{- else }}
+            secretName: {{ .Values.storage.postgres.caSecretName }}
+            {{- end }}
             items:
-              - key: ca.crt
-                path: ca.crt
+            - key: ca.crt
+              path: ca.crt
 
