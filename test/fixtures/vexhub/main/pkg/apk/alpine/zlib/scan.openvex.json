@@ -1,0 +1,22 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-5ccbf77b6cb2db8776490ae146e500dff670b8c707bf1b03064707d5f08ef447",
+  "author": "Unknown Author",
+  "timestamp": "2025-09-25T12:27:01.555850678+02:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2022-37434"
+      },
+      "timestamp": "2025-09-25T12:27:01.555853023+02:00",
+      "products": [
+        {
+          "@id": "pkg:apk/alpine/zlib@1.2.11-r3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path"
+    }
+  ]
+}

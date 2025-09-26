@@ -186,8 +186,8 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 		"--disable-telemetry",
 		"--cache-dir", h.workDir,
 		"--format", "spdx-json",
-		"--db-repository", "public.ecr.aws/aquasecurity/trivy-db",
-		"--java-db-repository", "public.ecr.aws/aquasecurity/trivy-java-db",
+		"--skip-db-update",
+		"--skip-java-db-update",
 		"--output", sbomFile.Name(),
 		fmt.Sprintf(
 			"%s/%s@%s",
