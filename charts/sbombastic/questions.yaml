@@ -93,7 +93,7 @@ questions:
   - variable: storage.replicas
     label: Storage Replicas
     type: int
-    default: 1 # TODO: change to 3 when the postgres is ready
+    default: 3
     min: 1
     group: Storage
     description: |
