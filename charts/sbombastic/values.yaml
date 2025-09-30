@@ -54,7 +54,7 @@ storage:
         # Size of the storage. Required if not already specified in the PVC template.
         # Changes to this field are automatically reapplied to the created PVCs.
         # Size cannot be decreased.
-        # Pleae refer to https://cloudnative-pg.io/documentation/1.18/storage/#volume-expansion for more details.
+        # Please refer to https://cloudnative-pg.io/documentation/current/storage/#volume-expansion for more details.
         size: 1Gi
         # Resize existent PVCs, defaults to true
         resizeInUseVolumes: true
