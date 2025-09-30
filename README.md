@@ -10,6 +10,7 @@ This is still being developed. For additional details, please refer to the [RFC]
 
 - [Quickstart](docs/installation/quickstart.md)
 - [Uninstall](docs/installation/uninstall.md)
+- [Helm Chart Values Configuration](docs/installation/helm-values.md)
 
 ### Usage
 
