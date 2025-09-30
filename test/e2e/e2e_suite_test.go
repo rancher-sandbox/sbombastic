@@ -191,6 +191,14 @@ func TestRegistryCreation(t *testing.T) {
 			require.NoError(t, err)
 			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(registry))
 			require.NoError(t, err)
+			// Verify the ScanJob is deleted
+			err = wait.For(conditions.New(cfg.Client().Resources()).ResourceDeleted(&v1alpha1.ScanJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-scanjob",
+					Namespace: cfg.Namespace(),
+				},
+			}))
+			require.NoError(t, err)
 
 			return ctx
 		}).
