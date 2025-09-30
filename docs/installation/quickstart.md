@@ -17,7 +17,10 @@ Before deployment, you need to prepare the following:
 - `helm` installed locally
 - `kubectl` installed locally
 - `cert-manager` installed in the cluster
+- `CloudNativePG` installed in the cluster
 
+
+### Install cert-manager
 To install cert-manager, you can run the following commands:
 
 ```bash
@@ -33,8 +36,23 @@ helm install cert-manager jetstack/cert-manager \
 ```
 
 > For more information on configuring cert-manager, please visit the [cert-manager documentation](https://cert-manager.io/docs/installation/helm)
-
 ---
+
+### Install CloudNativePG
+
+To install CloudNativePG, you can run the following commands:
+
+```bash
+helm repo add cnpg https://cloudnative-pg.github.io/charts
+helm repo update
+helm install cnpg \
+  --namespace cnpg-system \
+  --create-namespace \
+  cnpg/cloudnative-pg
+```
+
+To customize the CloudNativePG installation, refer to [Using CloudNativePG (Recommended)](helm-values.md#using-cloudnativepg-recommended) in the Helm values documentation.
+You can also bring your own PostgreSQL instance instead of using CloudNativePG. See [Using an External PostgreSQL Instance](helm-values.md#using-an-external-postgresql-instance) for configuration details.
 
 ## Deploy SBOMbastic
 
