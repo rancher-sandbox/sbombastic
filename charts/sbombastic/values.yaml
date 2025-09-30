@@ -39,8 +39,12 @@ storage:
   postgres:
     # Name of existing secret containing the URI to connect to external Postgres.
     # Expects a `uri` key. See https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
-    # The sslmode parameter will be ignored.
+    # Example: `postgresql://username:password@hostname:5432/dbname`
     # Ignored if CNPG is enabled.
+    #
+    # Note: Any `sslmode` or other `ssl*` parameters in the URI are ignored.
+    # SBOMBastic always enforces CA verification when connecting to the database,
+    # using the CA certificate specified in the `caSecretName` secret.
     authSecretName: ""
     # Name of secret containing the CA certificate used to verify the Postgres server certificate.
     # This secret must contain a `ca.crt` key with the CA certificate in PEM format.
@@ -54,7 +58,7 @@ storage:
         # Size of the storage. Required if not already specified in the PVC template.
         # Changes to this field are automatically reapplied to the created PVCs.
         # Size cannot be decreased.
-        # Pleae refer to https://cloudnative-pg.io/documentation/1.18/storage/#volume-expansion for more details.
+        # Please refer to https://cloudnative-pg.io/documentation/current/storage/#volume-expansion for more details.
         size: 1Gi
         # Resize existent PVCs, defaults to true
         resizeInUseVolumes: true
