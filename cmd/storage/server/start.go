@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"net"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/apiserver/pkg/server/dynamiccertificates"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/util/compatibility"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -38,7 +38,6 @@ import (
 	baseversion "k8s.io/component-base/version"
 
 	basecompatibility "k8s.io/component-base/compatibility"
-	netutils "k8s.io/utils/net"
 
 	"github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/internal/apiserver"
@@ -49,6 +48,10 @@ import (
 // WardleServerOptions contains state for master/api server
 type WardleServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
+
+	// DynamicCertKeyPairContent auto-updates the serving certificate and private key when the underlying files change
+	DynamicCertKeyPairContent *dynamiccertificates.DynamicCertKeyPairContent
+
 	// ComponentGlobalsRegistry is the registry where the effective versions and feature gates for all components are stored.
 	ComponentGlobalsRegistry basecompatibility.ComponentGlobalsRegistry
 
@@ -196,10 +199,12 @@ func (o *WardleServerOptions) Complete() error {
 
 // Config returns config for the api server given WardleServerOptions
 func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
-	// TODO have a "real" external address
-	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", o.AlternateDNS, []net.IP{netutils.ParseIPSloppy("127.0.0.1")}); err != nil {
-		return nil, fmt.Errorf("error creating self-signed certificates: %w", err)
+	dynamicCertKeyPairContent, err := dynamiccertificates.NewDynamicServingContentFromFiles("storage-serving-certs", "/tls/tls.crt", "/tls/tls.key")
+	if err != nil {
+		return nil, fmt.Errorf("error creating dynamic certificate content provider: %w", err)
 	}
+	o.DynamicCertKeyPairContent = dynamicCertKeyPairContent
+	o.RecommendedOptions.SecureServing.ServerCert.GeneratedCert = dynamicCertKeyPairContent
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
@@ -245,6 +250,10 @@ func (o *WardleServerOptions) RunWardleServer(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error creating server: %w", err)
 	}
+
+	// Stat the dynamic certificate controller to monitor for changes
+	// and update the serving certificate and key as needed.
+	go o.DynamicCertKeyPairContent.Run(ctx, 1)
 
 	if err = server.GenericAPIServer.PrepareRun().RunWithContext(ctx); err != nil {
 		return fmt.Errorf("error while running server: %w", err)
