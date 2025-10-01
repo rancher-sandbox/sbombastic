@@ -35,8 +35,8 @@ spec:
 {{ toYaml .Values.storage.resources | indent 12 }}
           {{- end }}
           volumeMounts:
-            - name: cert-volume
-              mountPath: /certs
+            - name: storage-tls
+              mountPath: /tls
             - name: pg-secret
               mountPath: /pg
               readOnly: true
@@ -44,8 +44,9 @@ spec:
               mountPath: /pg/tls/server/
               readOnly: true
       volumes:
-        - name: cert-volume
-          emptyDir: {}
+        - name: storage-tls
+          secret:
+            secretName: {{ include "sbombastic.fullname" . }}-storage-tls
         - name: pg-secret
           secret:
             {{- if .Values.storage.postgres.cnpg.enabled }}
@@ -63,4 +64,5 @@ spec:
             items:
             - key: ca.crt
               path: ca.crt
+
 
