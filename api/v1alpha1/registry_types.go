@@ -29,8 +29,6 @@ type RegistrySpec struct {
 	CABundle string `json:"caBundle,omitempty"`
 	// Insecure allows insecure connections to the registry when set to true.
 	Insecure bool `json:"insecure,omitempty"`
-	// Description tells more about the Registry.
-	Description string `json:"description,omitempty"`
 }
 
 // RegistryStatus defines the observed state of Registry
