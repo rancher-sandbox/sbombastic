@@ -20,7 +20,28 @@ type registryTestCase struct {
 	expectedField string
 }
 
-var registryTestCasees = []registryTestCase{
+func TestRegistryDefaulter_Default(t *testing.T) {
+	registry := &v1alpha1.Registry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-registry",
+			Namespace: "default",
+		},
+		Spec: v1alpha1.RegistrySpec{
+			URI:         "registry.test.local",
+			CatalogType: "",
+		},
+	}
+
+	defaulter := &RegistryCustomDefaulter{}
+
+	err := defaulter.Default(t.Context(), registry)
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, registry.Spec.CatalogType)
+	assert.Equal(t, defaultCatalogType, registry.Spec.CatalogType)
+}
+
+var registryTestCases = []registryTestCase{
 	{
 		name: "should admit creation when scanInterval is nil",
 		registry: &v1alpha1.Registry{
@@ -81,15 +102,75 @@ var registryTestCasees = []registryTestCase{
 		expectedField: "spec.scanInterval",
 		expectedError: "scanInterval must be at least 1 minute",
 	},
+	{
+		name: "should allow creation when catalogType is NoCatalog and Repositories are provided",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI:         "registry.test.local",
+				CatalogType: "NoCatalog",
+				Repositories: []string{
+					"repo-test-1",
+					"repo-test-2",
+					"repo-test-3",
+				},
+			},
+		},
+	},
+	{
+		name: "should deny creation when catalogType is NoCatalog and Repositories are not provided",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI:         "registry.test.local",
+				CatalogType: "NoCatalog",
+			},
+		},
+		expectedField: "spec.repositories",
+		expectedError: "repositories must be explicitly provided when catalogType is NoCatalog",
+	},
+	{
+		name: "should allow creation when catalogType is valid",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI:         "registry.test.local",
+				CatalogType: "OCIDistribution",
+			},
+		},
+	},
+	{
+		name: "should deny creation when catalogType is not valid",
+		registry: &v1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-registry",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.RegistrySpec{
+				URI:         "registry.test.local",
+				CatalogType: "notvalidcatalogtype",
+			},
+		},
+		expectedField: "spec.catalogType",
+		expectedError: "is not a valid CatalogType",
+	},
 }
 
 func TestRegistryCustomValidator_ValidateCreate(t *testing.T) {
-	for _, test := range registryTestCasees {
+	for _, test := range registryTestCases {
 		t.Run(test.name, func(t *testing.T) {
 			validator := &RegistryCustomValidator{
 				logger: logr.Discard(),
 			}
-
 			warnings, err := validator.ValidateCreate(t.Context(), test.registry)
 
 			if test.expectedError != "" {
@@ -111,7 +192,7 @@ func TestRegistryCustomValidator_ValidateCreate(t *testing.T) {
 }
 
 func TestRegistryCustomValidator_ValidateUpdate(t *testing.T) {
-	for _, test := range registryTestCasees {
+	for _, test := range registryTestCases {
 		t.Run(test.name, func(t *testing.T) {
 			validator := &RegistryCustomValidator{
 				logger: logr.Discard(),

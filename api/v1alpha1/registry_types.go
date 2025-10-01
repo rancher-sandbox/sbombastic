@@ -4,10 +4,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// CatalogTypeNoCatalog is used for registries that don't
+	// expose/implement the _catalog endpoint.
+	CatalogTypeNoCatalog       = "NoCatalog"
+	CatalogTypeOCIDistribution = "OCIDistribution"
+)
+
 // RegistrySpec defines the desired state of Registry
 type RegistrySpec struct {
 	// URI is the URI of the container registry
 	URI string `json:"uri,omitempty"`
+	// CatalogType is the type of catalog used to list the images within the registry.
+	CatalogType string `json:"catalogType,omitempty"`
 	// Repositories is the list of the repositories to be scanned
 	// An empty list means all the repositories found in the registry are going to be scanned
 	Repositories []string `json:"repositories,omitempty"`

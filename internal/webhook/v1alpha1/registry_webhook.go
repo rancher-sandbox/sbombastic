@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -18,11 +19,20 @@ import (
 	"github.com/rancher/sbombastic/api/v1alpha1"
 )
 
+const (
+	defaultCatalogType = v1alpha1.CatalogTypeOCIDistribution
+)
+
+var availableCatalogTypes = []string{v1alpha1.CatalogTypeNoCatalog, v1alpha1.CatalogTypeOCIDistribution}
+
 // SetupRegistryWebhookWithManager registers the webhook for Registry in the manager.
 func SetupRegistryWebhookWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewWebhookManagedBy(mgr).For(&v1alpha1.Registry{}).
 		WithValidator(&RegistryCustomValidator{
 			logger: mgr.GetLogger().WithName("registry_validator"),
+		}).
+		WithDefaulter(&RegistryCustomDefaulter{
+			logger: mgr.GetLogger().WithName("registry_defaulter"),
 		}).
 		Complete()
 	if err != nil {
@@ -31,7 +41,31 @@ func SetupRegistryWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-// +kubebuilder:webhook:path=/validate-sbombastic-sbombastic-rancher-io-v1alpha1-registry,mutating=false,failurePolicy=fail,sideEffects=None,groups=sbombastic.sbombastic.rancher.io,resources=registries,verbs=create;update,versions=v1alpha1,name=vregistry-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-sbombastic-rancher-io-v1alpha1-registry,mutating=true,failurePolicy=fail,sideEffects=None,groups=sbombastic.rancher.io,resources=registries,verbs=create;update,versions=v1alpha1,name=mregistry.sbombastic.rancher.io,admissionReviewVersions=v1
+
+type RegistryCustomDefaulter struct {
+	logger logr.Logger
+}
+
+var _ webhook.CustomDefaulter = &RegistryCustomDefaulter{}
+
+// Default implements admission.CustomDefaulter.
+func (d *RegistryCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	registry, ok := obj.(*v1alpha1.Registry)
+	if !ok {
+		return fmt.Errorf("expected a Registry object but got %T", obj)
+	}
+
+	d.logger.Info("Defaulting Registry", "name", registry.GetName())
+
+	if registry.Spec.CatalogType == "" {
+		registry.Spec.CatalogType = defaultCatalogType
+	}
+
+	return nil
+}
+
+// +kubebuilder:webhook:path=/validate-sbombastic-rancher-io-v1alpha1-registry,mutating=false,failurePolicy=fail,sideEffects=None,groups=sbombastic.rancher.io,resources=registries,verbs=create;update,versions=v1alpha1,name=vregistry.sbombastic.rancher.io,admissionReviewVersions=v1
 
 type RegistryCustomValidator struct {
 	logger logr.Logger
@@ -47,12 +81,7 @@ func (v *RegistryCustomValidator) ValidateCreate(_ context.Context, obj runtime.
 	}
 	v.logger.Info("Validation for Registry upon creation", "name", registry.GetName())
 
-	var allErrs field.ErrorList
-
-	if err := validateScanInterval(registry); err != nil {
-		fieldPath := field.NewPath("spec").Child("scanInterval")
-		allErrs = append(allErrs, field.Invalid(fieldPath, registry.Spec.ScanInterval, err.Error()))
-	}
+	allErrs := validateRegistry(registry)
 
 	if len(allErrs) > 0 {
 		return nil, apierrors.NewInvalid(
@@ -73,12 +102,7 @@ func (v *RegistryCustomValidator) ValidateUpdate(_ context.Context, _, newObj ru
 	}
 	v.logger.Info("Validation for Registry upon update", "name", registry.GetName())
 
-	var allErrs field.ErrorList
-
-	if err := validateScanInterval(registry); err != nil {
-		fieldPath := field.NewPath("spec").Child("scanInterval")
-		allErrs = append(allErrs, field.Invalid(fieldPath, registry.Spec.ScanInterval, err.Error()))
-	}
+	allErrs := validateRegistry(registry)
 
 	if len(allErrs) > 0 {
 		return nil, apierrors.NewInvalid(
@@ -111,4 +135,44 @@ func validateScanInterval(registry *v1alpha1.Registry) error {
 	}
 
 	return nil
+}
+
+func validateCatalogType(registry *v1alpha1.Registry) error {
+	// If the catalog type is empty, the Defaulter will set it to the default catalog type.
+	if registry.Spec.CatalogType == "" {
+		return nil
+	}
+	if !slices.Contains(availableCatalogTypes, registry.Spec.CatalogType) {
+		return fmt.Errorf("%s is not a valid CatalogType", registry.Spec.CatalogType)
+	}
+
+	return nil
+}
+
+func validateRepositories(registry *v1alpha1.Registry) error {
+	if registry.Spec.CatalogType == v1alpha1.CatalogTypeNoCatalog && len(registry.Spec.Repositories) == 0 {
+		return errors.New("repositories must be explicitly provided when catalogType is NoCatalog")
+	}
+	return nil
+}
+
+func validateRegistry(registry *v1alpha1.Registry) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if err := validateScanInterval(registry); err != nil {
+		fieldPath := field.NewPath("spec").Child("scanInterval")
+		allErrs = append(allErrs, field.Invalid(fieldPath, registry.Spec.ScanInterval, err.Error()))
+	}
+
+	if err := validateCatalogType(registry); err != nil {
+		fieldPath := field.NewPath("spec").Child("catalogType")
+		allErrs = append(allErrs, field.Invalid(fieldPath, registry.Spec.CatalogType, err.Error()))
+	}
+
+	if err := validateRepositories(registry); err != nil {
+		fieldPath := field.NewPath("spec").Child("repositories")
+		allErrs = append(allErrs, field.Invalid(fieldPath, registry.Spec.Repositories, err.Error()))
+	}
+
+	return allErrs
 }
