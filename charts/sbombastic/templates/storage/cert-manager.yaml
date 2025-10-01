@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-storage-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "sbombastic.fullname" . }}-storage-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sbombastic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  secretName: {{ include "sbombastic.fullname" . }}-storage-tls
+  dnsNames:
+    - {{ include "sbombastic.fullname" . }}-storage.{{ .Release.Namespace }}.svc
+    - {{ include "sbombastic.fullname" . }}-storage.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "sbombastic.fullname" . }}-storage-issuer
