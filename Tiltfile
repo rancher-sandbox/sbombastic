@@ -53,7 +53,7 @@ helm_resource(
 
 
 # Install CloudNativePG
-helm_repo("cnpg-repo", "https://cloudnative-pg.github.io/charts")
+helm_repo("cnpg", "https://cloudnative-pg.github.io/charts")
 helm_resource(
     "cloudnativepg",
     "cnpg/cloudnative-pg",
@@ -62,7 +62,7 @@ helm_resource(
         "--create-namespace",
     ],
     resource_deps=[
-        "cnpg-repo",
+        "cnpg",
     ],
 )
 
