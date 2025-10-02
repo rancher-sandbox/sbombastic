@@ -52,9 +52,6 @@ spec:
                 description: CatalogType is the type of catalog used to list the images
                   within the registry.
                 type: string
-              description:
-                description: Description tells more about the Registry.
-                type: string
               insecure:
                 description: Insecure allows insecure connections to the registry
                   when set to true.
