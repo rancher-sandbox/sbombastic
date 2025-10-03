@@ -174,10 +174,15 @@ func (c *client) GetImageDetails(ref name.Reference, platform *cranev1.Platform)
 		return ImageDetails{}, fmt.Errorf("cannot read config for %s: %w", ref, err)
 	}
 
-	// ensure platform is always set
-	platform = cfgFile.Platform()
+	// Single-arch images do not have a platform associated with them.
+	// In that case, we get the platform from the config file.
+	// Platform obtained from the config file does not have the Variant field set,
+	// as the config file does not contain that information.
 	if platform == nil {
-		return ImageDetails{}, fmt.Errorf("cannot get platform for %s", ref)
+		platform = cfgFile.Platform()
+		if platform == nil {
+			return ImageDetails{}, fmt.Errorf("cannot get platform for %s", ref)
+		}
 	}
 
 	layers, err := img.Layers()
