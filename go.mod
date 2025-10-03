@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/aquasecurity/trivy v0.66.0
 	github.com/aquasecurity/trivy-db v0.0.0-20250731052236-c7c831e2254d
-	github.com/docker/cli v28.4.0+incompatible
+	github.com/docker/cli v28.5.0+incompatible
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
