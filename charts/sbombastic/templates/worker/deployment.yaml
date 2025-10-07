@@ -28,6 +28,12 @@ spec:
           args:
             - -nats-url
             - {{ .Release.Name }}-nats.{{ .Release.Namespace }}.svc.cluster.local:4222
+            {{- if .Values.worker.trivyDBRepository }}
+            - -trivy-db-repository={{ .Values.worker.trivyDBRepository | quote }}
+            {{- end }}
+            {{- if .Values.worker.trivyJavaDBRepository }}
+            - -trivy-java-db-repository={{ .Values.worker.trivyJavaDBRepository | quote }}
+            {{- end }}
             {{- if .Values.worker.logLevel }}
             - -log-level={{ .Values.worker.logLevel }}
             {{- end }}

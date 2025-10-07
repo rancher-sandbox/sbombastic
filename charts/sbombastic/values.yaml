@@ -83,6 +83,8 @@ worker:
     requests:
       cpu: 250m
       memory: 300Mi
+  trivyDBRepository: public.ecr.aws/aquasecurity/trivy-db
+  trivyJavaDBRepository: public.ecr.aws/aquasecurity/trivy-java-db
 
 # NOTE: This section is used to configure the NATS server and its components
 # deployed by the NATS chart dependency.
