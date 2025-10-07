@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -58,7 +59,7 @@ func TestSubscriber_Run(t *testing.T) {
 	handlers := HandlerRegistry{
 		testSubscriberSubject: testHandler,
 	}
-	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable", handlers, nil, slog.Default())
+	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable", handlers, nil, nil, slog.Default())
 	require.NoError(t, err, "failed to create subscriber")
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -86,7 +87,7 @@ func TestSubscriber_Run(t *testing.T) {
 	require.NoError(t, err, "unexpected subscriber error")
 }
 
-func TestSubscriber_Run_WithFailure(t *testing.T) {
+func TestSubscriber_Run_WithRetry(t *testing.T) {
 	opts := natstest.DefaultTestOptions
 	opts.Port = -1 // Use a random port
 	opts.JetStream = true
@@ -101,16 +102,86 @@ func TestSubscriber_Run_WithFailure(t *testing.T) {
 	publisher, err := NewNatsPublisher(t.Context(), nc, slog.Default())
 	require.NoError(t, err)
 
+	var attemptCount atomic.Int32
+	processed := make(chan []byte, 1)
+	done := make(chan struct{})
+
+	// Handler that fails 3 times then succeeds
+	handleFunc := func(m []byte) error {
+		count := attemptCount.Add(1)
+		if count < 4 {
+			return fmt.Errorf("processing failed, attempt %d", count)
+		}
+		processed <- m
+		return nil
+	}
+
+	testHandler := &testHandler{handleFunc: handleFunc}
+	handlers := HandlerRegistry{
+		testSubscriberSubject: testHandler,
+	}
+	retryConfig := &RetryConfig{
+		BaseDelay:   100 * time.Millisecond,
+		Jitter:      0,
+		MaxAttempts: 5,
+	}
+	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable-retry", handlers, nil, retryConfig, slog.Default())
+	require.NoError(t, err, "failed to create subscriber")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	message := []byte(`{"data":"test retry data"}`)
+	err = publisher.Publish(t.Context(), testSubscriberSubject, "id", message)
+	require.NoError(t, err, "failed to publish message")
+
+	go func() {
+		err = subscriber.Run(ctx)
+		close(done)
+	}()
+
+	select {
+	case processedMessage := <-processed:
+		require.Equal(t, message, processedMessage, "unexpected message")
+		require.Equal(t, int32(4), attemptCount.Load(), "expected 4 attempts (1 initial + 3 retries)")
+	case <-time.After(5 * time.Second):
+		require.Fail(t, "timed out waiting for message to be processed after retries")
+	}
+
+	cancel()
+	<-done
+	require.NoError(t, err, "unexpected subscriber error")
+}
+
+func TestSubscriber_Run_WithMaxRetriesExceeded(t *testing.T) {
+	opts := natstest.DefaultTestOptions
+	opts.Port = -1 // Use a random port
+	opts.JetStream = true
+	opts.StoreDir = t.TempDir()
+	ns := natstest.RunServer(&opts)
+	defer ns.Shutdown()
+
+	nc, err := nats.Connect(ns.ClientURL())
+	require.NoError(t, err)
+	defer nc.Close()
+
+	publisher, err := NewNatsPublisher(t.Context(), nc, slog.Default())
+	require.NoError(t, err)
+
+	var attemptCount atomic.Int32
 	failureHandled := make(chan struct{}, 1)
 	done := make(chan struct{})
 
+	// Handler that always fails
 	handleFunc := func(_ []byte) error {
-		return errors.New("processing failed")
+		count := attemptCount.Add(1)
+		return fmt.Errorf("processing failed, attempt %d", count)
 	}
 
 	failureHandleFunc := func(message []byte, errorMessage string) error {
-		require.Contains(t, string(message), "test-scanjob")
-		require.Equal(t, fmt.Sprintf("failed to handle message on subject %s: processing failed", testSubscriberSubject), errorMessage)
+		require.Contains(t, string(message), "max-retry-test")
+		require.Contains(t, errorMessage, "processing failed")
+		require.Equal(t, int32(5), attemptCount.Load(), "expected exactly 5 attempts before failure handler")
 
 		failureHandled <- struct{}{}
 		return nil
@@ -122,14 +193,18 @@ func TestSubscriber_Run_WithFailure(t *testing.T) {
 	handlers := HandlerRegistry{
 		testSubscriberSubject: testHandler,
 	}
-
-	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable-failure", handlers, testFailureHandler, slog.Default())
+	retryConfig := &RetryConfig{
+		BaseDelay:   100 * time.Millisecond,
+		Jitter:      0,
+		MaxAttempts: 5,
+	}
+	subscriber, err := NewNatsSubscriber(t.Context(), nc, "test-durable-max-retry", handlers, testFailureHandler, retryConfig, slog.Default())
 	require.NoError(t, err, "failed to create subscriber")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	message := []byte(`{"scanjob":{"name":"test-scanjob","namespace":"default"}}`)
+	message := []byte(`{"data":"max-retry-test"}`)
 	err = publisher.Publish(t.Context(), testSubscriberSubject, "id", message)
 	require.NoError(t, err, "failed to publish message")
 
@@ -140,8 +215,9 @@ func TestSubscriber_Run_WithFailure(t *testing.T) {
 
 	select {
 	case <-failureHandled:
-	case <-time.After(2 * time.Second):
-		require.Fail(t, "timed out waiting for failure handler to be called")
+	// Success, failure handler was called
+	case <-time.After(5 * time.Second):
+		require.Fail(t, "timed out waiting for failure handler after max retries")
 	}
 
 	cancel()

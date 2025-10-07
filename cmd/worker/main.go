@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,8 +114,13 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, trivyDBRepository, trivyJavaDBRepository, logger),
 	}
 	failureHandler := handlers.NewScanJobFailureHandler(k8sClient, logger)
+	retryConfig := &messaging.RetryConfig{
+		BaseDelay:   5 * time.Second,
+		Jitter:      0.2,
+		MaxAttempts: 5,
+	}
 
-	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", registry, failureHandler, logger)
+	subscriber, err := messaging.NewNatsSubscriber(ctx, nc, "worker", registry, failureHandler, retryConfig, logger)
 	if err != nil {
 		logger.Error("Error creating NATS subscriber", "error", err)
 		os.Exit(1)
