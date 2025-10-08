@@ -75,6 +75,22 @@ questions:
     description: |
       Log level of the Worker Deployment
 
+  - variable: worker.trivyDBRepository
+    label: Worker Trivy DB Repository
+    type: string
+    default: public.ecr.aws/aquasecurity/trivy-db
+    group: Worker
+    description: |
+      OCI repository to retrieve trivy-db
+
+  - variable: worker.trivyJavaDBRepository
+    label: Worker Trivy Java DB Repository
+    type: string
+    default: public.ecr.aws/aquasecurity/trivy-java-db
+    group: Worker
+    description: |
+      OCI repository to retrieve trivy-java-db
+
   ###############################################################################
   # Storage
   ###############################################################################
