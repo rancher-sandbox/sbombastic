@@ -19,8 +19,8 @@ Before deployment, you need to prepare the following:
 - `cert-manager` installed in the cluster
 - `CloudNativePG` installed in the cluster
 
-
 ### Install cert-manager
+
 To install cert-manager, you can run the following commands:
 
 ```bash
@@ -36,6 +36,7 @@ helm install cert-manager jetstack/cert-manager \
 ```
 
 > For more information on configuring cert-manager, please visit the [cert-manager documentation](https://cert-manager.io/docs/installation/helm)
+
 ---
 
 ### Install CloudNativePG
@@ -48,6 +49,7 @@ helm repo update
 helm install cnpg \
   --namespace cnpg-system \
   --create-namespace \
+  --wait \
   cnpg/cloudnative-pg
 ```
 
