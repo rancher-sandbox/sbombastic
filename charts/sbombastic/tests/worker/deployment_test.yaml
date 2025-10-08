@@ -36,6 +36,12 @@ tests:
       - contains:
           path: "spec.template.spec.containers[0].args"
           content: "-log-level=debug"
+      - contains:
+          path: "spec.template.spec.containers[0].args"
+          content: "-trivy-db-repository=\"public.ecr.aws/aquasecurity/trivy-db\""
+      - contains:
+          path: "spec.template.spec.containers[0].args"
+          content: "-trivy-java-db-repository=\"public.ecr.aws/aquasecurity/trivy-java-db\""
       - equal:
           path: "spec.template.spec.containers[0].resources.limits.cpu"
           value: "500m"
