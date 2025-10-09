@@ -62,7 +62,11 @@ func NewNatsSubscriber(ctx context.Context,
 		jetstream.ConsumerConfig{
 			FilterSubjects: subjects,
 			Durable:        durable,
-			AckWait:        1 * time.Hour,
+			// AckWait defines how long the server will wait for an acknowledgement
+			// before resending a message.
+			// We set it to a higher value than the default to allow for longer processing times.
+			// Handlers that are expected to take longer should use `InProgress` to extend the AckWait.
+			AckWait: 10 * time.Minute,
 			// We do not set MaxDeliver here because we want to handle retries manually
 			// to implement custom backoff and failure handling logic.
 		})
@@ -103,7 +107,7 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 				return
 			}
 
-			if err := s.handleMessage(ctx, msg.Subject(), msg.Data()); err != nil {
+			if err := s.handleMessage(ctx, msg.Subject(), msg); err != nil {
 				s.handleFailure(ctx, msg, metadata, err)
 				return
 			}
@@ -131,7 +135,7 @@ func (s *NatsSubscriber) Run(ctx context.Context) error {
 }
 
 // handleMessage handles individual message processing.
-func (s *NatsSubscriber) handleMessage(ctx context.Context, subject string, message []byte) error {
+func (s *NatsSubscriber) handleMessage(ctx context.Context, subject string, message Message) error {
 	handler, found := s.handlers[subject]
 	if !found {
 		return fmt.Errorf("no handler found for subject: %s", subject)
@@ -155,7 +159,7 @@ func (s *NatsSubscriber) handleFailure(ctx context.Context, msg jetstream.Msg, m
 	)
 
 	if metadata.NumDelivered >= maxDeliver {
-		if err := s.failureHandler.HandleFailure(ctx, msg.Data(), processingErr.Error()); err != nil {
+		if err := s.failureHandler.HandleFailure(ctx, msg, processingErr.Error()); err != nil {
 			s.logger.ErrorContext(ctx, "Failed to handle failure",
 				"subject", msg.Subject(),
 				"error", err,
