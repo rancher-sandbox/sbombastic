@@ -109,6 +109,10 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message messaging.Mess
 		return err
 	}
 
+	if err = message.InProgress(); err != nil {
+		return fmt.Errorf("failed to ack message as in progress: %w", err)
+	}
+
 	if err = h.k8sClient.Create(ctx, sbom); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			h.logger.InfoContext(ctx, "SBOM already exists, skipping creation", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
