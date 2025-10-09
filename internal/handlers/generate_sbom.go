@@ -51,9 +51,9 @@ func NewGenerateSBOMHandler(
 }
 
 // Handle processes the GenerateSBOMMessage and generates a SBOM resource from the specified image.
-func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error {
+func (h *GenerateSBOMHandler) Handle(ctx context.Context, message messaging.Message) error {
 	generateSBOMMessage := &GenerateSBOMMessage{}
-	if err := json.Unmarshal(message, generateSBOMMessage); err != nil {
+	if err := json.Unmarshal(message.Data(), generateSBOMMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal GenerateSBOM message: %w", err)
 	}
 
@@ -104,32 +104,25 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 		return fmt.Errorf("cannot unmarshal registry data from scan job %s/%s: %w", scanJob.Namespace, scanJob.Name, err)
 	}
 
-	sbom := &storagev1alpha1.SBOM{}
-	err = h.k8sClient.Get(ctx, client.ObjectKey{
-		Name:      generateSBOMMessage.Image.Name,
-		Namespace: generateSBOMMessage.Image.Namespace,
-	}, sbom)
-
-	// Check if the SBOM already exists.
-	// If the SBOM already exists this is a no-op, since the SBOM of an image does not change.
-	if apierrors.IsNotFound(err) { //nolint:gocritic // It's easier to read this way.
-		h.logger.InfoContext(ctx, "SBOM not found, generating new one", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
-		sbom, err = h.generateSBOM(ctx, image, registry, generateSBOMMessage)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return fmt.Errorf("failed to check if SBOM %s in namespace %s exists: %w", generateSBOMMessage.Image.Name, generateSBOMMessage.Image.Namespace, err)
-	} else {
-		h.logger.InfoContext(ctx, "SBOM already exists, skipping generation", "sbom", sbom.Name, "namespace", sbom.Namespace)
+	sbom, err := h.generateSBOM(ctx, image, registry, generateSBOMMessage)
+	if err != nil {
+		return err
 	}
 
-	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, sbom.Name)
+	if err = h.k8sClient.Create(ctx, sbom); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			h.logger.InfoContext(ctx, "SBOM already exists, skipping creation", "sbom", generateSBOMMessage.Image.Name, "namespace", generateSBOMMessage.Image.Namespace)
+		} else {
+			return fmt.Errorf("failed to create SBOM: %w", err)
+		}
+	}
+
+	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, generateSBOMMessage.Image.Name)
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: generateSBOMMessage.BaseMessage,
 		SBOM: ObjectRef{
-			Name:      sbom.Name,
-			Namespace: sbom.Namespace,
+			Name:      generateSBOMMessage.Image.Name,
+			Namespace: generateSBOMMessage.Image.Namespace,
 		},
 	})
 	if err != nil {
@@ -143,7 +136,7 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message []byte) error 
 	return nil
 }
 
-// generateSBOM creates a new SBOM using Trivy and stores it in a SBOM resource.
+// generateSBOM creates a new SBOM using Trivy.
 func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1alpha1.Image, registry *v1alpha1.Registry, message *GenerateSBOMMessage) (*storagev1alpha1.SBOM, error) {
 	sbomFile, err := os.CreateTemp(h.workDir, "trivy.sbom.*.json")
 	if err != nil {
@@ -222,9 +215,6 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 	}
 	if err = controllerutil.SetControllerReference(image, sbom, h.scheme); err != nil {
 		return nil, fmt.Errorf("failed to set owner reference: %w", err)
-	}
-	if err = h.k8sClient.Create(ctx, sbom); err != nil {
-		return nil, fmt.Errorf("failed to create SBOM: %w", err)
 	}
 
 	return sbom, nil
