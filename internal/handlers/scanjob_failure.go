@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 // ScanJobFailureHandler handles failures for messages related to scan jobs.
@@ -31,9 +32,9 @@ func NewScanJobFailureHandler(
 }
 
 // HandleFailure processes message failures and updates the associated ScanJob status.
-func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message []byte, errorMessage string) error {
+func (h *ScanJobFailureHandler) HandleFailure(ctx context.Context, message messaging.Message, errorMessage string) error {
 	baseMessage := &BaseMessage{}
-	if err := json.Unmarshal(message, baseMessage); err != nil {
+	if err := json.Unmarshal(message.Data(), baseMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal base message: %w", err)
 	}
 	h.logger.DebugContext(ctx, "Handling ScanJob failure",
