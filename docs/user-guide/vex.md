@@ -56,6 +56,4 @@ kubectl patch vexhub <vexhub-name> -p '{"spec":{"enabled":false}}'
 
 ## Air Gap
 
-Air Gap is available by default for this feature, since the only requirement is to provide a self-hosted VEX Hub repository and change the `repository_url` (if any) within the VEX files, to point to the internal registries.
-
-This setup is well described [here](https://github.com/aquasecurity/trivy/blob/main/docs/docs/advanced/air-gap.md#vex-hub).
+Air Gap support for VEX Hub is described [here](./airgap-support.md#self-hosting-vex-hub).
