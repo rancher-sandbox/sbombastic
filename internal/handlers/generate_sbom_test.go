@@ -175,7 +175,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err, "failed to generate SBOM, with platform %s", platform)
 
 	sbom := &storagev1alpha1.SBOM{}
@@ -291,7 +291,7 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			require.NoError(t, err)
 
 			// Should return nil (no error) when resource doesn't exist
-			err = handler.Handle(context.Background(), message)
+			err = handler.Handle(context.Background(), &testMessage{data: message})
 			require.NoError(t, err)
 
 			// Verify no SBOM was created
@@ -406,7 +406,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err)
 }
 
@@ -528,6 +528,6 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err)
 }
