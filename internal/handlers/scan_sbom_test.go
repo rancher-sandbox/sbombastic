@@ -185,7 +185,7 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err, "failed to scan SBOM, with platform %s", platform)
 
 	vulnerabilityReport := &storagev1alpha1.VulnerabilityReport{}
@@ -289,7 +289,7 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			require.NoError(t, err)
 
 			// Should return nil (no error) when resource doesn't exist
-			err = handler.Handle(context.Background(), message)
+			err = handler.Handle(context.Background(), &testMessage{data: message})
 			require.NoError(t, err)
 
 			// Verify no VulnerabilityReport was created
