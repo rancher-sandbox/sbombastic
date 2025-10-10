@@ -244,16 +244,27 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 		},
 	}
 
+	failedScanJob := scanJob.DeepCopy()
+	failedScanJob.MarkFailed(v1alpha1.ReasonInternalError, "kaboom")
+
 	tests := []struct {
 		name            string
+		scanJob         *v1alpha1.ScanJob
 		existingObjects []runtime.Object
 	}{
 		{
 			name:            "scanjob not found",
+			scanJob:         scanJob,
 			existingObjects: []runtime.Object{image},
 		},
 		{
+			name:            "scanjob is failed",
+			scanJob:         failedScanJob,
+			existingObjects: []runtime.Object{failedScanJob, image, registry},
+		},
+		{
 			name:            "image not found",
+			scanJob:         scanJob,
 			existingObjects: []runtime.Object{registry, scanJob},
 		},
 	}
@@ -279,7 +290,7 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			message, err := json.Marshal(&GenerateSBOMMessage{
 				BaseMessage: BaseMessage{
 					ScanJob: ObjectRef{
-						Name:      scanJob.Name,
+						Name:      test.scanJob.Name,
 						Namespace: "default",
 					},
 				},

@@ -78,6 +78,11 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message messaging.Mess
 	}
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
 
+	if scanJob.IsFailed() {
+		h.logger.InfoContext(ctx, "ScanJob is in failed state, stopping SBOM generation", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+		return nil
+	}
+
 	image := &storagev1alpha1.Image{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      generateSBOMMessage.Image.Name,

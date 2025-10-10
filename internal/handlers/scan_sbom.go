@@ -91,6 +91,11 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message messaging.Message)
 		return fmt.Errorf("failed to get ScanJob: %w", err)
 	}
 
+	if scanJob.IsFailed() {
+		h.logger.InfoContext(ctx, "ScanJob is in failed state, stopping SBOM scan", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+		return nil
+	}
+
 	sbom := &storagev1alpha1.SBOM{}
 	err = h.k8sClient.Get(ctx, client.ObjectKey{
 		Name:      scanSBOMMessage.SBOM.Name,
