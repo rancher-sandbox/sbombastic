@@ -155,10 +155,15 @@ func (s *NatsSubscriber) handleFailure(ctx context.Context, msg jetstream.Msg, m
 		"subject", msg.Subject(),
 		"headers", msg.Headers(),
 		"error", processingErr,
-		"delivery_count", metadata.NumDelivered,
 	)
 
 	if metadata.NumDelivered >= maxDeliver {
+		s.logger.InfoContext(ctx, "Max delivery attempts reached, invoking failure handler",
+			"subject", msg.Subject(),
+			"deliveryCount", metadata.NumDelivered,
+			"maxAttempts", s.retryConfig.MaxAttempts,
+		)
+
 		if err := s.failureHandler.HandleFailure(ctx, msg, processingErr.Error()); err != nil {
 			s.logger.ErrorContext(ctx, "Failed to handle failure",
 				"subject", msg.Subject(),
@@ -179,7 +184,8 @@ func (s *NatsSubscriber) handleFailure(ctx context.Context, msg jetstream.Msg, m
 	delay := s.backoffDelay(int(metadata.NumDelivered))
 	s.logger.InfoContext(ctx, "Retrying failed message after delay",
 		"subject", msg.Subject(),
-		"delivery_count", metadata.NumDelivered,
+		"deliveryCount", metadata.NumDelivered,
+		"maxAttempts", s.retryConfig.MaxAttempts,
 		"delay", delay,
 	)
 	if err := msg.NakWithDelay(delay); err != nil {
