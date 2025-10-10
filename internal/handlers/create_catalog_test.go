@@ -234,7 +234,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		expectedMessageArm64,
 	).Return(nil).Once()
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}
@@ -441,7 +441,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err)
 
 	err = k8sClient.Get(t.Context(), client.ObjectKey{
@@ -540,7 +540,7 @@ func TestCatalogHandler_DeleteObsoleteImages(t *testing.T) {
 		"image-1", // Image 2 is obsolete
 	)
 
-	err := handler.deleteObsoleteImages(ctx, existingImageNames, newImageNames, "default")
+	err := handler.deleteObsoleteImages(ctx, existingImageNames, newImageNames, "default", &testMessage{})
 	require.NoError(t, err)
 
 	var remainingImages storagev1alpha1.ImageList
@@ -676,7 +676,7 @@ func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
 			require.NoError(t, err)
 
 			// Should return nil (no error) when resource doesn't exist
-			err = handler.Handle(context.Background(), message)
+			err = handler.Handle(context.Background(), &testMessage{data: message})
 			require.NoError(t, err)
 
 			// Verify no Image resources were created
@@ -966,7 +966,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 		expectedMessageAmd64,
 	).Return(nil).Once()
 
-	err = handler.Handle(t.Context(), message)
+	err = handler.Handle(t.Context(), &testMessage{data: message})
 	require.NoError(t, err)
 
 	imageList := &storagev1alpha1.ImageList{}

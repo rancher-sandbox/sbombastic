@@ -63,9 +63,9 @@ func NewCreateCatalogHandler(
 }
 
 // Handle processes the create catalog message and creates Image resources.
-func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error { //nolint:gocognit,funlen,gocyclo,cyclop // We are a bit more tolerant for the handler.
+func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Message) error { //nolint:gocognit,funlen,gocyclo,cyclop // We are a bit more tolerant for the handler.
 	createCatalogMessage := &CreateCatalogMessage{}
-	err := json.Unmarshal(message, createCatalogMessage)
+	err := json.Unmarshal(message.Data(), createCatalogMessage)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal message: %w", err)
 	}
@@ -162,6 +162,10 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		existingImageNames.Insert(existingImage.Name)
 	}
 
+	if err = message.InProgress(); err != nil {
+		return fmt.Errorf("failed to ack message as in progress: %w", err)
+	}
+
 	var discoveredImages []storagev1alpha1.Image
 	for newImageName := range discoveredImageReferences {
 		var ref name.Reference
@@ -173,7 +177,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 		}
 
 		var images []storagev1alpha1.Image
-		images, err = h.refToImages(registryClient, ref, registry)
+		images, err = h.refToImages(registryClient, ref, registry, message)
 		if err != nil {
 			h.logger.ErrorContext(ctx, "Cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
@@ -209,6 +213,10 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 				}
 				return fmt.Errorf("cannot create image %s: %w", image.Name, err)
 			}
+
+			if err = message.InProgress(); err != nil {
+				return fmt.Errorf("failed to ack message as in progress: %w", err)
+			}
 		}
 	}
 
@@ -216,7 +224,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message []byte) error
 	for _, image := range discoveredImages {
 		discoveredImageNames.Insert(image.Name)
 	}
-	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace); err != nil {
+	if err = h.deleteObsoleteImages(ctx, existingImageNames, discoveredImageNames, registry.Namespace, message); err != nil {
 		return fmt.Errorf("cannot delete obsolete images in registry %s: %w", registry.Name, err)
 	}
 
@@ -333,6 +341,7 @@ func (h *CreateCatalogHandler) refToImages(
 	registryClient registryclient.Client,
 	ref name.Reference,
 	registry *v1alpha1.Registry,
+	message messaging.Message,
 ) ([]storagev1alpha1.Image, error) {
 	platforms, err := h.refToPlatforms(registryClient, ref)
 	if err != nil {
@@ -372,6 +381,9 @@ func (h *CreateCatalogHandler) refToImages(
 		}
 
 		images = append(images, image)
+		if err = message.InProgress(); err != nil {
+			return []storagev1alpha1.Image{}, fmt.Errorf("failed to ack message as in progress: %w", err)
+		}
 	}
 
 	return images, nil
@@ -444,6 +456,7 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(
 	existingImageNames sets.Set[string],
 	discoveredImageNames sets.Set[string],
 	namespace string,
+	message messaging.Message,
 ) error {
 	obsoleteImageNames := existingImageNames.Difference(discoveredImageNames)
 
@@ -463,6 +476,9 @@ func (h *CreateCatalogHandler) deleteObsoleteImages(
 
 		if err := h.k8sClient.Delete(ctx, &existingImage); err != nil {
 			return fmt.Errorf("cannot delete image %s/%s: %w", obsoleteImageName, namespace, err)
+		}
+		if err := message.InProgress(); err != nil {
+			return fmt.Errorf("cannot mark message as in progress: %w", err)
 		}
 	}
 

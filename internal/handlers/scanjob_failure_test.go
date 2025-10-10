@@ -55,7 +55,7 @@ func TestScanJobFailureHandler_HandleFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	errorMessage := "SBOM generation failed"
-	err = handler.HandleFailure(t.Context(), message, errorMessage)
+	err = handler.HandleFailure(t.Context(), &testMessage{data: message}, errorMessage)
 	require.NoError(t, err)
 
 	updatedScanJob := &sbombasticv1alpha1.ScanJob{}

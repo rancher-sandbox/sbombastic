@@ -24,6 +24,18 @@ const (
 	htpasswd     = "user:$2y$10$nTQigvLRGGHCBQwZB4MPPe2SA6GYG218uTe1ntHusNcEjLaAfBive" // user:password
 )
 
+type testMessage struct {
+	data []byte
+}
+
+func (m *testMessage) Data() []byte {
+	return m.data
+}
+
+func (m *testMessage) InProgress() error {
+	return nil
+}
+
 type testPrivateRegistry struct {
 	registry    *registry.RegistryContainer
 	registryURL string
