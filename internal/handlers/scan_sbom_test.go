@@ -220,18 +220,6 @@ func fakeVEXHubRepository(t *testing.T) *httptest.Server {
 func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 	spdxData, err := os.ReadFile(filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"))
 	require.NoError(t, err)
-
-	scanJob := &v1alpha1.ScanJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scanjob",
-			Namespace: "default",
-			UID:       "test-scanjob-uid",
-		},
-		Spec: v1alpha1.ScanJobSpec{
-			Registry: "test-registry",
-		},
-	}
-
 	sbom := &storagev1alpha1.SBOM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-sbom",
@@ -244,16 +232,38 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 		Items: []v1alpha1.VEXHub{},
 	}
 
+	scanJob := &v1alpha1.ScanJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scanjob",
+			Namespace: "default",
+			UID:       "test-scanjob-uid",
+		},
+		Spec: v1alpha1.ScanJobSpec{
+			Registry: "test-registry",
+		},
+	}
+
+	failedScanJob := scanJob.DeepCopy()
+	failedScanJob.MarkFailed(v1alpha1.ReasonInternalError, "kaboom")
+
 	tests := []struct {
 		name            string
+		scanJob         *v1alpha1.ScanJob
 		existingObjects []runtime.Object
 	}{
 		{
 			name:            "scanjob not found",
+			scanJob:         scanJob,
 			existingObjects: []runtime.Object{sbom, vexHubs},
 		},
 		{
+			name:            "scanjob failed",
+			scanJob:         failedScanJob,
+			existingObjects: []runtime.Object{failedScanJob, sbom, vexHubs},
+		},
+		{
 			name:            "sbom not found",
+			scanJob:         scanJob,
 			existingObjects: []runtime.Object{scanJob, vexHubs},
 		},
 	}
@@ -277,13 +287,13 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			message, err := json.Marshal(&ScanSBOMMessage{
 				BaseMessage: BaseMessage{
 					ScanJob: ObjectRef{
-						Name:      scanJob.Name,
-						Namespace: "default",
+						Name:      test.scanJob.Name,
+						Namespace: test.scanJob.Namespace,
 					},
 				},
 				SBOM: ObjectRef{
 					Name:      sbom.Name,
-					Namespace: "default",
+					Namespace: sbom.Namespace,
 				},
 			})
 			require.NoError(t, err)
