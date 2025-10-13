@@ -108,8 +108,22 @@ var _ = Describe("ScanJob Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(storedRegistry.Name).To(Equal(registry.Name))
 
+			By("Reconciling the ScanJob again after the patch")
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      scanJob.Name,
+					Namespace: scanJob.Namespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			By("Verifying the ScanJob is marked as scheduled")
-			Expect(updatedScanJob.IsScheduled()).To(BeTrue())
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+			}, &scanJob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scanJob.IsScheduled()).To(BeTrue())
 		})
 	})
 
@@ -293,14 +307,22 @@ var _ = Describe("ScanJob Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scanJobList.Items).To(HaveLen(scanJobsHistoryLimit))
 
+			By("Reconciling the ScanJob again after the patch")
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      newScanJob.Name,
+					Namespace: newScanJob.Namespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			By("Verifying the new ScanJob still exists and is scheduled")
-			updatedScanJob := &v1alpha1.ScanJob{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      newScanJob.Name,
 				Namespace: newScanJob.Namespace,
-			}, updatedScanJob)
+			}, &newScanJob)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(updatedScanJob.IsScheduled()).To(BeTrue())
+			Expect(newScanJob.IsScheduled()).To(BeTrue())
 		})
 	})
 })
