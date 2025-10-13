@@ -185,12 +185,6 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 		}
 
 		for _, image := range images {
-			discoveredImages = append(discoveredImages, image)
-
-			if existingImageNames.Has(image.Name) {
-				continue
-			}
-
 			// Re-fetch the scanjob to be sure it was not deleted while we were processing images.
 			// If the scanjob is not found, we circuit-break the image creation.
 			err = h.k8sClient.Get(ctx, types.NamespacedName{
@@ -203,6 +197,12 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 					return nil
 				}
 				return fmt.Errorf("cannot get scanjob %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
+			}
+
+			discoveredImages = append(discoveredImages, image)
+
+			if existingImageNames.Has(image.Name) {
+				continue
 			}
 
 			h.logger.InfoContext(ctx, "Creating image", "image", image.Name, "namespace", image.Namespace)
