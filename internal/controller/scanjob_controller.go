@@ -65,6 +65,8 @@ func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	reconcileResult, reconcileErr := r.reconcileScanJob(ctx, scanJob)
 
+	log.V(1).Info("Patching ScanJob status", "scanJob", req.NamespacedName, "status", scanJob.Status)
+
 	if err := r.Status().Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob status: %w", err)
 	}
@@ -95,24 +97,36 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *v1alp
 		return ctrl.Result{}, fmt.Errorf("unable to get Registry %s: %w", scanJob.Spec.Registry, err)
 	}
 
-	registryData, err := json.Marshal(registry)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to marshal registry data: %w", err)
+	// Only patch if we haven't already set the registry annotation
+	// This avoids triggering multiple reconciles while we're still processing
+	if _, hasAnnotation := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]; !hasAnnotation {
+		registryData, err := json.Marshal(registry)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to marshal registry data: %w", err)
+		}
+
+		original := scanJob.DeepCopy()
+
+		if err = controllerutil.SetControllerReference(registry, scanJob, r.Scheme); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set owner reference on ScanJob: %w", err)
+		}
+		if scanJob.Annotations == nil {
+			scanJob.Annotations = map[string]string{}
+		}
+		scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey] = string(registryData)
+
+		if err = r.Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
+		}
+
+		log.V(1).Info("Patched ScanJob with registry data", "scanJob", scanJob.Name, "namespace", scanJob.Namespace, "registry", scanJob.Spec.Registry)
+
+		// Patch triggers a new reconcile, so return early
+		// The next reconcile will publish the message and update status
+		return ctrl.Result{}, nil
 	}
 
-	original := scanJob.DeepCopy()
-
-	if err = controllerutil.SetControllerReference(registry, scanJob, r.Scheme); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set owner reference on ScanJob: %w", err)
-	}
-	scanJob.Annotations = map[string]string{
-		v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
-	}
-
-	if err = r.Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob with registry data: %w", err)
-	}
-
+	log.V(1).Info("Publishing CreateCatalog message for ScanJob", "scanJob", scanJob.Name, "namespace", scanJob.Namespace, "registry", scanJob.Spec.Registry)
 	messageID := fmt.Sprintf("createCatalog/%s", scanJob.GetUID())
 	message, err := json.Marshal(&handlers.CreateCatalogMessage{
 		BaseMessage: handlers.BaseMessage{
