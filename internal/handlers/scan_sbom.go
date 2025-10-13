@@ -26,6 +26,7 @@ import (
 	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
 	"github.com/rancher/sbombastic/api/v1alpha1"
 	vulnReport "github.com/rancher/sbombastic/internal/handlers/vulnerabilityreport"
+	"github.com/rancher/sbombastic/internal/messaging"
 )
 
 const (
@@ -65,9 +66,9 @@ func NewScanSBOMHandler(
 }
 
 // Handle processes the ScanSBOMMessage and scans the specified SBOM resource for vulnerabilities.
-func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //nolint:funlen,gocognit
+func (h *ScanSBOMHandler) Handle(ctx context.Context, message messaging.Message) error { //nolint:funlen,gocognit
 	scanSBOMMessage := &ScanSBOMMessage{}
-	if err := json.Unmarshal(message, scanSBOMMessage); err != nil {
+	if err := json.Unmarshal(message.Data(), scanSBOMMessage); err != nil {
 		return fmt.Errorf("failed to unmarshal scan job message: %w", err)
 	}
 
@@ -88,6 +89,11 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 			return nil
 		}
 		return fmt.Errorf("failed to get ScanJob: %w", err)
+	}
+
+	if scanJob.IsFailed() {
+		h.logger.InfoContext(ctx, "ScanJob is in failed state, stopping SBOM scan", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)
+		return nil
 	}
 
 	sbom := &storagev1alpha1.SBOM{}
@@ -203,6 +209,10 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message []byte) error { //
 		"sbom", scanSBOMMessage.SBOM.Name,
 		"namespace", scanSBOMMessage.SBOM.Namespace,
 	)
+
+	if err = message.InProgress(); err != nil {
+		return fmt.Errorf("failed to ack message as in progress: %w", err)
+	}
 
 	reportBytes, err := io.ReadAll(reportFile)
 	if err != nil {
