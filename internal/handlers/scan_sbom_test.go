@@ -174,8 +174,9 @@ func testScanSBOM(t *testing.T, cacheDir, platform, sourceSBOMJSON, expectedRepo
 	message, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		SBOM: ObjectRef{
@@ -243,6 +244,9 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 		},
 	}
 
+	differentUIDScanJob := scanJob.DeepCopy()
+	differentUIDScanJob.UID = "test-scanjob-different-uid"
+
 	failedScanJob := scanJob.DeepCopy()
 	failedScanJob.MarkFailed(v1alpha1.ReasonInternalError, "kaboom")
 
@@ -255,6 +259,11 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			name:            "scanjob not found",
 			scanJob:         scanJob,
 			existingObjects: []runtime.Object{sbom, vexHubs},
+		},
+		{
+			name:            "scanjob was recreated with  different UID",
+			scanJob:         scanJob,
+			existingObjects: []runtime.Object{differentUIDScanJob, sbom, vexHubs},
 		},
 		{
 			name:            "scanjob failed",
@@ -289,6 +298,7 @@ func TestScanSBOMHandler_Handle_StopProcessing(t *testing.T) {
 					ScanJob: ObjectRef{
 						Name:      test.scanJob.Name,
 						Namespace: test.scanJob.Namespace,
+						UID:       string(test.scanJob.UID),
 					},
 				},
 				SBOM: ObjectRef{

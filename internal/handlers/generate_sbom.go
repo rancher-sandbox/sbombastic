@@ -76,6 +76,12 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message messaging.Mess
 
 		return fmt.Errorf("cannot get ScanJob %s/%s: %w", generateSBOMMessage.ScanJob.Name, generateSBOMMessage.ScanJob.Namespace, err)
 	}
+	if string(scanJob.GetUID()) != generateSBOMMessage.ScanJob.UID {
+		h.logger.InfoContext(ctx, "ScanJob not found, stopping SBOM generation (UID changed)", "scanjob", generateSBOMMessage.ScanJob.Name, "namespace", generateSBOMMessage.ScanJob.Namespace,
+			"uid", generateSBOMMessage.ScanJob.UID)
+		return nil
+	}
+
 	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
 
 	if scanJob.IsFailed() {
@@ -128,7 +134,9 @@ func (h *GenerateSBOMHandler) Handle(ctx context.Context, message messaging.Mess
 
 	scanSBOMMessageID := fmt.Sprintf("scanSBOM/%s/%s", scanJob.UID, generateSBOMMessage.Image.Name)
 	scanSBOMMessage, err := json.Marshal(&ScanSBOMMessage{
-		BaseMessage: generateSBOMMessage.BaseMessage,
+		BaseMessage: BaseMessage{
+			ScanJob: generateSBOMMessage.ScanJob,
+		},
 		SBOM: ObjectRef{
 			Name:      generateSBOMMessage.Image.Name,
 			Namespace: generateSBOMMessage.Image.Namespace,

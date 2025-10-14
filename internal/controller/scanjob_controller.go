@@ -59,15 +59,11 @@ func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 
-	original := scanJob.DeepCopy()
-
 	scanJob.InitializeConditions()
 
 	reconcileResult, reconcileErr := r.reconcileScanJob(ctx, scanJob)
 
-	log.V(1).Info("Patching ScanJob status", "scanJob", req.NamespacedName, "status", scanJob.Status)
-
-	if err := r.Status().Patch(ctx, scanJob, client.MergeFrom(original)); err != nil {
+	if err := r.Status().Update(ctx, scanJob); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ScanJob status: %w", err)
 	}
 
@@ -133,6 +129,7 @@ func (r *ScanJobReconciler) reconcileScanJob(ctx context.Context, scanJob *v1alp
 			ScanJob: handlers.ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.GetUID()),
 			},
 		},
 	})

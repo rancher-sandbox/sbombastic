@@ -96,6 +96,11 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 		}
 		return fmt.Errorf("cannot update scan job status %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
 	}
+	if string(scanJob.GetUID()) != createCatalogMessage.ScanJob.UID {
+		h.logger.InfoContext(ctx, "ScanJob not founnd, stopping SBOM generation (UID changed)", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace,
+			"uid", createCatalogMessage.ScanJob.UID)
+		return nil
+	}
 
 	// Retrieve the registry from the scan job annotations.
 	registryData, ok := scanJob.Annotations[v1alpha1.AnnotationScanJobRegistryKey]
@@ -188,8 +193,8 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 			// Re-fetch the scanjob to be sure it was not deleted while we were processing images.
 			// If the scanjob is not found, we circuit-break the image creation.
 			err = h.k8sClient.Get(ctx, types.NamespacedName{
-				Name:      scanJob.Name,
-				Namespace: scanJob.Namespace,
+				Name:      createCatalogMessage.ScanJob.Name,
+				Namespace: createCatalogMessage.ScanJob.Namespace,
 			}, scanJob)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
@@ -197,6 +202,11 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 					return nil
 				}
 				return fmt.Errorf("cannot get scanjob %s/%s: %w", createCatalogMessage.ScanJob.Namespace, createCatalogMessage.ScanJob.Name, err)
+			}
+			if string(scanJob.GetUID()) != createCatalogMessage.ScanJob.UID {
+				h.logger.InfoContext(ctx, "ScanJob not founnd, stopping SBOM generation (UID changed)", "scanjob", createCatalogMessage.ScanJob.Name, "namespace", createCatalogMessage.ScanJob.Namespace,
+					"uid", createCatalogMessage.ScanJob.UID)
+				return nil
 			}
 
 			discoveredImages = append(discoveredImages, image)
