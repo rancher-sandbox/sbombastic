@@ -1,5 +1,5 @@
 packages:
-  github.com/rancher/sbombastic/internal/messaging:
+  github.com/kubewarden/sbomscanner/internal/messaging:
     interfaces:
       Publisher:
         config:

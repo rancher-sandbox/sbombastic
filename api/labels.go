@@ -4,7 +4,7 @@ package api
 
 const (
 	LabelManagedByKey   = "app.kubernetes.io/managed-by"
-	LabelManagedByValue = "sbombastic"
+	LabelManagedByValue = "sbomscanner"
 	LabelPartOfKey      = "app.kubernetes.io/part-of"
-	LabelPartOfValue    = "sbombastic"
+	LabelPartOfValue    = "sbomscanner"
 )

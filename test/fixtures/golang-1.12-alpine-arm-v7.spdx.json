@@ -2,8 +2,8 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "ghcr.io/rancher-sandbox/sbombastic/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804",
-  "documentNamespace": "http://trivy.dev/container_image/ghcr.io/rancher-sandbox/sbombastic/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804-70a6d84b-0672-4cf1-bc7a-372417bcd01d",
+  "name": "ghcr.io/kubewarden/sbomscanner/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804",
+  "documentNamespace": "http://trivy.dev/container_image/ghcr.io/kubewarden/sbomscanner/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804-70a6d84b-0672-4cf1-bc7a-372417bcd01d",
   "creationInfo": {
     "creators": [
       "Organization: aquasecurity",
@@ -13,15 +13,15 @@
   },
   "packages": [
     {
-      "name": "ghcr.io/rancher-sandbox/sbombastic/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804",
-      "SPDXID": "SPDXRef-ContainerImage-588dfe4ea7967b82",
+      "name": "ghcr.io/kubewarden/sbomscanner/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804",
+      "SPDXID": "SPDXRef-ContainerImage-d52b2c873cb7ce37",
       "downloadLocation": "NONE",
       "filesAnalyzed": false,
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:oci/golang@sha256%3Aab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804?arch=arm\u0026repository_url=ghcr.io%2Francher-sandbox%2Fsbombastic%2Ftest-assets%2Fgolang"
+          "referenceLocator": "pkg:oci/golang@sha256%3Aab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804?arch=arm\u0026repository_url=ghcr.io%2Fkubewarden%2Fsbomscanner%2Ftest-assets%2Fgolang"
         }
       ],
       "primaryPackagePurpose": "CONTAINER",
@@ -66,7 +66,7 @@
           "annotator": "Tool: trivy-dev",
           "annotationDate": "2025-06-02T09:03:02Z",
           "annotationType": "OTHER",
-          "comment": "RepoDigest: ghcr.io/rancher-sandbox/sbombastic/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804"
+          "comment": "RepoDigest: ghcr.io/kubewarden/sbomscanner/test-assets/golang@sha256:ab389e320938f3bd42f45437d381fab28742dadcb892816236801e24a0bef804"
         },
         {
           "annotator": "Tool: trivy-dev",
@@ -872,13 +872,13 @@
   ],
   "relationships": [
     {
-      "spdxElementId": "SPDXRef-ContainerImage-588dfe4ea7967b82",
+      "spdxElementId": "SPDXRef-ContainerImage-d52b2c873cb7ce37",
       "relatedSpdxElement": "SPDXRef-OperatingSystem-a46f4fc05dfbdd25",
       "relationshipType": "CONTAINS"
     },
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-ContainerImage-588dfe4ea7967b82",
+      "relatedSpdxElement": "SPDXRef-ContainerImage-d52b2c873cb7ce37",
       "relationshipType": "DESCRIBES"
     },
     {

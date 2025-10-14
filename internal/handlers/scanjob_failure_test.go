@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	sbombasticv1alpha1 "github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 )
 
 func TestScanJobFailureHandler_HandleFailure(t *testing.T) {

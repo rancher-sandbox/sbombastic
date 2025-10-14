@@ -150,9 +150,9 @@ linters:
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
 
     ############################################################################
-    # SBOMbastic linter customization
+    # SBOMscanner linter customization
     # The following linters are disabled because they does not make sense for
-    # the SBOMbastic
+    # the SBOMscanner
     ############################################################################
 
     # We disable the testpackage linter because we have tests which is not

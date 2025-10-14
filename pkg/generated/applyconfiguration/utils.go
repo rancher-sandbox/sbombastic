@@ -3,9 +3,9 @@
 package applyconfiguration
 
 import (
-	v1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	internal "github.com/rancher/sbombastic/pkg/generated/applyconfiguration/internal"
-	storagev1alpha1 "github.com/rancher/sbombastic/pkg/generated/applyconfiguration/storage/v1alpha1"
+	v1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	internal "github.com/kubewarden/sbomscanner/pkg/generated/applyconfiguration/internal"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/applyconfiguration/storage/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
@@ -15,7 +15,7 @@ import (
 // apply configuration type exists for the given GroupVersionKind.
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
-	// Group=storage.sbombastic.rancher.io, Version=v1alpha1
+	// Group=storage.sbomscanner.kubewarden.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithKind("CVSS"):
 		return &storagev1alpha1.CVSSApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("Image"):

@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	sbombasticv1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/messaging"
+	sbombasticv1alpha1 "github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
 )
 
 // ScanJobFailureHandler handles failures for messages related to scan jobs.

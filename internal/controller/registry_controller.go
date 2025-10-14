@@ -11,8 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
 )
 
 // RegistryReconciler reconciles a Registry object
@@ -21,10 +21,10 @@ type RegistryReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=registries/finalizers,verbs=update
-// +kubebuilder:rbac:groups=storage.sbombastic.rancher.io,resources=images,verbs=list;watch
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries/finalizers,verbs=update
+// +kubebuilder:rbac:groups=storage.sbomscanner.kubewarden.io,resources=images,verbs=list;watch
 
 // Reconcile reconciles a Registry.
 // If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.

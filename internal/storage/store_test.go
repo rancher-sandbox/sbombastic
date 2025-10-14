@@ -19,10 +19,10 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/utils/ptr"
 
-	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
 )
 
-const keyPrefix = "/storage.sbombastic.rancher.io/sboms"
+const keyPrefix = "/storage.sbomscanner.kubewarden.io/sboms"
 
 type storeTestSuite struct {
 	suite.Suite
@@ -281,7 +281,7 @@ func (suite *storeTestSuite) TestWatchWithLabelSelector() {
 			Name:      "test1",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/test": "true",
+				"sbomscanner.kubewarden.io/test": "true",
 			},
 		},
 	}
@@ -301,7 +301,7 @@ func (suite *storeTestSuite) TestWatchWithLabelSelector() {
 	opts := storage.ListOptions{
 		ResourceVersion: "1",
 		Predicate: matcher(labels.SelectorFromSet(labels.Set{
-			"sbombastic.rancher.io/test": "true",
+			"sbomscanner.kubewarden.io/test": "true",
 		}), fields.Everything()),
 	}
 	watcher, err := suite.store.Watch(context.Background(), key, opts)
@@ -331,7 +331,7 @@ func (suite *storeTestSuite) TestGetList() {
 			Name:      "test1",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/env": "test",
+				"sbomscanner.kubewarden.io/env": "test",
 			},
 		},
 	}
@@ -343,7 +343,7 @@ func (suite *storeTestSuite) TestGetList() {
 			Name:      "test2",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/env": "dev",
+				"sbomscanner.kubewarden.io/env": "dev",
 			},
 		},
 	}
@@ -355,8 +355,8 @@ func (suite *storeTestSuite) TestGetList() {
 			Name:      "test3",
 			Namespace: "default",
 			Labels: map[string]string{
-				"sbombastic.rancher.io/env":      "prod",
-				"sbombastic.rancher.io/critical": "true",
+				"sbomscanner.kubewarden.io/env":      "prod",
+				"sbomscanner.kubewarden.io/critical": "true",
 			},
 		},
 	}
@@ -379,42 +379,42 @@ func (suite *storeTestSuite) TestGetList() {
 			name:          "list label selector (=)",
 			expectedItems: []v1alpha1.SBOM{sbom1},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env=test"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbomscanner.kubewarden.io/env=test"), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector (!=)",
 			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env!=test"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbomscanner.kubewarden.io/env!=test"), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector (in)",
 			expectedItems: []v1alpha1.SBOM{sbom2, sbom3},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env in (dev,prod)"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbomscanner.kubewarden.io/env in (dev,prod)"), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector (notin)",
 			expectedItems: []v1alpha1.SBOM{sbom3},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/env notin (test,dev)"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbomscanner.kubewarden.io/env notin (test,dev)"), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector (exists)",
 			expectedItems: []v1alpha1.SBOM{sbom3},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("sbombastic.rancher.io/critical"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("sbomscanner.kubewarden.io/critical"), fields.Everything()),
 			},
 		},
 		{
 			name:          "list label selector (does not exist)",
 			expectedItems: []v1alpha1.SBOM{sbom1, sbom2},
 			listOptions: storage.ListOptions{
-				Predicate: matcher(mustParseLabelSelector("!sbombastic.rancher.io/critical"), fields.Everything()),
+				Predicate: matcher(mustParseLabelSelector("!sbomscanner.kubewarden.io/critical"), fields.Everything()),
 			},
 		},
 		{

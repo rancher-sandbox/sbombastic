@@ -15,8 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rancher/sbombastic/cmd/storage/server"
-	"github.com/rancher/sbombastic/internal/storage"
+	"github.com/kubewarden/sbomscanner/cmd/storage/server"
+	"github.com/kubewarden/sbomscanner/internal/storage"
 )
 
 func main() {

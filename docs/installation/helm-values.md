@@ -1,23 +1,23 @@
 # Helm Values Configuration
 
-This document describes the available configuration options for the SBOMbastic Helm chart.
+This document describes the available configuration options for the SBOMscanner Helm chart.
 
 You can customize these values in two ways:
 
 1. Create a custom values file (e.g., `my-values.yaml`) with your overrides and pass it to Helm:
 ```bash
-helm install sbombastic ./chart -f my-values.yaml
+helm install sbomscanner ./chart -f my-values.yaml
 ```
 
 2. Use `--set` flags to override specific values directly:
 ```bash
-helm install sbombastic ./chart --set controller.replicas=5 --set storage.postgres.cnpg.instances=5
+helm install sbomscanner ./chart --set controller.replicas=5 --set storage.postgres.cnpg.instances=5
 ```
 
 For more details on customizing Helm charts, see the [Helm documentation](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 ## Log Levels
-You can configure the log level for each SBOMbastic component to control the verbosity of the logs.
+You can configure the log level for each SBOMscanner component to control the verbosity of the logs.
 
 ```yaml
 controller:
@@ -76,10 +76,10 @@ Adjust these values based on your workload. The storage component typically need
 For more information on resource management, see the [Kubernetes documentation on resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
 
 ## PostgreSQL Configuration
-SBOMbastic requires a PostgreSQL database to store SBOM data. You have two options: use the built-in [CloudNativePG (CNPG) operator](https://cloudnative-pg.io/) or connect to an external PostgreSQL instance.
+SBOMscanner requires a PostgreSQL database to store SBOM data. You have two options: use the built-in [CloudNativePG (CNPG) operator](https://cloudnative-pg.io/) or connect to an external PostgreSQL instance.
 
 ### Using CloudNativePG (Default)
-By default, SBOMbastic deploys a PostgreSQL cluster using the CloudNativePG operator. This is the easiest way to get started.
+By default, SBOMscanner deploys a PostgreSQL cluster using the CloudNativePG operator. This is the easiest way to get started.
 
 ```yaml
 storage:
@@ -125,7 +125,7 @@ metadata:
   name: my-postgres-credentials
   namespace: default
 stringData:
-  uri: "postgresql://user:password@postgres.example.com:5432/sbombastic?sslmode=require"
+  uri: "postgresql://user:password@postgres.example.com:5432/sbomscanner?sslmode=require"
 ```
 
 The URI format follows the [PostgreSQL connection URI specification](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS). 

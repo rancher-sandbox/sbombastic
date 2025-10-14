@@ -1,24 +1,25 @@
 # Collecting logs for debugging
 
-## Install
+## Install dependencies
 
-```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
-helm repo add sbombastic https://rancher-sandbox.github.io/sbombastic/
-helm repo update
-```
+Please follow the instructions in the [quickstart guide](../installation/quickstart.md#requirements) to ensure you have the necessary dependencies installed.
 
 ## Install or upgrade an existing installation with debug logging activated
 
 ```bash
-helm upgrade --install sbombastic sbombastic/sbombastic \
+helm repo add kubewarden https://charts.kubewarden.io
+helm repo update
+helm upgrade --install sbomscanner kubewarden/sbomscanner \
   --set=worker.logLevel=debug \
   --set=controller.logLevel=debug
+  --namespace sbomscanner \
+  --create-namespace \
+  --wait
 ```
 
 ## Verify installation
 
-Check the version. It should match the latest `sbombastic-chart-*` version found in the [releases](https://github.com/rancher-sandbox/sbombastic/releases) page.
+Check the version. It should match the latest `sbomscanner-chart-*` version found in the [releases](https://github.com/kubewarden/sbomscanner/releases) page.
 
 ```bash
 helm list
@@ -32,10 +33,10 @@ kubectl get pods
 
 ## Collect the logs
 
-Using [the script found in the sbombastic repository](https://github.com/rancher-sandbox/sbombastic/blob/main/hack/sbombastic-debug.sh):
+Using [the script found in the sbomscanner repository](https://github.com/kubewarden/sbomscanner/blob/main/hack/sbomscanner-debug.sh):
 
 ```bash
-./hack/sbombastic-debug.sh collect --compress-results
+./hack/sbomscanner-debug.sh collect --compress-results
 ```
 
 Upload the generated tar.gz file.

@@ -1,8 +1,8 @@
 # Air Gap Support
 
-SBOMbastic can be used in air-gapped environments.
+SBOMscanner can be used in air-gapped environments.
 
-To run the scans, SBOMbastic currently needs the following external sources:
+To run the scans, SBOMscanner currently needs the following external sources:
 
 * Vulnerability Database
 
@@ -20,12 +20,12 @@ The following Vulnerability Databases are packaged as OCI images, allowing you t
 
 * [`trivy-java-db`](https://github.com/aquasecurity/trivy-java-db/pkgs/container/trivy-java-db)
 
-Once mirrored in your own OCI registry, you can install SBOMbastic to point to them:
+Once mirrored in your own OCI registry, you can install SBOMscanner to point to them:
 
 ```shell
-helm install sbombastic ./chart \
-    --set worker.trivyDBRepository="yourlocalregistry.example/sbombastic/trivy-db" \
-    --set worker.trivyJavaDBRepository="yourlocalregistry.example/sbombastic/trivy-java-db"
+helm install sbomscanner ./chart \
+    --set worker.trivyDBRepository="yourlocalregistry.example/sbomscanner/trivy-db" \
+    --set worker.trivyJavaDBRepository="yourlocalregistry.example/sbomscanner/trivy-java-db"
 ```
 
 ## Self-Hosting VEX Hub
@@ -36,10 +36,10 @@ Change the `repository_url` (if any) within the VEX files, to point to the inter
 
 All you need to do is to setup an HTTP server to provide the needed files for VEX.
 
-To configure a VEX Hub in SBOMbastic, create a `VEXHub` resource with your local repository URL and apply it:
+To configure a VEX Hub in SBOMscanner, create a `VEXHub` resource with your local repository URL and apply it:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: VEXHub
 metadata:
   name: local_vexhub

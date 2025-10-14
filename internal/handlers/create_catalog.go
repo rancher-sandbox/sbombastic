@@ -28,12 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/rancher/sbombastic/api"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers/dockerauth"
-	registryclient "github.com/rancher/sbombastic/internal/handlers/registry"
-	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/kubewarden/sbomscanner/api"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/handlers/dockerauth"
+	registryclient "github.com/kubewarden/sbomscanner/internal/handlers/registry"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
 )
 
 // CreateCatalogHandler is a handler for creating a catalog of images in a registry.

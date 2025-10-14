@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	http "net/http"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	scheme "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	scheme "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -17,7 +17,7 @@ type StorageV1alpha1Interface interface {
 	VulnerabilityReportsGetter
 }
 
-// StorageV1alpha1Client is used to interact with features provided by the storage.sbombastic.rancher.io group.
+// StorageV1alpha1Client is used to interact with features provided by the storage.sbomscanner.kubewarden.io group.
 type StorageV1alpha1Client struct {
 	restClient rest.Interface
 }

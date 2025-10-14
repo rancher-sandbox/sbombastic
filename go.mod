@@ -1,4 +1,4 @@
-module github.com/rancher/sbombastic
+module github.com/kubewarden/sbomscanner
 
 go 1.25.2
 

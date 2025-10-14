@@ -11,7 +11,7 @@ import (
 
 const (
 	streamName        = "SBOMBASTIC"
-	sbombasticSubject = "sbombastic.>"
+	sbombasticSubject = "sbomscanner.>"
 )
 
 type Publisher interface {

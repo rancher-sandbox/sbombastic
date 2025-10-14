@@ -1,6 +1,6 @@
 name: "Bug report"
 labels: ["bug", "triage"]
-description: Create a report to help SBOMbastic to improve
+description: Create a report to help SBOMscanner to improve
 body:
   - type: checkboxes
     attributes:

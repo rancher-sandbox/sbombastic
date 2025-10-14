@@ -16,10 +16,10 @@ import (
 var (
 	testenv              env.Environment
 	kindClusterName      string
-	namespace            = "sbombastic"
-	workerImage          = "ghcr.io/rancher-sandbox/sbombastic/worker:latest"
-	controllerImage      = "ghcr.io/rancher-sandbox/sbombastic/controller:latest"
-	storageImage         = "ghcr.io/rancher-sandbox/sbombastic/storage:latest"
+	namespace            = "sbomscanner"
+	workerImage          = "ghcr.io/kubewarden/sbomscanner/worker:latest"
+	controllerImage      = "ghcr.io/kubewarden/sbomscanner/controller:latest"
+	storageImage         = "ghcr.io/kubewarden/sbomscanner/storage:latest"
 	certManagerNamespace = "cert-manager"
 	certManagerVersion   = "v1.18.2"
 	cnpgNamespace        = "cnpg-system"
@@ -28,7 +28,7 @@ var (
 func TestMain(m *testing.M) {
 	cfg, _ := envconf.NewFromFlags()
 	testenv = env.NewWithConfig(cfg)
-	kindClusterName = envconf.RandomName("sbombastic-e2e-cluster", 32)
+	kindClusterName = envconf.RandomName("sbomscanner-e2e-cluster", 32)
 
 	testenv.Setup(
 		envfuncs.CreateCluster(kind.NewProvider(), kindClusterName),

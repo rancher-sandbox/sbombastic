@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
 )
 
 func TestScanJobDefaulter_Default(t *testing.T) {

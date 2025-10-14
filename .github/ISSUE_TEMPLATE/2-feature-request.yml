@@ -1,6 +1,6 @@
 name: "Feature Request"
 labels: ["triage"]
-description: Create a feature request to help SBOMbastic to improve
+description: Create a feature request to help SBOMscanner to improve
 title: "Feature Request: "
 body:
   - type: textarea

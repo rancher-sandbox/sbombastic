@@ -4,7 +4,7 @@ on:
     inputs:
       component:
         type: string
-        description: "SBOMbastic component"
+        description: "SBOMscanner component"
         required: true
       arch:
         type: string
@@ -55,7 +55,7 @@ jobs:
       - name: Find attestation digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbombastic/${{ inputs.component }}@${{ env.DIGEST }} \
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ inputs.component }}@${{ env.DIGEST }} \
           | jq -r '.manifests[]
             | select(.annotations["vnd.docker.reference.type"] == "attestation-manifest")
             | .digest')
@@ -63,7 +63,7 @@ jobs:
       - name: Find provenance manifest digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbombastic/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
                       jq -r '.layers[]
                         | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2")
                         | .digest')
@@ -71,40 +71,40 @@ jobs:
       - name: Sign provenance manifest
         run: |
           cosign sign --yes \
-          ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
+          ghcr.io/${{github.repository_owner}}/sbomscanner/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/sbombastic/.github/workflows/attestation.yml@${{ github.ref }}" \
-            ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
+            --certificate-identity="https://github.com/${{github.repository_owner}}/sbomscanner/.github/workflows/attestation.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/sbomscanner/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}}
       - name: Find SBOM manifest layer digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/sbomscanner/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
             jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
           echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
       - name: Download provenance and SBOM files
         run: |
           set -e
-          crane blob ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
-            > SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json
-          sha256sum SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json \
-            >> SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
-          crane blob ghcr.io/${{github.repository_owner}}/sbombastic/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
-            > SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
-          sha256sum SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json \
-            >> SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+          crane blob ghcr.io/${{github.repository_owner}}/sbomscanner/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
+            > SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json
+          sha256sum SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.json \
+            >> SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+          crane blob ghcr.io/${{github.repository_owner}}/sbomscanner/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
+            > SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+          sha256sum SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json \
+            >> SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
       - name: Sign checksum file
         run: |
           cosign sign-blob --yes \
-            --bundle SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
-            SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+            --bundle SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
+            SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
           cosign verify-blob \
-            --bundle SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
+            --bundle SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum-cosign.bundle \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/sbombastic/.github/workflows/attestation.yml@${{ github.ref }}" \
-            SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
+            --certificate-identity="https://github.com/${{github.repository_owner}}/sbomscanner/.github/workflows/attestation.yml@${{ github.ref }}" \
+            SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}-checksum.txt
       - name: Upload SBOMs as artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: attestation-SBOMbastic-${{ inputs.component }}-${{ inputs.arch }}
-          path: SBOMbastic-${{ inputs.component }}-attestation-${{ inputs.arch }}*
+          name: attestation-SBOMscanner-${{ inputs.component }}-${{ inputs.arch }}
+          path: SBOMscanner-${{ inputs.component }}-attestation-${{ inputs.arch }}*

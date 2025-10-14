@@ -39,10 +39,10 @@ import (
 
 	basecompatibility "k8s.io/component-base/compatibility"
 
-	"github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/apiserver"
-	informers "github.com/rancher/sbombastic/pkg/generated/informers/externalversions"
-	sampleopenapi "github.com/rancher/sbombastic/pkg/generated/openapi"
+	"github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/apiserver"
+	informers "github.com/kubewarden/sbomscanner/pkg/generated/informers/externalversions"
+	sampleopenapi "github.com/kubewarden/sbomscanner/pkg/generated/openapi"
 )
 
 // WardleServerOptions contains state for master/api server
@@ -86,7 +86,7 @@ func WardleVersionToKubeVersion(ver *version.Version) *version.Version {
 func NewWardleServerOptions(db *pgxpool.Pool, logger *slog.Logger) *WardleServerOptions {
 	o := &WardleServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
-			"/registry/sbombastic.rancher.io",
+			"/registry/sbomscanner.kubewarden.io",
 			apiserver.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion),
 		),
 		ComponentGlobalsRegistry: compatibility.DefaultComponentGlobalsRegistry,

@@ -3,8 +3,8 @@
 package storage
 
 import (
-	internalinterfaces "github.com/rancher/sbombastic/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/rancher/sbombastic/pkg/generated/informers/externalversions/storage/v1alpha1"
+	internalinterfaces "github.com/kubewarden/sbomscanner/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/informers/externalversions/storage/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

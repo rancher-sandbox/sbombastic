@@ -16,17 +16,17 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
-	"github.com/rancher/sbombastic/api"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	v1alpha1 "github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	v1alpha1 "github.com/kubewarden/sbomscanner/api/v1alpha1"
 )
 
 func TestRegistryCreation(t *testing.T) {
-	releaseName := "sbombastic"
+	releaseName := "sbomscanner"
 	registryName := "test-registry"
 	registryURI := "ghcr.io"
-	registryRepository := "rancher-sandbox/sbombastic/test-assets/golang"
-	chartPath := "../../charts/sbombastic"
+	registryRepository := "kubewarden/sbomscanner/test-assets/golang"
+	chartPath := "../../charts/sbomscanner"
 	totalImages := 7 // Current number of images in the test-assets/golang directory
 
 	labelSelector := labels.FormatLabels(
@@ -50,7 +50,7 @@ func TestRegistryCreation(t *testing.T) {
 				),
 				helm.WithTimeout("3m"))
 
-			require.NoError(t, err, "sbombastic helm chart is not installed correctly")
+			require.NoError(t, err, "sbomscanner helm chart is not installed correctly")
 
 			err = storagev1alpha1.AddToScheme(cfg.Client().Resources(cfg.Namespace()).GetScheme())
 			require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestRegistryCreation(t *testing.T) {
 		Assess("Create a VEXHub", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			vexHub := &v1alpha1.VEXHub{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "rancher-vexhub",
+					Name: "kubewarden-vexhub",
 				},
 				Spec: v1alpha1.VEXHubSpec{
 					URL:     "https://github.com/rancher/vexhub",
@@ -208,7 +208,7 @@ func TestRegistryCreation(t *testing.T) {
 				helm.WithName(releaseName),
 				helm.WithNamespace(cfg.Namespace()),
 			)
-			assert.NoError(t, err, "sbombastic helm chart is not deleted correctly")
+			assert.NoError(t, err, "sbomscanner helm chart is not deleted correctly")
 			return ctx
 		})
 

@@ -22,11 +22,11 @@ import (
 
 	trivyCommands "github.com/aquasecurity/trivy/pkg/commands"
 	trivyTypes "github.com/aquasecurity/trivy/pkg/types"
-	"github.com/rancher/sbombastic/api"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	vulnReport "github.com/rancher/sbombastic/internal/handlers/vulnerabilityreport"
-	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/kubewarden/sbomscanner/api"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	vulnReport "github.com/kubewarden/sbomscanner/internal/handlers/vulnerabilityreport"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
 )
 
 const (

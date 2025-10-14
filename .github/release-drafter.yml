@@ -25,7 +25,7 @@ exclude-labels:
 
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-name-template: 'SBOMbastic v$RESOLVED_VERSION'
+name-template: 'SBOMscanner v$RESOLVED_VERSION'
 template: |
   $CHANGES
 

@@ -1,9 +1,9 @@
 package handlers
 
 const (
-	GenerateSBOMSubject  = "sbombastic.sbom.generate"
-	ScanSBOMSubject      = "sbombastic.sbom.scan"
-	CreateCatalogSubject = "sbombastic.catalog.create"
+	GenerateSBOMSubject  = "sbomscanner.sbom.generate"
+	ScanSBOMSubject      = "sbomscanner.sbom.scan"
+	CreateCatalogSubject = "sbomscanner.catalog.create"
 )
 
 // ObjectRef is a reference to a Kubernetes object, used in messages to identify resources.

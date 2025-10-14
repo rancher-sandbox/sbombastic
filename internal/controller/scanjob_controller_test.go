@@ -16,9 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers"
-	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/handlers"
+	messagingMocks "github.com/kubewarden/sbomscanner/internal/messaging/mocks"
 )
 
 var _ = Describe("ScanJob Controller", func() {
