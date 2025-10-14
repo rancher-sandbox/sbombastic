@@ -63,11 +63,16 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		Architecture: "arm64",
 		OS:           "linux",
 	}
+	platformUnknown := cranev1.Platform{
+		Architecture: "unknown",
+		OS:           "unknown",
+	}
+
 	digestLinuxAmd64, err := cranev1.NewHash("sha256:8ec69d882e7f29f0652d537557160e638168550f738d0d49f90a7ef96bf31787")
 	require.NoError(t, err)
 	digestLinuxArm64, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
 	require.NoError(t, err)
-	unknownDigest, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
+	digestUnknown, err := cranev1.NewHash("sha256:f1c2e7a5b4d3c8a9e6f5d4c3b2a1908f7e6d5c4b3a29180f7e6d5c4b3a291807")
 	require.NoError(t, err)
 
 	indexManifest := cranev1.IndexManifest{
@@ -87,21 +92,21 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			{
 				MediaType:    types.OCIManifestSchema1,
 				Size:         100,
-				Digest:       unknownDigest,
-				Data:         []byte(""),
-				URLs:         []string{},
-				Annotations:  map[string]string{},
-				Platform:     nil,
-				ArtifactType: "",
-			},
-			{
-				MediaType:    types.OCIManifestSchema1,
-				Size:         100,
 				Digest:       digestLinuxArm64,
 				Data:         []byte(""),
 				URLs:         []string{},
 				Annotations:  map[string]string{},
 				Platform:     &platformLinuxArm64,
+				ArtifactType: "",
+			},
+			{
+				MediaType:    types.OCIManifestSchema1,
+				Size:         100,
+				Digest:       digestUnknown,
+				Data:         []byte(""),
+				URLs:         []string{},
+				Annotations:  map[string]string{},
+				Platform:     &platformUnknown,
 				ArtifactType: "",
 			},
 		},
@@ -119,8 +124,6 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
-		Return(registryClient.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client { return mockRegistryClient }
 
 	mockPublisher := messagingMocks.NewMockPublisher(t)

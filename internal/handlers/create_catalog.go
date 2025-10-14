@@ -182,7 +182,7 @@ func (h *CreateCatalogHandler) Handle(ctx context.Context, message messaging.Mes
 		}
 
 		var images []storagev1alpha1.Image
-		images, err = h.refToImages(registryClient, ref, registry, message)
+		images, err = h.refToImages(ctx, registryClient, ref, registry, message)
 		if err != nil {
 			h.logger.ErrorContext(ctx, "Cannot get images", "reference", ref.String(), "error", err)
 			// Avoid blocking other images to be cataloged
@@ -348,6 +348,7 @@ func (h *CreateCatalogHandler) discoverImages(
 
 // refToImages converts a reference to a list of Image resources.
 func (h *CreateCatalogHandler) refToImages(
+	ctx context.Context,
 	registryClient registryclient.Client,
 	ref name.Reference,
 	registry *v1alpha1.Registry,
@@ -357,10 +358,6 @@ func (h *CreateCatalogHandler) refToImages(
 	if err != nil {
 		return []storagev1alpha1.Image{}, fmt.Errorf("cannot get platforms for %s: %w", ref, err)
 	}
-	if platforms == nil {
-		// add a `nil` platform to the list of platforms, this will be used to get the default platform
-		platforms = append(platforms, nil)
-	}
 
 	images := []storagev1alpha1.Image{}
 
@@ -368,11 +365,7 @@ func (h *CreateCatalogHandler) refToImages(
 		var imageDetails registryclient.ImageDetails
 		imageDetails, err = registryClient.GetImageDetails(ref, platform)
 		if err != nil {
-			platformStr := "default"
-			if platform != nil {
-				platformStr = platform.String()
-			}
-			h.logger.Info("cannot get image details", "reference", ref.Name(), "platform", platformStr, "error", err)
+			h.logger.WarnContext(ctx, "cannot get image details", "reference", ref.Name(), "platform", imageDetails.Platform, "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
@@ -380,13 +373,13 @@ func (h *CreateCatalogHandler) refToImages(
 		var image storagev1alpha1.Image
 		image, err = imageDetailsToImage(ref, imageDetails, registry)
 		if err != nil {
-			h.logger.Info("cannot convert image details to image", "reference", ref.Name(), "error", err)
+			h.logger.InfoContext(ctx, "cannot convert image details to image", "reference", ref.Name(), "error", err)
 			// Avoid blocking other images to be cataloged
 			continue
 		}
 
 		if err = controllerutil.SetControllerReference(registry, &image, h.scheme); err != nil {
-			h.logger.Info("cannot set owner reference", "reference", ref.Name(), "error", err)
+			h.logger.InfoContext(ctx, "cannot set owner reference", "reference", ref.Name(), "error", err)
 			return []storagev1alpha1.Image{}, fmt.Errorf("cannot set owner reference: %w", err)
 		}
 
@@ -411,17 +404,24 @@ func (h *CreateCatalogHandler) refToPlatforms(
 			"image doesn't seem to be multi-architecture",
 			"image", ref.Name(),
 			"error", err)
-		return []*cranev1.Platform(nil), nil
+		// The image is not multi-architecture, return a single nil platform.
+		return []*cranev1.Platform{nil}, nil
 	}
 
 	manifest, err := imgIndex.IndexManifest()
 	if err != nil {
-		return []*cranev1.Platform(nil), fmt.Errorf("cannot read index manifest of %s: %w", ref, err)
+		return []*cranev1.Platform{}, fmt.Errorf("cannot read index manifest of %s: %w", ref, err)
 	}
 
-	platforms := make([]*cranev1.Platform, len(manifest.Manifests))
-	for i, manifest := range manifest.Manifests {
-		platforms[i] = manifest.Platform
+	platforms := []*cranev1.Platform{}
+	for _, manifest := range manifest.Manifests {
+		// Images can contain "unknown/unknown" layers, which usually contain attestations.
+		// See https://docs.docker.com/build/metadata/attestations/attestation-storage/
+		// We need to skip these images, as they cannot be scanned.
+		if manifest.Platform.OS == "unknown" && manifest.Platform.Architecture == "unknown" {
+			continue
+		}
+		platforms = append(platforms, manifest.Platform)
 	}
 
 	return platforms, nil
