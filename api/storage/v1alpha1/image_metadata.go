@@ -9,7 +9,7 @@ type ImageMetadata struct {
 	Registry string `json:"registry"`
 	// RegistryURI specifies the URI of the registry where the image is stored. Example: "registry-1.docker.io:5000".`
 	RegistryURI string `json:"registryURI"`
-	// Repository specifies the repository path of the image. Example: "rancher/sbombastic".
+	// Repository specifies the repository path of the image. Example: "kubewarden/sbomscanner".
 	Repository string `json:"repository"`
 	// Tag specifies the tag of the image. Example: "latest".
 	Tag string `json:"tag"`

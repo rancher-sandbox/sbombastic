@@ -3,7 +3,7 @@
 | Feature Name | VEX Support                     |
 | Start Date   | 16 July 2025                    |
 | Category     | Architecture                    |
-| RFC PR       | [#326](https://github.com/rancher-sandbox/sbombastic/pull/326) |
+| RFC PR       | [#326](https://github.com/kubewarden/sbomscanner/pull/326) |
 | State        | **ACCEPTED**                       |
 
 # Summary
@@ -50,7 +50,7 @@ and the response. When appropriate, provide user stories in the form of "As a
 ### User story #1
 
 As a user, I want to scan registries on my infrastructure, filtering out the 
-number of CVEs detected by SBOMbastic, removing false positives as much as possible.
+number of CVEs detected by SBOMscanner, removing false positives as much as possible.
 
 ### User story #2
 
@@ -90,7 +90,7 @@ To configure a new `VEXHub` resource, the user will need to apply a manifest
 as follows:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: VEXHub
 metadata:
   name: company-vexhub
@@ -99,7 +99,7 @@ spec:
   enabled: true
   authSecret:
     name: company-vexhub-creds
-    namespace: sbombastic
+    namespace: sbomscanner
 ```
 
 There are a few attributes to keep in mind when configuring the `VEXHub` CRD:
@@ -114,7 +114,7 @@ A VEX Hub repository might have authentication enforced. When that happens,
 the `VEXHub` CRD has a `spec.authSecret` field, which is used to 
 reference a `Secret` resource that holds the authentication details.
 The `Secret` being referenced must be placed in the same 
-`Namespace` where the SBOMbastic stack is deployed.
+`Namespace` where the SBOMscanner stack is deployed.
 
 The user can use these two formats for secrets, since VEX Hub supports auth
 through `username`/`password` or `token`.
@@ -127,7 +127,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: company-vexhub-creds
-  namespace: sbombastic
+  namespace: sbomscanner
 type: Opaque
 data:
   username: YWRtaW4=
@@ -142,7 +142,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: company-vexhub-token
-  namespace: sbombastic
+  namespace: sbomscanner
 type: Opaque
 data:
   token: ZXlKaGaU9pSktWMVFpT2c9PQ==

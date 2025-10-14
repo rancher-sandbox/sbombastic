@@ -1,20 +1,20 @@
-name: Update SBOMbastic chart versions
+name: Update SBOMscanner chart versions
 
 sources:
   chartVersion:
-    name: "Get latest sbombastic helm version"
+    name: "Get latest sbomscanner helm version"
     kind: yaml
     transformers:
       - semverinc: patch
     spec:
-      file: charts/sbombastic/Chart.yaml
+      file: charts/sbomscanner/Chart.yaml
       key: $.version
   releaseVersion:
-    name: "Get latest sbombastic version"
+    name: "Get latest sbomscanner version"
     kind: githubrelease
     spec:
       owner: "{{ requiredEnv .github.owner }}"
-      repository: sbombastic
+      repository: sbomscanner
       token: "{{ requiredEnv .github.token }}"
       typefilter:
         prerelease: true
@@ -31,15 +31,15 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       owner: "{{ requiredEnv .github.owner }}"
-      repository: "sbombastic"
+      repository: "sbomscanner"
       token: "{{ requiredEnv .github.token }}"
       username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitmessage:
         type: "chore"
-        title: "Update SBOMbastic Helm charts"
+        title: "Update SBOMscanner Helm charts"
         hidecredit: true
-        footers: "Signed-off-by: SBOMbastic bot <sbombastic-bot@users.noreply.github.com>"
+        footers: "Signed-off-by: SBOMscanner bot <sbomscanner-bot@users.noreply.github.com>"
 
 actions:
   default:
@@ -51,7 +51,7 @@ actions:
       mergemethod: squash
       description: |
         Automatic Helm chart {{ source "chartVersion" }} update.
-        This PR has been created by the automation used to automatically update the Helm charts when SBOMbastic is released or helm chart content is updated.
+        This PR has been created by the automation used to automatically update the Helm charts when SBOMscanner is released or helm chart content is updated.
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
       labels:
@@ -64,7 +64,7 @@ targets:
     kind: yaml
     sourceid: chartVersion
     spec:
-      file: charts/sbombastic/Chart.yaml
+      file: charts/sbomscanner/Chart.yaml
       key: $.version
   update_appversion:
     scmid: default
@@ -72,7 +72,7 @@ targets:
     kind: yaml
     sourceid: releaseVersion
     spec:
-      file: charts/sbombastic/Chart.yaml
+      file: charts/sbomscanner/Chart.yaml
       key: $.appVersion
   update_controller_version:
     scmid: default
@@ -80,7 +80,7 @@ targets:
     kind: yaml
     sourceid: releaseVersion
     spec:
-      file: charts/sbombastic/values.yaml
+      file: charts/sbomscanner/values.yaml
       key: $.controller.image.tag
   update_storage_version:
     scmid: default
@@ -88,7 +88,7 @@ targets:
     kind: yaml
     sourceid: releaseVersion
     spec:
-      file: charts/sbombastic/values.yaml
+      file: charts/sbomscanner/values.yaml
       key: $.storage.image.tag
   update_worker_version:
     scmid: default
@@ -96,6 +96,6 @@ targets:
     kind: yaml
     sourceid: releaseVersion
     spec:
-      file: charts/sbombastic/values.yaml
+      file: charts/sbomscanner/values.yaml
       key: $.worker.image.tag
 

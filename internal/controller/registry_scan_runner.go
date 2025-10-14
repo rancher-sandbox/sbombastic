@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
 )
 
 const scanInterval = 1 * time.Minute

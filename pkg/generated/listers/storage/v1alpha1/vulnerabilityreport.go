@@ -3,7 +3,7 @@
 package v1alpha1
 
 import (
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	listers "k8s.io/client-go/listers"
 	cache "k8s.io/client-go/tools/cache"

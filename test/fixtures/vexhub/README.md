@@ -1,4 +1,4 @@
-# SBOMbastic VEXHub
+# SBOMscanner VEXHub
 
 This directory contains all the files needed to setup a local VEX Hub repository.
 

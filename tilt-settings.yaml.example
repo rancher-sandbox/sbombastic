@@ -1,8 +1,8 @@
 registry: ghcr.io
 use_private_registry: false
 storage: 
-    image: <username>/sbombastic/storage
+    image: <username>/sbomscanner/storage
 controller: 
-    image: <username>/sbombastic/controller
+    image: <username>/sbomscanner/controller
 worker: 
-    image: <username>/sbombastic/worker
+    image: <username>/sbomscanner/worker

@@ -1,10 +1,10 @@
-# SBOMbastic Quick Start
+# SBOMscanner Quick Start
 
-Welcome to the SBOMbastic Quick Start!
+Welcome to the SBOMscanner Quick Start!
 
 This guide will walk you through the following steps:
 
-- Deploying the SBOMbastic stack in a Kubernetes cluster
+- Deploying the SBOMscanner stack in a Kubernetes cluster
 - Running an automated image scan using a `Registry` custom resource
 
 ---
@@ -56,17 +56,17 @@ helm install cnpg \
 To customize the CloudNativePG installation, refer to [Using CloudNativePG (Recommended)](helm-values.md#using-cloudnativepg-recommended) in the Helm values documentation.
 You can also bring your own PostgreSQL instance instead of using CloudNativePG. See [Using an External PostgreSQL Instance](helm-values.md#using-an-external-postgresql-instance) for configuration details.
 
-## Deploy SBOMbastic
+## Deploy SBOMscanner
 
-Follow these simple steps from your local machine to get SBOMbastic up and running:
+Follow these simple steps from your local machine to get SBOMscanner up and running:
 
 ### Install the Helm chart
 
 ```bash
-helm repo add sbombastic https://rancher-sandbox.github.io/sbombastic
+helm repo add kubewarden https://charts.kubewarden.io
 helm repo update
-helm install sbombastic sbombastic/sbombastic \
-  --namespace sbombastic \
+helm install sbomscanner kubewarden/sbomscanner \
+  --namespace sbomscanner \
   --create-namespace \
   --wait
 ```
@@ -76,22 +76,22 @@ helm install sbombastic sbombastic/sbombastic \
 After installation, ensure all pods are running:
 
 ```bash
-kubectl get pods -n sbombastic
+kubectl get pods -n sbomscanner
 ```
 
 Example output:
 
 ```bash
-sbombastic           sbombastic-controller-7f568c88dc-bmjgs       1/1     Running
-sbombastic           sbombastic-controller-7f568c88dc-gcgbn       1/1     Running
-sbombastic           sbombastic-controller-7f568c88dc-q7hbh       1/1     Running
-sbombastic           sbombastic-nats-0                            2/2     Running
-sbombastic           sbombastic-nats-1                            2/2     Running
-sbombastic           sbombastic-nats-2                            2/2     Running
-sbombastic           sbombastic-storage-5f596cd8f8-4t7z8          1/1     Running
-sbombastic           sbombastic-worker-d9d68c5c-5dtck             1/1     Running
-sbombastic           sbombastic-worker-d9d68c5c-qcp7n             1/1     Running
-sbombastic           sbombastic-worker-d9d68c5c-tlpgm             1/1     Running
+sbomscanner           sbomscanner-controller-7f568c88dc-bmjgs       1/1     Running
+sbomscanner           sbomscanner-controller-7f568c88dc-gcgbn       1/1     Running
+sbomscanner           sbomscanner-controller-7f568c88dc-q7hbh       1/1     Running
+sbomscanner           sbomscanner-nats-0                            2/2     Running
+sbomscanner           sbomscanner-nats-1                            2/2     Running
+sbomscanner           sbomscanner-nats-2                            2/2     Running
+sbomscanner           sbomscanner-storage-5f596cd8f8-4t7z8          1/1     Running
+sbomscanner           sbomscanner-worker-d9d68c5c-5dtck             1/1     Running
+sbomscanner           sbomscanner-worker-d9d68c5c-qcp7n             1/1     Running
+sbomscanner           sbomscanner-worker-d9d68c5c-tlpgm             1/1     Running
 ```
 
 ### Summary
@@ -106,10 +106,10 @@ In this section, you'll learn how to create a registry source and trigger an aut
 
 ### Prepare a `registry.yaml` file
 
-Before running a scan, you need to define a `Registry` custom resource for SBOMbastic to fetch images.
+Before running a scan, you need to define a `Registry` custom resource for SBOMscanner to fetch images.
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: test-registry
@@ -117,7 +117,7 @@ metadata:
 spec:
   uri: ghcr.io
   repositories:
-    - rancher-sandbox/sbombastic/test-assets/golang
+    - kubewarden/sbomscanner/test-assets/golang
 ```
 
 ### Create the Registry CR
@@ -128,10 +128,10 @@ kubectl apply -f registry.yaml
 
 ### Prepare a `scan-job.yaml`
 
-The `ScanJob` CR tells SBOMbastic which registry to scan.
+The `ScanJob` CR tells SBOMscanner which registry to scan.
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: ScanJob
 metadata:
   name: test-scanjob

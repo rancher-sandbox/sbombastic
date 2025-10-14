@@ -16,7 +16,7 @@ const (
 	registryPort = "5000/tcp"
 	authUser     = "user"
 	authPass     = "password"
-	registryURI  = "ghcr.io/rancher-sandbox/sbombastic/test-assets"
+	registryURI  = "ghcr.io/kubewarden/sbomscanner/test-assets"
 	imageName    = "golang"
 	tag          = "1.12-alpine"
 	platform     = "linux/amd64"

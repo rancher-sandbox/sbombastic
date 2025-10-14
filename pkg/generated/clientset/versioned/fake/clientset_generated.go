@@ -3,10 +3,10 @@
 package fake
 
 import (
-	applyconfiguration "github.com/rancher/sbombastic/pkg/generated/applyconfiguration"
-	clientset "github.com/rancher/sbombastic/pkg/generated/clientset/versioned"
-	storagev1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
-	fakestoragev1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1/fake"
+	applyconfiguration "github.com/kubewarden/sbomscanner/pkg/generated/applyconfiguration"
+	clientset "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
+	fakestoragev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/typed/storage/v1alpha1/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

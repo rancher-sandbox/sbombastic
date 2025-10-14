@@ -16,8 +16,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -42,7 +42,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "charts", "sbombastic", "templates", "crd"),
+			filepath.Join("..", "..", "charts", "sbomscanner", "templates", "crd"),
 			// Add storage CRD used only for testing.
 			// Storage does not need CRD, as it uses the API server extension mechanism.
 			filepath.Join("..", "..", "test", "crd"),

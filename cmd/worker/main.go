@@ -13,14 +13,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/cmdutil"
+	"github.com/kubewarden/sbomscanner/internal/handlers"
+	"github.com/kubewarden/sbomscanner/internal/handlers/registry"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
+	"github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	"github.com/nats-io/nats.go"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/cmdutil"
-	"github.com/rancher/sbombastic/internal/handlers"
-	"github.com/rancher/sbombastic/internal/handlers/registry"
-	"github.com/rancher/sbombastic/internal/messaging"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 

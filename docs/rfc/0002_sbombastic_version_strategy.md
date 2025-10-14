@@ -1,25 +1,25 @@
 |              |                                                                    |
 | :----------- | :----------------------------------------------------------------- |
-| Feature Name | SBOMbastic versioning                                              |
+| Feature Name | SBOMscanner versioning                                              |
 | Start Date   | May 20th, 2025                                                     |
 | Category     | Versioning                                                         |
-| RFC PR       | [PR#215]](https://github.com/rancher-sandbox/SBOMbastic/pull/215/) |
+| RFC PR       | [PR#215]](https://github.com/kubewarden/SBOMscanner/pull/215/) |
 | State        | **ACCEPTED**                                                       |
 
 # Summary
 
 [summary]: #summary
 
-SBOMbastic is composed of controllers, workers, and storage that work together in order to build the final product. This is a proposal to harmonize SBOMbastic versioning schema.
+SBOMscanner is composed of controllers, workers, and storage that work together in order to build the final product. This is a proposal to harmonize SBOMscanner versioning schema.
 
 # Motivation
 
 [motivation]: #motivation
 
-Defining a versioning strategy for SBOMbastic will allow us to:
+Defining a versioning strategy for SBOMscanner will allow us to:
 
 - Align on the versioning schema across all components
-- Make it easier to upgrade SBOMbastic
+- Make it easier to upgrade SBOMscanner
 - Make it easier to test and validate the changes
 
 ## User Stories
@@ -28,30 +28,30 @@ Defining a versioning strategy for SBOMbastic will allow us to:
 
 ### User story #1
 
-As a user, I want a unified versioning scheme for SBOMbastic so that I can easily understand and upgrade the entire system without confusion or friction.
+As a user, I want a unified versioning scheme for SBOMscanner so that I can easily understand and upgrade the entire system without confusion or friction.
 
 ### User story #2
 
-As a user, when I encounter a bug in SBOMbastic, I want to be able to report it using a single, unified version that reflects all components.
+As a user, when I encounter a bug in SBOMscanner, I want to be able to report it using a single, unified version that reflects all components.
 I also want to upgrade to a fixed version without dealing with compatibility issues between components.
 
 ### User story #3
 
-As a maintainer, when a user reports an issue with SBOMbastic (which includes multiple components), I want to know:
+As a maintainer, when a user reports an issue with SBOMscanner (which includes multiple components), I want to know:
 
-- Which version of SBOMbastic was initially installed
+- Which version of SBOMscanner was initially installed
 - What upgrade path was taken
   This helps ensure reproducibility and simplifies debugging.
 
 ### User story #4
 
-As a user upgrading SBOMbastic to a new version, I want to know if the new version
+As a user upgrading SBOMscanner to a new version, I want to know if the new version
 introduces backward incompatible changes and behavior, so I can decide if to upgrade,
 and how.
 
 For example, if upgrading the helm charts in my cluster has backwards-incompatible
 changes, as I may be forced to redeploy from scratch, halt workloads of do manual tasks.
-Or if SBOMbastic introduces backwards-incompatible changes, that would necessitate
+Or if SBOMscanner introduces backwards-incompatible changes, that would necessitate
 changes to my CI infrastructure.
 
 # Detailed design
@@ -60,12 +60,12 @@ changes to my CI infrastructure.
 
 ## Many component, unified version
 
-SBOMbastic is composed of three main components: the controller, worker and storage.
+SBOMscanner is composed of three main components: the controller, worker and storage.
 
 To simplify version management and improve clarity, all of these components will share a
 single version, following the [Semantic Versioning](https://semver.org/) specification.
 
-This means the SBOMbastic Controller, Worker, and Storage will always be released
+This means the SBOMscanner Controller, Worker, and Storage will always be released
 together using the same `<Major>.<Minor>.<Patch>` version number.
 
 ## Helm Charts
@@ -73,13 +73,13 @@ together using the same `<Major>.<Minor>.<Patch>` version number.
 Helm charts have two kinds of version numbers:
 
 - `version`: a SemVer 2 version specific to the helm chart
-- `appVersion`: the version of the SBOMbastic that the chart contains
+- `appVersion`: the version of the SBOMscanner that the chart contains
 
 The helm charts will keep their own independence when it comes to
 the `version` attribute. That is, using Semver, for helm charts helps users be aware of backwards-incompatible changes when upgrading.
 
-The Helm chart `version` will receive a minor version bump whenever changes are made to the chart or when the SBOMbastic stack version is updated.
-Finally, the `appVersion` attribute will always be set to match the version of the SBOMbastic stack.
+The Helm chart `version` will receive a minor version bump whenever changes are made to the chart or when the SBOMscanner stack version is updated.
+Finally, the `appVersion` attribute will always be set to match the version of the SBOMscanner stack.
 
 > See the official documentation about
 > [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file)
@@ -91,13 +91,13 @@ Finally, the `appVersion` attribute will always be set to match the version of t
 
 This section outlines scenarios to illustrate how the proposal would work in practice.
 
-### A new release SBOMbastic takes place
+### A new release SBOMscanner takes place
 
-A new version of SBOMbastic stack has to be released because new features has been introduced.
+A new version of SBOMscanner stack has to be released because new features has been introduced.
 
 Assumptions:
 
-- The current version of the SBOMbastic stack is `1.2.0`
+- The current version of the SBOMscanner stack is `1.2.0`
 - The current version of the helm chart is `v1.5.3`
 
 Actions:
@@ -107,17 +107,17 @@ Actions:
 Helm Chart Changes:
 
 - The chart `version` attribute receives a minor bump too because the version
-  of the SBOMbastic stack was bumped: `v1.6.0`
+  of the SBOMscanner stack was bumped: `v1.6.0`
 - The `appVersion` attribute is set to `1.3.0`, because all of the components have the same version.
 
-### A patch for a component of the SBOMbastic stack
+### A patch for a component of the SBOMscanner stack
 
 A patch release is made to deliver a backward-compatible bug fix for one of the
-components of the SBOMbastic stack (e.g.: storage).
+components of the SBOMscanner stack (e.g.: storage).
 
 Assumptions:
 
-- The current version of the SBOMbastic stack is `1.2.0`
+- The current version of the SBOMscanner stack is `1.2.0`
 - The current version of the helm chart is `v1.5.3`
 
 Actions:
@@ -130,7 +130,7 @@ not have changed since the `1.2.0` release.
 Helm Chart Changes:
 
 - The chart `version` attribute receives a patch bump too because this is a
-  a patch release of the SBOMbastic stack: `v1.5.4`
+  a patch release of the SBOMscanner stack: `v1.5.4`
 - The `appVersion` attribute is set to `1.2.1`, because all of the components have the same version.
 
 ### A patch for helm chart
@@ -139,7 +139,7 @@ Sometimes only the Helm chart needs to be updated, such as adjusting argument de
 
 Assumptions
 
-- The current version of the SBOMbastic stack is `1.2.0`
+- The current version of the SBOMscanner stack is `1.2.0`
 - The current version of the Helm chart is `v1.5.4`
 
 Helm Chart Changes:
@@ -147,9 +147,9 @@ Helm Chart Changes:
 - The chart `version` attribute receives a minor bump: `v1.6.0`
 - The `appVersion` remains `1.2.0`
 
-### A bug found in SBOMbastic stack
+### A bug found in SBOMscanner stack
 
-When users encounter a bug, they can simply report the SBOMbastic stack version they are using (e.g., `1.2.1`).
+When users encounter a bug, they can simply report the SBOMscanner stack version they are using (e.g., `1.2.1`).
 This unified versioning approach makes it much easier for maintainers to reproduce the issue and verify the environment across components.
 
 # Drawbacks

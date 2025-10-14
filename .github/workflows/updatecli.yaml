@@ -31,7 +31,7 @@ jobs:
       - name: Run Updatecli (dryrun)
         if: github.ref != 'refs/heads/main'
         env:
-          # Until this repository is under the rancher-sandbox GitHub organisation
+          # Until this repository is under the kubewarden GitHub organisation
           # It's easier to use the default GITHUB_TOKEN but ultimately
           # it's gonna be better to use a GitHub App token
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -41,7 +41,7 @@ jobs:
       - name: Run Updatecli
         if: github.ref == 'refs/heads/main'
         env:
-          # Until this repository is under the rancher-sandbox GitHub organisation
+          # Until this repository is under the kubewarden GitHub organisation
           # It's easier to use the default GITHUB_TOKEN but ultimately
           # it's gonna be better to use a GitHub App token
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

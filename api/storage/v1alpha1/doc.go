@@ -16,6 +16,6 @@ limitations under the License.
 
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package
-// +groupName=storage.sbombastic.rancher.io
+// +groupName=storage.sbomscanner.kubewarden.io
 
 package v1alpha1

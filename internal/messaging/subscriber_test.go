@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testSubscriberSubject = "sbombastic.subscriber.test"
+const testSubscriberSubject = "sbomscanner.subscriber.test"
 
 type testMessage struct {
 	data []byte
@@ -273,7 +273,7 @@ func TestSubscriber_handleMessage(t *testing.T) {
 			handleFunc: func(_ Message) error {
 				return errors.New("handler error")
 			},
-			expectedError: "failed to handle message on subject sbombastic.subscriber.test: handler error",
+			expectedError: "failed to handle message on subject sbomscanner.subscriber.test: handler error",
 		},
 	}
 

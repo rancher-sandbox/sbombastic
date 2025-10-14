@@ -23,7 +23,7 @@ k8s_resource(
 #
 # Note: We are not using the tilt cert-manager extension, since it creates a namespace to test cert-manager,
 # which takes a long time to delete when running `tilt down`.
-# We Install the cert-manager CRDs separately, so we are sure they will be avalable before the sbombastic Helm chart is installed.
+# We Install the cert-manager CRDs separately, so we are sure they will be avalable before the sbomscanner Helm chart is installed.
 cert_manager_version = "v1.18.2"
 local_resource(
     "cert-manager-crds",
@@ -66,10 +66,10 @@ helm_resource(
     ],
 )
 
-# Create the sbombastic namespace
+# Create the sbomscanner namespace
 # This is required since the helm() function doesn't support the create_namespace flag
 load("ext://namespace", "namespace_create")
-namespace_create("sbombastic")
+namespace_create("sbomscanner")
 
 registry = settings.get("registry")
 controller_image = settings.get("controller").get("image")
@@ -77,9 +77,9 @@ storage_image = settings.get("storage").get("image")
 worker_image = settings.get("worker").get("image")
 
 yaml = helm(
-    "./charts/sbombastic",
-    name="sbombastic",
-    namespace="sbombastic",
+    "./charts/sbomscanner",
+    name="sbomscanner",
+    namespace="sbomscanner",
     set=[
         "global.cattle.systemDefaultRegistry=" + registry,
         "controller.image.repository=" + controller_image,
@@ -106,7 +106,7 @@ for o in objects:
 updated_yaml = encode_yaml_stream(objects)
 k8s_yaml(updated_yaml)
 k8s_kind("Cluster", api_version="postgresql.cnpg.io/v1")
-k8s_resource("sbombastic-cnpg-cluster", resource_deps=["cloudnativepg"])
+k8s_resource("sbomscanner-cnpg-cluster", resource_deps=["cloudnativepg"])
 
 # Hot reloading containers
 local_resource(

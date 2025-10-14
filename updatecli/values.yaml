@@ -2,6 +2,6 @@ github:
   owner: "UPDATECLI_GITHUB_OWNER"
   token: "UPDATECLI_GITHUB_TOKEN"
   branch: "main"
-  author: "SBOMbastic bot"
+  author: "SBOMscanner bot"
   user: "UPDATECLI_GITHUB_OWNER"
-  email: "sbombastic-bot@users.noreply.github.com"
+  email: "sbomscanner-bot@users.noreply.github.com"

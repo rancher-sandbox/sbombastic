@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

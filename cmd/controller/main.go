@@ -38,13 +38,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/go-logr/logr"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/cmdutil"
+	"github.com/kubewarden/sbomscanner/internal/controller"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
+	webhookv1alpha1 "github.com/kubewarden/sbomscanner/internal/webhook/v1alpha1"
 	"github.com/nats-io/nats.go"
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/cmdutil"
-	"github.com/rancher/sbombastic/internal/controller"
-	"github.com/rancher/sbombastic/internal/messaging"
-	webhookv1alpha1 "github.com/rancher/sbombastic/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -163,7 +163,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: cfg.ProbeAddr,
 		LeaderElection:         cfg.EnableLeaderElection,
-		LeaderElectionID:       "0cc30ed1.sbombastic.rancher.io",
+		LeaderElectionID:       "0cc30ed1.sbomscanner.kubewarden.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

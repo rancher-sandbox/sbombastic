@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
 )
 
 const (
@@ -41,7 +41,7 @@ func SetupRegistryWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-// +kubebuilder:webhook:path=/mutate-sbombastic-rancher-io-v1alpha1-registry,mutating=true,failurePolicy=fail,sideEffects=None,groups=sbombastic.rancher.io,resources=registries,verbs=create;update,versions=v1alpha1,name=mregistry.sbombastic.rancher.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-sbomscanner-kubewarden-io-v1alpha1-registry,mutating=true,failurePolicy=fail,sideEffects=None,groups=sbomscanner.kubewarden.io,resources=registries,verbs=create;update,versions=v1alpha1,name=mregistry.sbomscanner.kubewarden.io,admissionReviewVersions=v1
 
 type RegistryCustomDefaulter struct {
 	logger logr.Logger
@@ -65,7 +65,7 @@ func (d *RegistryCustomDefaulter) Default(_ context.Context, obj runtime.Object)
 	return nil
 }
 
-// +kubebuilder:webhook:path=/validate-sbombastic-rancher-io-v1alpha1-registry,mutating=false,failurePolicy=fail,sideEffects=None,groups=sbombastic.rancher.io,resources=registries,verbs=create;update,versions=v1alpha1,name=vregistry.sbombastic.rancher.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-sbomscanner-kubewarden-io-v1alpha1-registry,mutating=false,failurePolicy=fail,sideEffects=None,groups=sbomscanner.kubewarden.io,resources=registries,verbs=create;update,versions=v1alpha1,name=vregistry.sbomscanner.kubewarden.io,admissionReviewVersions=v1
 
 type RegistryCustomValidator struct {
 	logger logr.Logger

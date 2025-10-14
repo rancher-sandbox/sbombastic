@@ -1,4 +1,4 @@
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: ScanJob
 metadata:
   name: my-first-scanjob

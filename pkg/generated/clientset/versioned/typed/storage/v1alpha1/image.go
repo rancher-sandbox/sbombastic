@@ -5,9 +5,9 @@ package v1alpha1
 import (
 	context "context"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	applyconfigurationstoragev1alpha1 "github.com/rancher/sbombastic/pkg/generated/applyconfiguration/storage/v1alpha1"
-	scheme "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	applyconfigurationstoragev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/applyconfiguration/storage/v1alpha1"
+	scheme "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -12,7 +12,7 @@ type RestOptionsGetter struct {
 }
 
 // GetRESTOptions implements the generic.RESTOptionsGetter interface to ensure the GarbageCollection is enabled.
-// ResourcePrefix is set to "/<group>/<resource>", compatible with the storage Key format: /storage.sbombastic.rancher.io/<resource>/<namespace>/<name>.
+// ResourcePrefix is set to "/<group>/<resource>", compatible with the storage Key format: /storage.sbomscanner.kubewarden.io/<resource>/<namespace>/<name>.
 func (o *RestOptionsGetter) GetRESTOptions(
 	resource schema.GroupResource,
 	_ runtime.Object,

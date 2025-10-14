@@ -3,7 +3,7 @@
 | Feature Name | Scanner architecture and design                      |
 | Start Date   | Oct 24th, 2024                                       |
 | Category     | Architecture                                         |
-| RFC PR       | https://github.com/rancher-sandbox/sbombastic/pull/9 |
+| RFC PR       | https://github.com/kubewarden/sbomscanner/pull/9 |
 | State        | **ACCEPTED**                                         |
 
 # Summary
@@ -57,7 +57,7 @@ The following CRDs will be added to the cluster. Please note that the detailed d
 Registry represents a registry to be scanned. It contains the registry URL, the name of the secret containing auth credentials, the repositories to be scanned, and the discovery and scan schedules.
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
+apiVersion: scanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: registry-example
@@ -80,17 +80,17 @@ spec:
 Labels are used to select the image by the registry, repository, and tag.
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
+apiVersion: scanner.kubewarden.io/v1alpha1
 kind: Image
 metadata:
   name: "uuid"
   namespace: default
   labels:
-    "scanner.rancher.io/image": "nginx:v1.19.0" # tag of the image
-    "scanner.rancher.io/digest": "sha256:example" # digest of the image
-    "scanner.rancher.io/registry": "registry-example" # registry name
-    "scanner.rancher.io/registry-namespace": "default" # registry namespace
-    "scanner.rancher.io/repository": "prod" # repository name
+    "scanner.kubewarden.io/image": "nginx:v1.19.0" # tag of the image
+    "scanner.kubewarden.io/digest": "sha256:example" # digest of the image
+    "scanner.kubewarden.io/registry": "registry-example" # registry name
+    "scanner.kubewarden.io/registry-namespace": "default" # registry namespace
+    "scanner.kubewarden.io/repository": "prod" # repository name
 spec:
   layers:
     - ...
@@ -102,17 +102,17 @@ spec:
 `SBOM` represents a Software Bill of Materials of an image.
 
 ```yaml
-apiVersion: canner.rancher.io/v1alpha1
+apiVersion: canner.kubewarden.io/v1alpha1
 kind: SBOM
 metadata:
   name: "uuid" # uuid of the image
   namespace: default
   labels:
-    "scanner.rancher.io/image": "nginx:v1.19.0" # tag of the image
-    "scanner.rancher.io/digest": "sha256:example" # digest of the image
-    "scanner.rancher.io/registry": "registry-example" # registry name
-    "scanner.rancher.io/registry-namespace": "default" # registry namespace
-    "scanner.rancher.io/repository": "prod" # repository name
+    "scanner.kubewarden.io/image": "nginx:v1.19.0" # tag of the image
+    "scanner.kubewarden.io/digest": "sha256:example" # digest of the image
+    "scanner.kubewarden.io/registry": "registry-example" # registry name
+    "scanner.kubewarden.io/registry-namespace": "default" # registry namespace
+    "scanner.kubewarden.io/repository": "prod" # repository name
 spec:
   sbom:
     # the SBOM content in json SPDX format
@@ -125,17 +125,17 @@ The content of the report is in [SARIF](https://sarifweb.azurewebsites.net/) for
 and it is approved as an [OASIS](https://www.oasis-open.org/) standard.
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
+apiVersion: scanner.kubewarden.io/v1alpha1
 kind: VulnerabilityReport
 metadata:
   name: "uuid" # uuid of the image
   namespace: default
   labels:
-    "scanner.rancher.io/image": "nginx:v1.19.0" # tag of the image
-    "scanner.rancher.io/digest": "sha256:example" # digest of the image
-    "scanner.rancher.io/registry": "registry-example" # registry name
-    "scanner.rancher.io/registry-namespace": "default" # registry namespace
-    "scanner.rancher.io/repository": "prod" # repository name
+    "scanner.kubewarden.io/image": "nginx:v1.19.0" # tag of the image
+    "scanner.kubewarden.io/digest": "sha256:example" # digest of the image
+    "scanner.kubewarden.io/registry": "registry-example" # registry name
+    "scanner.kubewarden.io/registry-namespace": "default" # registry namespace
+    "scanner.kubewarden.io/repository": "prod" # repository name
 spec:
   report:
     # vulnerabilities found in the image in SARIF format
@@ -147,7 +147,7 @@ A DiscoveryJob represents a discovery operation that can be triggered by the use
 It tracks the status condition of the discovery operation.
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
+apiVersion: scanner.kubewarden.io/v1alpha1
 kind: DiscoveryJob
 metadata:
   name: discovery-job-example
@@ -172,7 +172,7 @@ A `ScanJob` represents a scan operation that can be triggered by the user or by 
 It tracks the status condition of the scan operation.
 
 ```yaml
-apiVersion: scanner.rancher.io/v1alpha1
+apiVersion: scanner.kubewarden.io/v1alpha1
 kind: ScanJob
 metadata:
   name: scan-job-example

@@ -1,0 +1,105 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: images.storage.sbomscanner.kubewarden.io
+spec:
+  group: storage.sbomscanner.kubewarden.io
+  names:
+    kind: Image
+    listKind: ImageList
+    plural: images
+    singular: image
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Image is the Schema for the images API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          imageMetadata:
+            description: Metadata of the image
+            properties:
+              digest:
+                description: Digest specifies the sha256 digest of the image.
+                type: string
+              platform:
+                description: Platform specifies the platform of the image. Example
+                  "linux/amd64".
+                type: string
+              registry:
+                description: Registry specifies the name of the Registry object in
+                  the same namespace where the image is stored.
+                type: string
+              registryURI:
+                description: 'RegistryURI specifies the URI of the registry where
+                  the image is stored. Example: "registry-1.docker.io:5000".`'
+                type: string
+              repository:
+                description: 'Repository specifies the repository path of the image.
+                  Example: "kubewarden/sbomscanner".'
+                type: string
+              tag:
+                description: 'Tag specifies the tag of the image. Example: "latest".'
+                type: string
+            required:
+            - digest
+            - platform
+            - registry
+            - registryURI
+            - repository
+            - tag
+            type: object
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          layers:
+            description: List of the layers that make the image
+            items:
+              description: ImageLayer define a layer part of an OCI Image
+              properties:
+                command:
+                  description: |-
+                    command is the command that led to the creation
+                    of the layer. The contents are base64 encoded
+                  type: string
+                diffID:
+                  description: diffID is the Hash of the uncompressed layer
+                  type: string
+                digest:
+                  description: digest is the Hash of the compressed layer
+                  type: string
+              required:
+              - command
+              - diffID
+              - digest
+              type: object
+            type: array
+          metadata:
+            type: object
+        required:
+        - imageMetadata
+        type: object
+    selectableFields:
+    - jsonPath: .imageMetadata.registry
+    - jsonPath: .imageMetadata.registryURI
+    - jsonPath: .imageMetadata.repository
+    - jsonPath: .imageMetadata.tag
+    - jsonPath: .imageMetadata.platform
+    - jsonPath: .imageMetadata.digest
+    served: true
+    storage: true

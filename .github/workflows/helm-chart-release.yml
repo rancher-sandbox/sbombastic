@@ -57,7 +57,7 @@ jobs:
           set -ex
 
           OWNER=${{ github.repository_owner }}
-          REPO=sbombastic
+          REPO=sbomscanner
           CONFIG_FILE=cr.yaml
           PACKAGE_PATH=.cr-release-packages
           CR_TOKEN=${{ secrets.GITHUB_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
             echo "Repository indexed!"
 
             # Publish the charts to the OCI registry and sign them
-            REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER/sbombastic/charts"
+            REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER/sbomscanner/charts"
             echo "REGISTRY=${REGISTRY}" >> "$GITHUB_ENV"
             for chart_path in $(find ${PACKAGE_PATH} -maxdepth 1 -mindepth 1 ); do
               echo "Pushing chart $chart_path to ghcr.io"
@@ -114,10 +114,10 @@ jobs:
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
-      - name: Generate provenance attestation for sbombastic chart and push to OCI
+      - name: Generate provenance attestation for sbomscanner chart and push to OCI
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         if: env.DIGEST_sbombastic != ''
         with:
           push-to-registry: true
-          subject-name: ${{ env.REGISTRY }}/sbombastic
+          subject-name: ${{ env.REGISTRY }}/sbomscanner
           subject-digest: ${{ env.DIGEST_sbombastic }}

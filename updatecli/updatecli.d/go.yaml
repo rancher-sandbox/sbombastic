@@ -48,7 +48,7 @@ actions:
       mergemethod: squash
       description: |
         Automatic Golang version {{ source "go" }} update.
-        This PR has been created by the automation used to automatically update the Golang version in the SBOMbastic project
+        This PR has been created by the automation used to automatically update the Golang version in the SBOMscanner project
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
       labels:
@@ -62,7 +62,7 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       owner: "{{ requiredEnv .github.owner }}"
-      repository: "sbombastic"
+      repository: "sbomscanner"
       token: "{{ requiredEnv .github.token }}"
       username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
@@ -71,4 +71,4 @@ scms:
         scope: deps
         title: "update Golang version"
         hidecredit: true
-        footers: "Signed-off-by: SBOMbastic bot <sbombastic-bot@users.noreply.github.com>"
+        footers: "Signed-off-by: SBOMscanner bot <sbomscanner-bot@users.noreply.github.com>"
