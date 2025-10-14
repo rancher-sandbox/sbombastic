@@ -1,7 +1,7 @@
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: VEXHub
 metadata:
-  name: rancher-vexhub
+  name: kubewarden-vexhub
 spec:
-  url: "https://github.com/rancher/vexhub"
+  url: "https://github.com/kubewarden/vexhub"
   enabled: true

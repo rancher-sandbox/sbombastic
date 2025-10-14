@@ -7,9 +7,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/rancher/sbombastic/pkg/generated/clientset/versioned"
-	internalinterfaces "github.com/rancher/sbombastic/pkg/generated/informers/externalversions/internalinterfaces"
-	storage "github.com/rancher/sbombastic/pkg/generated/informers/externalversions/storage"
+	versioned "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned"
+	internalinterfaces "github.com/kubewarden/sbomscanner/pkg/generated/informers/externalversions/internalinterfaces"
+	storage "github.com/kubewarden/sbomscanner/pkg/generated/informers/externalversions/storage"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

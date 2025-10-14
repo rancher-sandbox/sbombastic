@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	testTrivyDBRepository     = "ghcr.io/rancher-sandbox/sbombastic/test-assets/trivy-db:2"
-	testTrivyJavaDBRepository = "ghcr.io/rancher-sandbox/sbombastic/test-assets/trivy-java-db:2"
+	testTrivyDBRepository     = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-db:2"
+	testTrivyJavaDBRepository = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-java-db:2"
 )
 
 func TestScanSBOMHandler_Handle(t *testing.T) {
@@ -47,43 +47,43 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 			platform:           "linux/amd64",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/arm/v6",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v6.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v6.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v6.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/arm/v7",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v7.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v7.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm-v7.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/arm64/v8",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm64-v8.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm64-v8.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-arm64-v8.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/386",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-386.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-386.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-386.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/ppc64le",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-ppc64le.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-ppc64le.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-ppc64le.sbomscanner.json"),
 		},
 		{
 			platform:           "linux/s390x",
 			vexHubList:         []v1alpha1.VEXHub{},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-s390x.sbomscanner.json"),
 		},
 		{
 			platform: "linux/s390x with VEX repo enabled",
@@ -99,7 +99,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 				},
 			},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbombastic-vex.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbomscanner-vex.json"),
 		},
 		{
 			platform: "linux/s390x with VEX repo not enabled",
@@ -115,7 +115,7 @@ func TestScanSBOMHandler_Handle(t *testing.T) {
 				},
 			},
 			sourceSBOMJSON:     filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.spdx.json"),
-			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbombastic.json"),
+			expectedReportJSON: filepath.Join("..", "..", "test", "fixtures", "golang-1.12-alpine-amd64.sbomscanner.json"),
 		},
 	} {
 		t.Run(test.platform, func(t *testing.T) {

@@ -3,7 +3,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
+	v1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

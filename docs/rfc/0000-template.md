@@ -33,7 +33,7 @@ accepted, the motivation can be used to develop alternative solutions.
 RFCs are a tool for achieving consensus, alignment, and documenting it for
 reference.
 
-When developing complex features that touch different parts of SBOMbastic, it is
+When developing complex features that touch different parts of SBOMscanner, it is
 useful to have consensus on what the feature entails, its pros and cons, and how
 the implementation will be achieved.
 

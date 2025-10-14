@@ -7,12 +7,12 @@ LATEST_VERSION="v0.2.0"
 
 # Components to check
 DEPLOYMENTS=(
-  "sbombastic-controller:app.kubernetes.io/component=controller"
-  "sbombastic-worker:app.kubernetes.io/component=worker"
-  "sbombastic-storage:app.kubernetes.io/component=storage"
+  "sbomscanner-controller:app.kubernetes.io/component=controller"
+  "sbomscanner-worker:app.kubernetes.io/component=worker"
+  "sbomscanner-storage:app.kubernetes.io/component=storage"
 )
 STATEFULSETS=(
-  "sbombastic-nats:app.kubernetes.io/component=nats"
+  "sbomscanner-nats:app.kubernetes.io/component=nats"
 )
 
 # Colors & Symbols
@@ -40,16 +40,16 @@ usage() {
 
 verify_version() {
   local version
-  version=$(helm list -n "$NAMESPACE" -o json | jq -r '.[] | select(.name=="sbombastic") | .app_version')
+  version=$(helm list -n "$NAMESPACE" -o json | jq -r '.[] | select(.name=="sbomscanner") | .app_version')
   if [[ -z "$version" ]]; then
-    echo -e "$FAIL Helm release 'sbombastic' not found in namespace $NAMESPACE."
+    echo -e "$FAIL Helm release 'sbomscanner' not found in namespace $NAMESPACE."
     return 1
   fi
   if [[ "$version" == "$LATEST_VERSION" ]]; then
-    echo -e "$OK sbombastic Helm version is latest ($version)"
+    echo -e "$OK sbomscanner Helm version is latest ($version)"
     return 0
   else
-    echo -e "$FAIL sbombastic Helm version is $version (expected $LATEST_VERSION)"
+    echo -e "$FAIL sbomscanner Helm version is $version (expected $LATEST_VERSION)"
     return 1
   fi
 }
@@ -104,7 +104,7 @@ collect_data() {
   local compress=$1
   local ts
   ts=$(date +%Y%m%d_%H%M%S)
-  local base_dir="sbombastic-debug-${ts}"
+  local base_dir="sbomscanner-debug-${ts}"
   local logs_dir="${base_dir}/logs"
   local manifests_dir="${base_dir}/manifests"
 

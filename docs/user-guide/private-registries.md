@@ -1,10 +1,10 @@
 # Private Registries
 
-SBOMbastic supports private registries to scan for images. In order to make it work, please follow the steps listed below.
+SBOMscanner supports private registries to scan for images. In order to make it work, please follow the steps listed below.
 
 ## Create the Secret
 
-SBOMbastic relies on the docker `config.json` file to manage the authentication to the registries.
+SBOMscanner relies on the docker `config.json` file to manage the authentication to the registries.
 
 The first step to setup a private registry is to create a `Secret` with the `config.json` content, having the following structure:
 
@@ -48,7 +48,7 @@ cat dockerconfig.json | base64 -w 0 | xclip -sel clipboard
 Once your `Secret` is ready, you can reference it on the `Registry` configuration, specifying the name in the `Registry` field `spec.authSecret`.
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: my-first-registry
@@ -59,7 +59,7 @@ spec:
   authSecret: my-auth-secret
 ```
 
-This will allow SBOMbastic to scan for images from private registries.
+This will allow SBOMscanner to scan for images from private registries.
 
 **Please, note**:
 

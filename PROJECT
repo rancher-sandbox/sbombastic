@@ -2,20 +2,20 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: sbombastic.rancher.io
+domain: sbomscanner.kubewarden.io
 layout:
 - go.kubebuilder.io/v4
-projectName: sbombastic
-repo: github.com/rancher/sbombastic
+projectName: sbomscanner
+repo: github.com/kubewarden/sbomscanner
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: sbombastic.rancher.io
-  group: sbombastic
+  domain: sbomscanner.kubewarden.io
+  group: sbomscanner
   kind: Registry
-  path: github.com/rancher/sbombastic/api/v1alpha1
+  path: github.com/kubewarden/sbomscanner/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -24,26 +24,26 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: sbombastic.rancher.io
-  group: sbombastic
+  domain: sbomscanner.kubewarden.io
+  group: sbomscanner
   kind: ScanJob
-  path: github.com/rancher/sbombastic/api/v1alpha1
+  path: github.com/kubewarden/sbomscanner/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
     webhookVersion: v1
 - controller: true
-  domain: sbombastic.rancher.io
+  domain: sbomscanner.kubewarden.io
   external: true
   group: storage
   kind: VulnerabilityReport
-  path: github.com/rancher/sbombastic/api/storage/v1alpha1
+  path: github.com/kubewarden/sbomscanner/api/storage/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
-  domain: sbombastic.rancher.io
-  group: sbombastic
+  domain: sbomscanner.kubewarden.io
+  group: sbomscanner
   kind: VEXHub
-  path: github.com/rancher/sbombastic/api/v1alpha1
+  path: github.com/kubewarden/sbomscanner/api/v1alpha1
   version: v1alpha1
 version: "3"

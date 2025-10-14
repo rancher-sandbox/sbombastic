@@ -6,7 +6,7 @@ import (
 	fmt "fmt"
 	http "net/http"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

@@ -24,7 +24,7 @@ func Image(name, namespace string) *ImageApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("Image")
-	b.WithAPIVersion("storage.sbombastic.rancher.io/v1alpha1")
+	b.WithAPIVersion("storage.sbomscanner.kubewarden.io/v1alpha1")
 	return b
 }
 func (b ImageApplyConfiguration) IsApplyConfiguration() {}

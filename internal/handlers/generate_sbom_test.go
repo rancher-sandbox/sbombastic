@@ -22,10 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	messagingMocks "github.com/kubewarden/sbomscanner/internal/messaging/mocks"
+	"github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	corev1 "k8s.io/api/core/v1"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
@@ -86,7 +86,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		},
 		ImageMetadata: storagev1alpha1.ImageMetadata{
 			Registry:    "ghcr",
-			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			RegistryURI: "ghcr.io/kubewarden/sbomscanner/test-assets",
 			Repository:  "golang",
 			Tag:         "1.12-alpine",
 			Platform:    platform,
@@ -211,7 +211,7 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 		},
 		ImageMetadata: storagev1alpha1.ImageMetadata{
 			Registry:    "ghcr",
-			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			RegistryURI: "ghcr.io/kubewarden/sbomscanner/test-assets",
 			Repository:  "golang",
 			Tag:         "1.12-alpine",
 			Platform:    "linux/amd64",
@@ -325,7 +325,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 		},
 		ImageMetadata: storagev1alpha1.ImageMetadata{
 			Registry:    "ghcr",
-			RegistryURI: "ghcr.io/rancher-sandbox/sbombastic/test-assets",
+			RegistryURI: "ghcr.io/kubewarden/sbomscanner/test-assets",
 			Repository:  "golang",
 			Tag:         "1.12-alpine",
 			Platform:    "linux/amd64",

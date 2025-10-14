@@ -28,9 +28,9 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rancher/sbombastic/api/storage/install"
-	"github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/internal/storage"
+	"github.com/kubewarden/sbomscanner/api/storage/install"
+	"github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/storage"
 )
 
 var (

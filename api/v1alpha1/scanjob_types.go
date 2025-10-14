@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const LabelScanJobUIDKey = "sbombastic.rancher.io/scanjob-uid"
+const LabelScanJobUIDKey = "sbomscanner.kubewarden.io/scanjob-uid"
 
 const (
 	// IndexScanJobSpecRegistry is the field index for the registry of a ScanJob.
@@ -19,11 +19,11 @@ const (
 // RegistryAnnotation stores a snapshot of the Registry targeted by the ScanJob.
 const (
 	// AnnotationScanJobRegistryKey stores a snapshot of the Registry targeted by the ScanJob.
-	AnnotationScanJobRegistryKey = "sbombastic.rancher.io/registry"
+	AnnotationScanJobRegistryKey = "sbomscanner.kubewarden.io/registry"
 	// AnnotationScanJobCreationTimestampKey is used to store the creation timestamp of the ScanJob.
-	AnnotationScanJobCreationTimestampKey = "sbombastic.rancher.io/creation-timestamp"
+	AnnotationScanJobCreationTimestampKey = "sbomscanner.kubewarden.io/creation-timestamp"
 	// AnnotationScanJobTriggerKey is used to identify the source of the ScanJob trigger.
-	AnnotationScanJobTriggerKey = "sbombastic.rancher.io/trigger"
+	AnnotationScanJobTriggerKey = "sbomscanner.kubewarden.io/trigger"
 )
 
 // ScanJobSpec defines the desired state of ScanJob.

@@ -3,9 +3,9 @@
 package fake
 
 import (
-	v1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	storagev1alpha1 "github.com/rancher/sbombastic/pkg/generated/applyconfiguration/storage/v1alpha1"
-	typedstoragev1alpha1 "github.com/rancher/sbombastic/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
+	v1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/applyconfiguration/storage/v1alpha1"
+	typedstoragev1alpha1 "github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/typed/storage/v1alpha1"
 	gentype "k8s.io/client-go/gentype"
 )
 

@@ -1,4 +1,4 @@
-# SBOMbastic
+# SBOMscanner
 
 A SBOM-centric security scanner for Kubernetes.
 

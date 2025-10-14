@@ -40,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         with:
-          images: ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}
+          images: ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}
       - name: Build and push ${{ matrix.component }} for ${{ matrix.arch }}
         id: build-image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
@@ -52,7 +52,7 @@ jobs:
           push: true
           sbom: true
           provenance: mode=max
-          tags: ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}
+          tags: ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}
           outputs: |
             type=image,push=true,push-by-digest=true,name-canonical=true
       - name: Export digest
@@ -111,11 +111,11 @@ jobs:
           arm64_digest=$(cat ${{ matrix.component }}-arm64.txt)
 
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}:${{ env.TAG_NAME }} \
-            ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}@${amd64_digest} \
-            ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}@${arm64_digest}
+            -t ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}:${{ env.TAG_NAME }} \
+            ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}@${amd64_digest} \
+            ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}@${arm64_digest}
 
-          docker buildx imagetools inspect ghcr.io/${{ github.repository_owner }}/sbombastic/${{ matrix.component }}:${{ env.TAG_NAME }}
+          docker buildx imagetools inspect ghcr.io/${{ github.repository_owner }}/sbomscanner/${{ matrix.component }}:${{ env.TAG_NAME }}
 
   attest:
     needs: [merge]

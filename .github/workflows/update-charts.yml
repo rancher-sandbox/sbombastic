@@ -3,8 +3,8 @@ on:
   workflow_call:
   workflow_dispatch:
 jobs:
-  update-sbombastic-charts:
-    name: Update SBOMbastic charts
+  update-sbomscanner-charts:
+    name: Update SBOMscanner charts
     runs-on: ubuntu-latest
     permissions:
       contents: write # for updatecli to update the repository
@@ -16,9 +16,9 @@ jobs:
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@57aa8966d4d775cb1420b90c270ba97a4b5abe47 # v2.93.0
 
-      - name: Update SBOMbastic charts
+      - name: Update SBOMscanner charts
         env:
-          # Until this repository is under the rancher-sandbox GitHub organisation
+          # Until this repository is under the kubewarden GitHub organisation
           # It's easier to use the default GITHUB_TOKEN but ultimately
           # it's gonna be better to use a GitHub App token
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

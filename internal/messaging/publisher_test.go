@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testPublisherSubject = "sbombastic.publisher.test"
+const testPublisherSubject = "sbomscanner.publisher.test"
 
 func TestPublisher_Publish(t *testing.T) {
 	opts := natstest.DefaultTestOptions

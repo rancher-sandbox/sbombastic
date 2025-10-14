@@ -12,7 +12,7 @@ GO_MOD_SRCS := go.mod go.sum
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
-REPO ?= rancher-sandbox/sbombastic
+REPO ?= kubewarden/sbomscanner
 TAG ?= latest
 
 .PHONY: all
@@ -24,7 +24,7 @@ test: vet ## Run tests.
 
 .PHONY: helm-unittest
 helm-unittest:
-	helm unittest charts/sbombastic --file "tests/**/*_test.yaml"
+	helm unittest charts/sbomscanner --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image storage-image worker-image
@@ -94,10 +94,10 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbombastic/templates/crd output:rbac:artifacts:config=charts/sbombastic/templates/controller
-	sed -i 's/controller-role/{{ include "sbombastic.fullname" . }}-controller/' charts/sbombastic/templates/controller/role.yaml
-	sed -i '/metadata:/a\  labels:\n    {{ include "sbombastic.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/sbombastic/templates/controller/role.yaml
-	for f in ./charts/sbombastic/templates/crd/*.yaml; do \
+	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbomscanner/templates/crd output:rbac:artifacts:config=charts/sbomscanner/templates/controller
+	sed -i 's/controller-role/{{ include "sbomscanner.fullname" . }}-controller/' charts/sbomscanner/templates/controller/role.yaml
+	sed -i '/metadata:/a\  labels:\n    {{ include "sbomscanner.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/sbomscanner/templates/controller/role.yaml
+	for f in ./charts/sbomscanner/templates/crd/*.yaml; do \
 		sed -i '/^[[:space:]]*annotations:/a\    helm.sh\/resource-policy: keep' "$$f"; \
 	done
 

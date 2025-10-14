@@ -1,6 +1,6 @@
 # Scanning Registries
 
-This guide explains how to configure and run scans on container registries using SBOMbastic.
+This guide explains how to configure and run scans on container registries using SBOMscanner.
 
 It covers:
 
@@ -19,7 +19,7 @@ Before scanning a registry, create a `Registry` custom resource that specifies t
 Example manifest:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: my-registry
@@ -28,13 +28,13 @@ spec:
   uri: ghcr.io
   scanInterval: 1h
   repositories:
-    - rancher-sandbox/sbombastic/test-assets/golang
+    - kubewarden/sbomscanner/test-assets/golang
 ```
 
 This configuration:
 
 - Targets the `ghcr.io` registry
-- Scans the `rancher-sandbox/sbombastic/test-assets/golang` repository
+- Scans the `kubewarden/sbomscanner/test-assets/golang` repository
 - Runs a new scan every hour
 
 Apply the resource:
@@ -52,7 +52,7 @@ To run a one-time scan, omit the `scanInterval` in the `Registry` resource and c
 Example `Registry` without scheduling:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: my-registry
@@ -60,13 +60,13 @@ metadata:
 spec:
   uri: ghcr.io
   repositories:
-    - rancher-sandbox/sbombastic/test-assets/golang
+    - kubewarden/sbomscanner/test-assets/golang
 ```
 
 Example `ScanJob` manifest:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: ScanJob
 metadata:
   name: my-scanjob
@@ -87,14 +87,14 @@ kubectl apply -f scanjob.yaml
 
 In some cases, you may work with registries that do not implement/exposes the `_catalog` endpoint (such as **Docker Hub**, **Amazon ECR**, or **ghcr.io**).
 
-To make SBOMbastic work with these registries, you can manually specify the repositories you want to scan, instead of pulling the catalog.
+To make SBOMscanner work with these registries, you can manually specify the repositories you want to scan, instead of pulling the catalog.
 
 > **Note**: When using `catalogType` as `NoCatalog`, you must explicitly provide the list of `repositories` to scan.
 
 Example `Registry` without catalog:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: Registry
 metadata:
   name: my-registry
@@ -103,7 +103,7 @@ spec:
   uri: ghcr.io
   catalogType: NoCatalog
   repositories:
-    - rancher-sandbox/sbombastic/test-assets/golang
+    - kubewarden/sbomscanner/test-assets/golang
 ```
 
 Here's a list of registries that do NOT support `_catalog` (or intentionally disable it):

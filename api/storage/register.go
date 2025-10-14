@@ -1,13 +1,13 @@
 package storage
 
 import (
-	"github.com/rancher/sbombastic/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GroupName is the group name used in this package
-const GroupName = "storage.sbombastic.rancher.io"
+const GroupName = "storage.sbomscanner.kubewarden.io"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}

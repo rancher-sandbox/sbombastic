@@ -3,7 +3,7 @@
 | Feature Name | Scan trigger                                                   |
 | Start Date   | 2025-05-30                                                     |
 | Category     | Architecture                                                   |
-| RFC PR       | [#227](https://github.com/rancher-sandbox/sbombastic/pull/227) |
+| RFC PR       | [#227](https://github.com/kubewarden/sbomscanner/pull/227) |
 | State        | **ACCEPTED**                                                   |
 
 # Summary
@@ -43,7 +43,7 @@ To trigger a scan, we define the `ScanJob` custom resource, which serves as a tr
 An example `ScanJob` manifest looks like this:
 
 ```yaml
-apiVersion: sbombastic.rancher.io/v1alpha1
+apiVersion: sbomscanner.kubewarden.io/v1alpha1
 kind: ScanJob
 metadata:
   name: scanjob-example

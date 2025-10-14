@@ -8,7 +8,7 @@ import (
 	name "github.com/google/go-containerregistry/pkg/name"
 	mock "github.com/stretchr/testify/mock"
 
-	registry "github.com/rancher/sbombastic/internal/handlers/registry"
+	registry "github.com/kubewarden/sbomscanner/internal/handlers/registry"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )

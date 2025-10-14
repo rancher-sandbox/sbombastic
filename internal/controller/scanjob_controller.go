@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	"github.com/rancher/sbombastic/internal/handlers"
-	"github.com/rancher/sbombastic/internal/messaging"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	"github.com/kubewarden/sbomscanner/internal/handlers"
+	"github.com/kubewarden/sbomscanner/internal/messaging"
 )
 
 const (
@@ -31,9 +31,9 @@ type ScanJobReconciler struct {
 	Publisher messaging.Publisher
 }
 
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=scanjobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=scanjobs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sbombastic.rancher.io,resources=scanjobs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=scanjobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=scanjobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=scanjobs/finalizers,verbs=update
 
 // Reconcile reconciles a ScanJob object.
 func (r *ScanJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

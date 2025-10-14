@@ -31,12 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	storagev1alpha1 "github.com/rancher/sbombastic/api/storage/v1alpha1"
-	"github.com/rancher/sbombastic/api/v1alpha1"
-	registryClient "github.com/rancher/sbombastic/internal/handlers/registry"
-	registryMocks "github.com/rancher/sbombastic/internal/handlers/registry/mocks"
-	messagingMocks "github.com/rancher/sbombastic/internal/messaging/mocks"
-	"github.com/rancher/sbombastic/pkg/generated/clientset/versioned/scheme"
+	storagev1alpha1 "github.com/kubewarden/sbomscanner/api/storage/v1alpha1"
+	"github.com/kubewarden/sbomscanner/api/v1alpha1"
+	registryClient "github.com/kubewarden/sbomscanner/internal/handlers/registry"
+	registryMocks "github.com/kubewarden/sbomscanner/internal/handlers/registry/mocks"
+	messagingMocks "github.com/kubewarden/sbomscanner/internal/messaging/mocks"
+	"github.com/kubewarden/sbomscanner/pkg/generated/clientset/versioned/scheme"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -331,7 +331,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			Name:      "obsolete-image",
 			Namespace: "default",
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion: "sbombastic.io/v1alpha1",
+				APIVersion: "sbomscanner.io/v1alpha1",
 				Kind:       "Registry",
 				Name:       registry.Name,
 				UID:        registry.UID,
@@ -353,7 +353,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			Name:      existingImageUID,
 			Namespace: "default",
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion: "sbombastic.io/v1alpha1",
+				APIVersion: "sbomscanner.io/v1alpha1",
 				Kind:       "Registry",
 				Name:       registry.Name,
 				UID:        registry.UID,
