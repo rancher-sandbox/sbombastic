@@ -69,6 +69,7 @@ var _ = Describe("ScanJob Controller", func() {
 					ScanJob: handlers.ObjectRef{
 						Name:      scanJob.Name,
 						Namespace: scanJob.Namespace,
+						UID:       string(scanJob.GetUID()),
 					},
 				},
 			})
@@ -286,6 +287,7 @@ var _ = Describe("ScanJob Controller", func() {
 					ScanJob: handlers.ObjectRef{
 						Name:      newScanJob.Name,
 						Namespace: newScanJob.Namespace,
+						UID:       string(newScanJob.GetUID()),
 					},
 				},
 			})

@@ -7,9 +7,12 @@ const (
 )
 
 // ObjectRef is a reference to a Kubernetes object, used in messages to identify resources.
+// UID should be populated when you need to verify the exact resource instance
+// (e.g., to detect if the resource was deleted and recreated).
 type ObjectRef struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
+	UID       string `json:"uid,omitempty"`
 }
 
 // BaseMessage is the base structure for messages.
