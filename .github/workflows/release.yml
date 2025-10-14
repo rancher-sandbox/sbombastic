@@ -3,7 +3,7 @@ name: Create a new release for SBOMscanner stack
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
   build:
@@ -98,6 +98,7 @@ jobs:
               prerelease: isPreRelease,
               make_latest: !isPreRelease
             });
+
   update-charts:
     needs: [create-release]
     uses: ./.github/workflows/update-charts.yml
@@ -105,3 +106,20 @@ jobs:
       contents: write # for updatecli to update the repository
       pull-requests: write # for updatecli to create a PR
     secrets: inherit
+
+  # Dispatch send release event to other GitHub repositories
+  dispatch:
+    needs:
+      - create-release
+    strategy:
+      matrix:
+        repo:
+          - kubewarden/helm-charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+          repository: ${{ matrix.repo }}
+          event-type: release-sbomscanner
