@@ -1,6 +1,6 @@
 module github.com/kubewarden/sbomscanner
 
-go 1.25.2
+go 1.25.3
 
 require (
 	github.com/aquasecurity/trivy v0.66.0
