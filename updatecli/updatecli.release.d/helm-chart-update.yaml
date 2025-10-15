@@ -5,7 +5,7 @@ sources:
     name: "Get latest sbomscanner helm version"
     kind: yaml
     transformers:
-      - semverinc: patch
+      - semverinc: minor
     spec:
       file: charts/sbomscanner/Chart.yaml
       key: $.version
@@ -36,8 +36,9 @@ scms:
       username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitmessage:
+        squash: true
         type: "chore"
-        title: "Update SBOMscanner Helm charts"
+        title: "update SBOMscanner Helm charts"
         hidecredit: true
         footers: "Signed-off-by: SBOMscanner bot <sbomscanner-bot@users.noreply.github.com>"
 
@@ -98,4 +99,3 @@ targets:
     spec:
       file: charts/sbomscanner/values.yaml
       key: $.worker.image.tag
-
