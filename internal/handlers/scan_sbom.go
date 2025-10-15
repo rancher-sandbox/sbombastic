@@ -90,6 +90,13 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message messaging.Message)
 		}
 		return fmt.Errorf("failed to get ScanJob: %w", err)
 	}
+	if string(scanJob.GetUID()) != scanSBOMMessage.ScanJob.UID {
+		h.logger.InfoContext(ctx, "ScanJob not found, stopping SBOM generation (UID changed)", "scanjob", scanSBOMMessage.ScanJob.Name, "namespace", scanSBOMMessage.ScanJob.Namespace,
+			"uid", scanSBOMMessage.ScanJob.UID)
+		return nil
+	}
+
+	h.logger.DebugContext(ctx, "ScanJob found", "scanjob", scanJob)
 
 	if scanJob.IsFailed() {
 		h.logger.InfoContext(ctx, "ScanJob is in failed state, stopping SBOM scan", "scanjob", scanJob.Name, "namespace", scanJob.Namespace)

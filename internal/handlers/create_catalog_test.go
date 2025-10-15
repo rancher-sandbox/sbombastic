@@ -63,11 +63,16 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 		Architecture: "arm64",
 		OS:           "linux",
 	}
+	platformUnknown := cranev1.Platform{
+		Architecture: "unknown",
+		OS:           "unknown",
+	}
+
 	digestLinuxAmd64, err := cranev1.NewHash("sha256:8ec69d882e7f29f0652d537557160e638168550f738d0d49f90a7ef96bf31787")
 	require.NoError(t, err)
 	digestLinuxArm64, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
 	require.NoError(t, err)
-	unknownDigest, err := cranev1.NewHash("sha256:ca9d8b5d1cc2f2186983fc6b9507da6ada5eb92f2b518c06af1128d5396c6f34")
+	digestUnknown, err := cranev1.NewHash("sha256:f1c2e7a5b4d3c8a9e6f5d4c3b2a1908f7e6d5c4b3a29180f7e6d5c4b3a291807")
 	require.NoError(t, err)
 
 	indexManifest := cranev1.IndexManifest{
@@ -87,21 +92,21 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			{
 				MediaType:    types.OCIManifestSchema1,
 				Size:         100,
-				Digest:       unknownDigest,
-				Data:         []byte(""),
-				URLs:         []string{},
-				Annotations:  map[string]string{},
-				Platform:     nil,
-				ArtifactType: "",
-			},
-			{
-				MediaType:    types.OCIManifestSchema1,
-				Size:         100,
 				Digest:       digestLinuxArm64,
 				Data:         []byte(""),
 				URLs:         []string{},
 				Annotations:  map[string]string{},
 				Platform:     &platformLinuxArm64,
+				ArtifactType: "",
+			},
+			{
+				MediaType:    types.OCIManifestSchema1,
+				Size:         100,
+				Digest:       digestUnknown,
+				Data:         []byte(""),
+				URLs:         []string{},
+				Annotations:  map[string]string{},
+				Platform:     &platformUnknown,
 				ArtifactType: "",
 			},
 		},
@@ -119,8 +124,6 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxAmd64).Return(imageDetailsLinuxAmd64, nil)
 	mockRegistryClient.On("GetImageDetails", image, &platformLinuxArm64).Return(imageDetailsLinuxArm64, nil)
-	mockRegistryClient.On("GetImageDetails", image, (*cranev1.Platform)(nil)).
-		Return(registryClient.ImageDetails{}, fmt.Errorf("cannot get platform for %s", image))
 	mockRegistryClientFactory := func(_ http.RoundTripper) registryClient.Client { return mockRegistryClient }
 
 	mockPublisher := messagingMocks.NewMockPublisher(t)
@@ -140,12 +143,12 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 
 	scanJob := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scan-job",
+			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
-			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: registry.Name,
@@ -185,6 +188,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 	})
@@ -196,6 +200,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{
@@ -211,6 +216,7 @@ func TestCreateCatalogHandler_Handle(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{
@@ -371,12 +377,12 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 
 	scanJob := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scan-job",
+			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
-			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: registry.Name,
@@ -388,6 +394,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{
@@ -436,6 +443,7 @@ func TestCreateCatalogHandler_Handle_ObsoleteImages(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 	})
@@ -590,6 +598,16 @@ func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
 			},
 		},
 		{
+			name:            "scanjob with differnt UID initially",
+			existingObjects: []runtime.Object{registry},
+			setupRegistryClient: func(_ *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
+				differentUIDScanJob := scanJob.DeepCopy()
+				differentUIDScanJob.UID = "test-scanjob-different-uid"
+				err = k8sClient.Create(context.Background(), differentUIDScanJob)
+				require.NoError(t, err)
+			},
+		},
+		{
 			name:            "scanjob deleted before image creation",
 			existingObjects: []runtime.Object{registry, scanJob},
 			setupRegistryClient: func(mockClient *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
@@ -614,7 +632,44 @@ func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
 					// Delete the ScanJob when GetImageDetails is called
 					// This ensures the handler gets valid image details but then finds the ScanJob missing
 					// when it tries to re-fetch it before image creation
-					_ = k8sClient.Delete(context.Background(), scanJob)
+					err = k8sClient.Delete(context.Background(), scanJob)
+					require.NoError(t, err)
+				}).Return(imageDetails, nil)
+			},
+		},
+		{
+			name:            "scanjob with different UID before image creation",
+			existingObjects: []runtime.Object{registry, scanJob},
+			setupRegistryClient: func(mockClient *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
+				mockClient.On("Catalog", mock.Anything, mock.Anything).Return([]string{"test.io/repo"}, nil)
+				mockClient.On("ListRepositoryContents", mock.Anything, mock.Anything).Return([]string{"test.io/repo:latest"}, nil)
+				mockClient.On("GetImageIndex", mock.Anything).Return(nil, errors.New("not multi-arch"))
+
+				digest, _ := cranev1.NewHash("sha256:abc123def456")
+				platform := cranev1.Platform{OS: "linux", Architecture: "amd64"}
+				mockLayer := &registryMocks.Layer{}
+				mockLayer.On("Digest").Return(cranev1.Hash{Algorithm: "sha256", Hex: "layer123"}, nil)
+				mockLayer.On("DiffID").Return(cranev1.Hash{Algorithm: "sha256", Hex: "diff123"}, nil)
+
+				imageDetails := registryClient.ImageDetails{
+					Digest:   digest,
+					Platform: platform,
+					History:  []cranev1.History{{CreatedBy: "test command", EmptyLayer: false}},
+					Layers:   []cranev1.Layer{mockLayer},
+				}
+
+				mockClient.On("GetImageDetails", mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+					// Recreate the ScanJob when GetImageDetails is called
+					// This ensures the handler gets valid image details but then finds the ScanJob with a different UID
+					// when it tries to re-fetch it before image creation
+					err := k8sClient.Delete(context.Background(), scanJob)
+					require.NoError(t, err)
+
+					differentUIDScanJob := scanJob.DeepCopy()
+					differentUIDScanJob.UID = "test-scanjob-different-uid"
+					differentUIDScanJob.ResourceVersion = ""
+					err = k8sClient.Create(context.Background(), differentUIDScanJob)
+					require.NoError(t, err)
 				}).Return(imageDetails, nil)
 			},
 		},
@@ -628,7 +683,29 @@ func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
 
 				// On GetImageDetails call, delete the ScanJob to simulate mid-processing deletion
 				mockClient.On("GetImageDetails", mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
-					_ = k8sClient.Delete(context.Background(), scanJob)
+					err := k8sClient.Delete(context.Background(), scanJob)
+					require.NoError(t, err)
+				}).Return(registryClient.ImageDetails{}, errors.New("something went wrong"))
+			},
+		},
+		{
+			name:            "scanjob with different UID before status update",
+			existingObjects: []runtime.Object{registry, scanJob},
+			setupRegistryClient: func(mockClient *registryMocks.Client, k8sClient client.Client, scanJob *v1alpha1.ScanJob) {
+				mockClient.On("Catalog", mock.Anything, mock.Anything).Return([]string{"test.io/repo"}, nil)
+				mockClient.On("ListRepositoryContents", mock.Anything, mock.Anything).Return([]string{"test.io/repo:latest"}, nil)
+				mockClient.On("GetImageIndex", mock.Anything).Return(nil, errors.New("not multi-arch"))
+
+				// On GetImageDetails call, recreate the ScanJob to simulate the UID change mid-processing
+				mockClient.On("GetImageDetails", mock.Anything, mock.Anything).Run(func(_ mock.Arguments) {
+					err := k8sClient.Delete(context.Background(), scanJob)
+					require.NoError(t, err)
+
+					differentUIDScanJob := scanJob.DeepCopy()
+					differentUIDScanJob.UID = "test-scanjob-different-uid"
+					differentUIDScanJob.ResourceVersion = ""
+					err = k8sClient.Create(context.Background(), differentUIDScanJob)
+					require.NoError(t, err)
 				}).Return(registryClient.ImageDetails{}, errors.New("something went wrong"))
 			},
 		},
@@ -670,6 +747,7 @@ func TestCreateCatalogHandler_Handle_StopProcessing(t *testing.T) {
 					ScanJob: ObjectRef{
 						Name:      scanJob.Name,
 						Namespace: scanJob.Namespace,
+						UID:       string(scanJob.UID),
 					},
 				},
 			})
@@ -892,12 +970,12 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 
 	scanJob := &v1alpha1.ScanJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scan-job",
+			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
-			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: registry.Name,
@@ -939,6 +1017,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 	})
@@ -950,6 +1029,7 @@ func TestCreateCatalogHandler_Handle_PrivateRegistry(t *testing.T) {
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{

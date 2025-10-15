@@ -110,6 +110,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
@@ -141,8 +142,9 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		SBOM: ObjectRef{
@@ -162,15 +164,16 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
-		Image: ObjectRef{
-			Name:      image.Name,
-			Namespace: image.Namespace,
-		},
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
 				Name:      scanJob.Name,
 				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
+		},
+		Image: ObjectRef{
+			Name:      image.Name,
+			Namespace: image.Namespace,
 		},
 	})
 	require.NoError(t, err)
@@ -235,6 +238,7 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
@@ -243,6 +247,9 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			Registry: "test-registry",
 		},
 	}
+
+	differentUIDScanJob := scanJob.DeepCopy()
+	differentUIDScanJob.UID = "test-scanjob-different-uid"
 
 	failedScanJob := scanJob.DeepCopy()
 	failedScanJob.MarkFailed(v1alpha1.ReasonInternalError, "kaboom")
@@ -256,6 +263,11 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			name:            "scanjob not found",
 			scanJob:         scanJob,
 			existingObjects: []runtime.Object{image},
+		},
+		{
+			name:            "scanjob was recreated with a different UID",
+			scanJob:         scanJob,
+			existingObjects: []runtime.Object{differentUIDScanJob, image, registry},
 		},
 		{
 			name:            "scanjob is failed",
@@ -291,12 +303,13 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 				BaseMessage: BaseMessage{
 					ScanJob: ObjectRef{
 						Name:      test.scanJob.Name,
-						Namespace: "default",
+						Namespace: test.scanJob.Namespace,
+						UID:       string(test.scanJob.UID),
 					},
 				},
 				Image: ObjectRef{
 					Name:      image.Name,
-					Namespace: "default",
+					Namespace: test.scanJob.Namespace,
 				},
 			})
 			require.NoError(t, err)
@@ -383,8 +396,9 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		SBOM: ObjectRef{
@@ -406,8 +420,9 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{
@@ -478,10 +493,10 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-scanjob",
 			Namespace: "default",
+			UID:       "test-scanjob-uid",
 			Annotations: map[string]string{
 				v1alpha1.AnnotationScanJobRegistryKey: string(registryData),
 			},
-			UID: "scanjob-uid",
 		},
 		Spec: v1alpha1.ScanJobSpec{
 			Registry: "test-registry",
@@ -505,8 +520,9 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 	expectedScanMessage, err := json.Marshal(&ScanSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		SBOM: ObjectRef{
@@ -528,8 +544,9 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{
 			ScanJob: ObjectRef{
-				Name:      "test-scanjob",
-				Namespace: "default",
+				Name:      scanJob.Name,
+				Namespace: scanJob.Namespace,
+				UID:       string(scanJob.UID),
 			},
 		},
 		Image: ObjectRef{
