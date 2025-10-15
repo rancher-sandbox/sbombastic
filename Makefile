@@ -8,6 +8,7 @@ ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_V
 MOCKERY ?= go run github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
 
 GO_MOD_SRCS := go.mod go.sum
+GO_BUILD_ENV := CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOEXPERIMENT=jsonv2
 
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
@@ -20,7 +21,7 @@ all: controller storage worker
 
 .PHONY: test
 test: vet ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
+	$(GO_BUILD_ENV) KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -28,30 +29,30 @@ helm-unittest:
 
 .PHONY: test-e2e
 test-e2e: controller-image storage-image worker-image
-	go test ./test/e2e/ -v
+	$(GO_BUILD_ENV) go test ./test/e2e/ -v
 
 .PHONY: fmt
 fmt:
-	go fmt ./...
+	$(GO_BUILD_ENV) go fmt ./...
 
 .PHOHY: lint
 lint: golangci-lint
-	$(GOLANGCI_LINT) run --verbose
+	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --verbose
 
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
-	$(GOLANGCI_LINT) run --fix
+	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --fix
 
 .PHOHY: vet
 vet:
-	go vet ./...
+	$(GO_BUILD_ENV) go vet ./...
 
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
 CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
 .PHONY: controller
 controller: $(CONTROLLER_SRCS) vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/controller ./cmd/controller
+	$(GO_BUILD_ENV) go build -o ./bin/controller ./cmd/controller
 
 .PHONY: controller-image
 controller-image:
@@ -64,7 +65,7 @@ STORAGE_GO_SRCS := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
 STORAGE_SRCS := $(GO_MOD_SRCS) $(STORAGE_GO_SRCS)
 .PHONY: storage
 storage: $(STORAGE_SRCS) vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/storage ./cmd/storage
+	$(GO_BUILD_ENV) go build -o ./bin/storage ./cmd/storage
 
 .PHONY: storage-image
 storage-image:
@@ -77,7 +78,7 @@ WORKER_GO_SRCS := $(shell find $(WORKER_SRC_DIRS) -type f -name '*.go')
 WORKER_SRCS := $(GO_MOD_SRCS) $(WORKER_GO_SRCS)
 .PHONY: worker
 worker: $(WORKER_SRCS) vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/worker ./cmd/worker
+	$(GO_BUILD_ENV) go build -o ./bin/worker ./cmd/worker
 
 .PHONY: worker-image
 worker-image:
@@ -90,11 +91,11 @@ generate: generate-controller generate-storage generate-mocks
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object paths="./api/v1alpha1"
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) object paths="./api/v1alpha1"
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbomscanner/templates/crd output:rbac:artifacts:config=charts/sbomscanner/templates/controller
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/v1alpha1"  paths="./internal/controller" output:crd:artifacts:config=charts/sbomscanner/templates/crd output:rbac:artifacts:config=charts/sbomscanner/templates/controller
 	sed -i 's/controller-role/{{ include "sbomscanner.fullname" . }}-controller/' charts/sbomscanner/templates/controller/role.yaml
 	sed -i '/metadata:/a\  labels:\n    {{ include "sbomscanner.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/sbomscanner/templates/controller/role.yaml
 	for f in ./charts/sbomscanner/templates/crd/*.yaml; do \
@@ -103,7 +104,7 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 
 .PHONY: generate-storage-test-crd
 generate-storage-test-crd: ## Generate CRD used by the controller tests to access the storage resources. This is needed since storage does not provide CRD, being an API server extension.
-	$(CONTROLLER_GEN) crd paths="./api/storage/..." output:crd:artifacts:config=test/crd
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) crd paths="./api/storage/..." output:crd:artifacts:config=test/crd
 
 .PHONY: generate-storage
 generate-storage: generate-storage-test-crd ## Generate storage  code in pkg/generated and DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
