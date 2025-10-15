@@ -115,3 +115,54 @@ questions:
     description: |
       Number of replicas of the Storage Deployment
 
+  - variable: storage.postgres.authSecretName
+    label: Authentication Secret Name
+    type: string
+    default: ""
+    group: Storage
+    description: |
+      Name of existing secret containing the URI to connect to external Postgres
+
+  - variable: storage.postgres.caSecretName
+    label: CA Secret Name
+    type: string
+    default: ""
+    group: Storage
+    description: |
+      Name of secret containing the CA certificate used to verify the Postgres server certificate
+
+  - variable: storage.postgres.cnpg.enabled
+    label: CNPG Enabled
+    type: boolean
+    default: true
+    group: Storage
+
+  - variable: storage.postgres.cnpg.instances
+    label: CNPG Instances
+    type: int
+    default: 3
+    group: Storage
+
+  - variable: storage.postgres.cnpg.storage.size
+    label: CNPG Storage Size
+    type: string
+    default: "1Gi"
+    group: Storage
+    description: |
+      Size of the storage
+
+  - variable: storage.postgres.cnpg.storage.resizeInUseVolumes
+    label: CNPG Storage Resize In-Use-Volumes
+    type: boolean
+    default: true
+    group: Storage
+    description: |
+      Resize existent PVCs
+
+  - variable: storage.postgres.cnpg.storage.storageClass
+    label: CNPG StorageClass
+    type: string
+    default: ""
+    group: Storage
+    description: |
+      StorageClass to use for PVCs
