@@ -161,7 +161,7 @@ func testGenerateSBOM(t *testing.T, platform, sha256, expectedSPDXJSON string) {
 		expectedScanMessage,
 	).Return(nil).Once()
 
-	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", testTrivyJavaDBRepository, publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{
@@ -297,7 +297,7 @@ func TestGenerateSBOMHandler_Handle_StopProcessing(t *testing.T) {
 			publisher := messagingMocks.NewMockPublisher(t)
 			// Publisher should not be called since we exit early
 
-			handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+			handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", testTrivyJavaDBRepository, publisher, slog.Default())
 
 			message, err := json.Marshal(&GenerateSBOMMessage{
 				BaseMessage: BaseMessage{
@@ -415,7 +415,7 @@ func TestGenerateSBOMHandler_Handle_ExistingSBOM(t *testing.T) {
 		expectedScanMessage,
 	).Return(nil).Once()
 
-	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", testTrivyJavaDBRepository, publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{
@@ -539,7 +539,7 @@ func TestGenerateSBOMHandler_Handle_PrivateRegistry(t *testing.T) {
 		expectedScanMessage,
 	).Return(nil).Once()
 
-	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", publisher, slog.Default())
+	handler := NewGenerateSBOMHandler(k8sClient, scheme, "/tmp", testTrivyJavaDBRepository, publisher, slog.Default())
 
 	message, err := json.Marshal(&GenerateSBOMMessage{
 		BaseMessage: BaseMessage{

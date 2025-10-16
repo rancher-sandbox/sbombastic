@@ -110,7 +110,7 @@ func main() { //nolint:funlen // This function is intentionally long to keep the
 
 	registry := messaging.HandlerRegistry{
 		handlers.CreateCatalogSubject: handlers.NewCreateCatalogHandler(registryClientFactory, k8sClient, scheme, publisher, logger),
-		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, publisher, logger),
+		handlers.GenerateSBOMSubject:  handlers.NewGenerateSBOMHandler(k8sClient, scheme, runDir, trivyJavaDBRepository, publisher, logger),
 		handlers.ScanSBOMSubject:      handlers.NewScanSBOMHandler(k8sClient, scheme, runDir, trivyDBRepository, trivyJavaDBRepository, logger),
 	}
 	failureHandler := handlers.NewScanJobFailureHandler(k8sClient, logger)

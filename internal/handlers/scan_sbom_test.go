@@ -25,11 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-const (
-	testTrivyDBRepository     = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-db:2"
-	testTrivyJavaDBRepository = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-java-db:2"
-)
-
 func TestScanSBOMHandler_Handle(t *testing.T) {
 	vexHubServer := fakeVEXHubRepository(t)
 	vexHubServer.Start()

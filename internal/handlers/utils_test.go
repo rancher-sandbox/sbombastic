@@ -13,6 +13,11 @@ import (
 )
 
 const (
+	testTrivyDBRepository     = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-db:2"
+	testTrivyJavaDBRepository = "ghcr.io/kubewarden/sbomscanner/test-assets/trivy-java-db:2"
+)
+
+const (
 	registryPort = "5000/tcp"
 	authUser     = "user"
 	authPass     = "password"

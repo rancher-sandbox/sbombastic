@@ -26,11 +26,12 @@ import (
 
 // GenerateSBOMHandler is responsible for handling SBOM generation requests.
 type GenerateSBOMHandler struct {
-	k8sClient client.Client
-	scheme    *runtime.Scheme
-	workDir   string
-	publisher messaging.Publisher
-	logger    *slog.Logger
+	k8sClient             client.Client
+	scheme                *runtime.Scheme
+	workDir               string
+	trivyJavaDBRepository string
+	publisher             messaging.Publisher
+	logger                *slog.Logger
 }
 
 // NewGenerateSBOMHandler creates a new instance of GenerateSBOMHandler.
@@ -38,15 +39,17 @@ func NewGenerateSBOMHandler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
 	workDir string,
+	trivyJavaDBRepository string,
 	publisher messaging.Publisher,
 	logger *slog.Logger,
 ) *GenerateSBOMHandler {
 	return &GenerateSBOMHandler{
-		k8sClient: k8sClient,
-		scheme:    scheme,
-		workDir:   workDir,
-		publisher: publisher,
-		logger:    logger.With("handler", "generate_sbom_handler"),
+		k8sClient:             k8sClient,
+		scheme:                scheme,
+		workDir:               workDir,
+		trivyJavaDBRepository: trivyJavaDBRepository,
+		publisher:             publisher,
+		logger:                logger.With("handler", "generate_sbom_handler"),
 	}
 }
 
@@ -197,7 +200,9 @@ func (h *GenerateSBOMHandler) generateSBOM(ctx context.Context, image *storagev1
 		"--cache-dir", h.workDir,
 		"--format", "spdx-json",
 		"--skip-db-update",
-		"--skip-java-db-update",
+		// The Java DB is needed to generate SBOMs for images containing Java components
+		// See: https://github.com/aquasecurity/trivy/discussions/9666
+		"--java-db-repository", h.trivyJavaDBRepository,
 		"--output", sbomFile.Name(),
 		fmt.Sprintf(
 			"%s/%s@%s",

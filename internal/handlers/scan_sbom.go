@@ -161,8 +161,6 @@ func (h *ScanSBOMHandler) Handle(ctx context.Context, message messaging.Message)
 		"--disable-telemetry",
 		"--cache-dir", h.workDir,
 		"--format", "json",
-		// Use the public ECR repository to bypass GitHub's rate limits.
-		// Refer to https://github.com/orgs/community/discussions/139074 for details.
 		"--db-repository", h.trivyDBRepository,
 		"--java-db-repository", h.trivyJavaDBRepository,
 		"--output", reportFile.Name(),
