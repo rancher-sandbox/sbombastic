@@ -143,7 +143,7 @@ spec:
 ### Create a ScanJob CR
 
 ```bash
-kubectl apply -f registry.yaml
+kubectl apply -f scan-job.yaml
 ```
 
 ### Wait for Results
