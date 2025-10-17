@@ -24,10 +24,9 @@ type RegistryReconciler struct {
 // +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sbomscanner.kubewarden.io,resources=registries/finalizers,verbs=update
-// +kubebuilder:rbac:groups=storage.sbomscanner.kubewarden.io,resources=images,verbs=list;watch
+// +kubebuilder:rbac:groups=storage.sbomscanner.kubewarden.io,resources=images,verbs=get;list;watch;delete
 
 // Reconcile reconciles a Registry.
-// If the Registry doesn't have the last discovered timestamp, it sends a create catalog request to the workers.
 // If the Registry has repositories specified, it deletes all images that are not in the current list of repositories.
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
@@ -41,31 +40,49 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
-	if len(registry.Spec.Repositories) > 0 {
-		log.V(1).
-			Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
+	if !registry.DeletionTimestamp.IsZero() {
+		log.V(1).Info("ScanJob is being deleted, skipping reconciliation", "scanJob", req.NamespacedName)
+		return ctrl.Result{}, nil
+	}
 
-		images := &storagev1alpha1.ImageList{}
-		listOpts := []client.ListOption{
-			client.InNamespace(req.Namespace),
-			client.MatchingFields{
-				storagev1alpha1.IndexImageMetadataRegistry: registry.Name,
-			},
+	return r.reconcileRegistry(ctx, &registry)
+}
+
+func (r *RegistryReconciler) reconcileRegistry(ctx context.Context, registry *v1alpha1.Registry) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	if len(registry.Spec.Repositories) == 0 {
+		return ctrl.Result{}, nil
+	}
+
+	log.V(1).
+		Info("Deleting Images that are not in the current list of repositories", "name", registry.Name, "namespace", registry.Namespace, "repositories", registry.Spec.Repositories)
+
+	images := &storagev1alpha1.ImageList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(registry.Namespace),
+		client.MatchingFields{
+			storagev1alpha1.IndexImageMetadataRegistry: registry.Name,
+		},
+	}
+	if err := r.List(ctx, images, listOpts...); err != nil {
+		return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
+	}
+
+	allowedRepositories := sets.NewString(registry.Spec.Repositories...)
+
+	for _, image := range images.Items {
+		if allowedRepositories.Has(image.GetImageMetadata().Repository) {
+			continue
 		}
-		if err := r.List(ctx, images, listOpts...); err != nil {
-			return ctrl.Result{}, fmt.Errorf("unable to list Images: %w", err)
-		}
 
-		allowedRepositories := sets.NewString(registry.Spec.Repositories...)
-
-		for _, image := range images.Items {
-			if !allowedRepositories.Has(image.GetImageMetadata().Repository) {
-				if err := r.Delete(ctx, &image); err != nil {
-					return ctrl.Result{}, fmt.Errorf("unable to delete Image %s: %w", image.Name, err)
-				}
-				log.V(1).Info("Deleted Image", "name", image.Name, "repository", image.GetImageMetadata().Repository)
+		if err := r.Delete(ctx, &image); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("unable to delete Image %s: %w", image.Name, err)
 			}
 		}
+
+		log.V(1).Info("Deleted Image", "name", image.Name, "repository", image.GetImageMetadata().Repository)
 	}
 
 	return ctrl.Result{}, nil
