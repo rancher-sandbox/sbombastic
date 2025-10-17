@@ -14,7 +14,7 @@ body:
       label: Troubleshooting logs
       description: Please read the [troubleshooing guide](https://github.com/kubewarden/sbomscanner/blob/main/docs/troubleshooting/collecting-logs.md) and attach debugging logs if possible.
       options:
-        - label: I have read the troubleshooting guide and attached relevant logs
+        - label: I reviewed the troubleshooting logs and confirmed they contain no sensitive information.
           required: true
   - type: textarea
     attributes:

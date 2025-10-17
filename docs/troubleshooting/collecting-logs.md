@@ -33,10 +33,21 @@ kubectl get pods
 
 ## Collect the logs
 
-Using [the script found in the sbomscanner repository](https://github.com/kubewarden/sbomscanner/blob/main/hack/sbomscanner-debug.sh):
+> **Warning:** ⚠️ Troubleshooting logs do not contain sensitive data such as Secrets,
+> but they may include container registry names and URIs. Review the tarball contents
+> before sharing to ensure no sensitive information is disclosed.
+
+Using [the script found in the sbomscanner repository](https://github.com/kubewarden/sbomscanner/blob/main/hack/sbombscanner-debug.sh):
 
 ```bash
 ./hack/sbomscanner-debug.sh collect --compress-results
 ```
+
+The script collects the following information:
+
+- Logs from the pods of all SBOMscanner components (controller, workers, storage, NATS).
+- Manifest of all SBOMscanner related resources (Registry, VEXHub, ScanJob, Image, VulnerabilityReport).
+
+The script prints the names of the manifests being collected at runtime.
 
 Upload the generated tar.gz file.
