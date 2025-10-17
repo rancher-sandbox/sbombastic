@@ -143,7 +143,7 @@ spec:
 ### Create a ScanJob CR
 
 ```bash
-kubectl apply -f scan-job.yaml
+kubectl apply -f scanjob.yaml
 ```
 
 ### Wait for Results
