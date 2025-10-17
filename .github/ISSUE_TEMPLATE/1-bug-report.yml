@@ -9,6 +9,13 @@ body:
       options:
         - label: I have searched the existing issues
           required: true
+  - type: checkboxes
+    attributes:
+      label: Troubleshooting logs
+      description: Please read the [troubleshooing guide](https://github.com/kubewarden/sbomscanner/blob/main/docs/troubleshooting/collecting-logs.md) and attach debugging logs if possible.
+      options:
+        - label: I reviewed the troubleshooting logs and confirmed they contain no sensitive information.
+          required: true
   - type: textarea
     attributes:
       label: Current Behavior
